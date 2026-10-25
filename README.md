@@ -15,6 +15,19 @@ A picture-and-word reading game for kids, built as a single [Scriptable](https:/
 </tr>
 </table>
 
+## Install
+
+1. Get **[Scriptable](https://apps.apple.com/app/scriptable/id1405459188)** (free) from the App Store.
+2. In Scriptable tap **+**, paste this line and tap **▶︎**:
+   ```js
+   const s = await new Request("https://raw.githubusercontent.com/gadominas/Reading-Stars/main/install.js").loadString(); await Function("module", "return (async () => {" + s + "\n})()")(module);
+   ```
+3. Tap **Open now**. That's it: *Reading Stars* is in your scripts list.
+
+- **Update:** run the same little script again. Players, tokens, budgets and the PIN are kept.
+- **Home Screen icon:** in Scriptable tap *⋯* on *Reading Stars* → *Add to Home Screen*.
+- **Manual install:** create a new script and paste the whole [`Reading Stars.js`](Reading%20Stars.js) instead.
+
 ## How a round works
 
 A word is shown big, split into syllables with dashes and a different colour per syllable: **Na-mas**, **Kar-vė**, **He-li-cop-ter**. Above it are pictures, and the kid taps the one that matches.
@@ -167,12 +180,6 @@ The game speaks **Lithuanian 🇱🇹, English 🇬🇧 and Spanish 🇪🇸**, 
 <td align="center"><sub>Expert in English: five C-words</sub></td>
 </tr>
 </table>
-
-## Install
-
-1. Install **Scriptable** from the App Store.
-2. Create a new script, paste the contents of [`Reading Stars.js`](Reading%20Stars.js) and name it *Reading Stars*.
-3. Run it. You can add it to the Home Screen from the script's settings.
 
 ## Data
 
