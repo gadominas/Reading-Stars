@@ -24,9 +24,17 @@ A picture-and-word reading game for kids, built as a single [Scriptable](https:/
    ```
 3. Tap **Open now**. That's it: *Reading Stars* is in your scripts list.
 
-- **Update:** run the same little script again. Players, tokens, budgets and the PIN are kept.
+- **Updates:** from v1.1.0 the game offers new versions itself (see below). On an older copy, run the install line once more.
 - **Home Screen icon:** in Scriptable tap *⋯* on *Reading Stars* → *Add to Home Screen*.
 - **Manual install:** create a new script and paste the whole [`Reading Stars.js`](Reading%20Stars.js) instead.
+
+## Updates and what's new
+
+When a new version is out, the home screen shows what it brings, with **Update now** and **Later** (asks again in 2 days). The offer never interrupts a round, and updating keeps all players, tokens, budgets and the PIN. Close and reopen the game afterwards.
+
+<img src="docs/screenshots/18-update-lt.png" width="240" alt="Update sheet in Lithuanian">
+
+Every version is listed in [CHANGELOG.md](CHANGELOG.md). To publish one, follow [docs/RELEASING.md](docs/RELEASING.md). To turn the checks off, set `CHECK_UPDATES: false` at the top of the script.
 
 ## How a round works
 

@@ -1,0 +1,100 @@
+{
+  "name": "Reading Stars",
+  "appId": "reading-stars",
+  "script": "Reading Stars.js",
+  "releases": [
+    {
+      "version": "1.1.0",
+      "date": "2026-10-27",
+      "title": { "en": "Never miss an update", "lt": "Nepraleisk nė vieno atnaujinimo", "es": "No te pierdas ninguna novedad" },
+      "highlights": [
+        {
+          "icon": "🔔",
+          "title": { "en": "Update reminders", "lt": "Priminimai apie naujienas", "es": "Avisos de novedades" },
+          "text": {
+            "en": "The game tells you when a new version is out, and waits two days if you tap Later.",
+            "lt": "Žaidimas praneša apie naują versiją, o paspaudus „Vėliau“ palaukia dvi dienas.",
+            "es": "El juego avisa cuando hay versión nueva y espera dos días si tocas Más tarde."
+          }
+        },
+        {
+          "icon": "⬆️",
+          "title": { "en": "One-tap update", "lt": "Atnaujinimas vienu paspaudimu", "es": "Actualiza con un toque" },
+          "text": {
+            "en": "Update right from the game. No need to run the installer again.",
+            "lt": "Atnaujink tiesiai žaidime, diegimo scenarijaus nebereikia.",
+            "es": "Actualiza desde el juego, sin volver a usar el instalador."
+          }
+        },
+        {
+          "icon": "✨",
+          "title": { "en": "See what's new first", "lt": "Pirmiausia – naujienos", "es": "Mira primero lo nuevo" },
+          "text": {
+            "en": "Every update shows its three best features before you install it.",
+            "lt": "Prieš diegiant matysi tris geriausias atnaujinimo naujoves.",
+            "es": "Cada actualización muestra sus tres mejores novedades antes de instalarla."
+          }
+        }
+      ],
+      "changes": [
+        "Update check on start, with an update sheet in Lithuanian, English and Spanish",
+        "Update now downloads the new script over the running one; Later hides the offer for 2 days",
+        "The update sheet appears only on the home screen, never during a round",
+        "Version number on the home screen and in the parent zone",
+        "CONFIG.CHECK_UPDATES switch to turn update checks off",
+        "releases.json, CHANGELOG.md, tools/changelog.js and docs/RELEASING.md"
+      ],
+      "fixes": []
+    },
+    {
+      "version": "1.0.0",
+      "date": "2026-10-21",
+      "title": { "en": "Reading Stars is here", "lt": "Skaitymo žvaigždės jau čia", "es": "Llega Estrellas lectoras" },
+      "highlights": [
+        {
+          "icon": "📚",
+          "title": { "en": "Read and tap", "lt": "Perskaityk ir paspausk", "es": "Lee y toca" },
+          "text": {
+            "en": "Big syllable-split words with 3 or 5 pictures that all start with the same letter.",
+            "lt": "Dideli žodžiai skiemenimis ir 3 ar 5 paveikslėliai iš tos pačios raidės.",
+            "es": "Palabras grandes por sílabas con 3 o 5 dibujos que empiezan por la misma letra."
+          }
+        },
+        {
+          "icon": "🪙",
+          "title": { "en": "Tokens worth real money", "lt": "Žetonai virsta pinigais", "es": "Fichas con valor real" },
+          "text": {
+            "en": "+1 for a correct read, −1 for a wrong tap, shown as pocket money in a big wallet.",
+            "lt": "+1 už teisingą, −1 už klaidą, o vertė pinigais matoma didelėje piniginėje.",
+            "es": "+1 por acertar, −1 por fallar, y su valor en dinero en una gran cartera."
+          }
+        },
+        {
+          "icon": "🔒",
+          "title": { "en": "Parent zone", "lt": "Tėvų zona", "es": "Zona de padres" },
+          "text": {
+            "en": "Set each kid's token value and hidden budget, top up and pay out behind a PIN.",
+            "lt": "Su PIN kodu nustatykite žetono vertę, slaptą biudžetą, papildykite ir išmokėkite.",
+            "es": "Con PIN: valor de ficha, presupuesto oculto, recargas y canjes por niño."
+          }
+        }
+      ],
+      "changes": [
+        "Picture-and-word reading game for Scriptable with Lithuanian, English and Spanish (about 190–200 words each)",
+        "Beginner (ages 4–6): 1–2 syllables, 3 pictures; Expert (ages 9–11): 3–6 syllables, 5 pictures",
+        "All pictures in a round start with the word's first letter",
+        "Kid profiles with name, level and avatar; leaderboard with podium and all-time points",
+        "+1 token for a correct first try, −1 for each wrong tap (never below 0)",
+        "Big animated wallet showing tokens and their money value",
+        "Parent zone behind a 4-digit PIN: per-kid token value, hidden budget, top-ups, payouts and history",
+        "Kids are told to ask for a top-up when the budget can't cover their tokens",
+        "Word letter style, currency and sound settings",
+        "One-line installer (install.js)"
+      ],
+      "fixes": [
+        "Black screen on start caused by the old save loop",
+        "Parent zone could not open after adding a player in the same session"
+      ]
+    }
+  ]
+}

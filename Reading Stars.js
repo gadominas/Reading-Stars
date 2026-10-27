@@ -6,6 +6,8 @@
  * READING STARS ⭐ — a picture-and-word reading game for kids (Scriptable, iOS)
  *
  * - Three pictures on top, one big word below split into syllables (na-mas, kar-vė).
+ * - In-app updates: checks releases.json on GitHub at start and offers new versions
+ *   (Update now / Later = 2 days). See docs/RELEASING.md.
  * - Kid taps the picture that matches the word. First-try correct answer = +1 token,
  *   every wrong tap = −1 token (never below 0). Beginner sees 3 pictures, Expert sees 5.
  * - Languages: Lithuanian, English, Spanish (switch on the home screen).
@@ -21,6 +23,20 @@
  * Data is saved to: iCloud Drive › Scriptable › ReadingStars › data.json
  * (falls back to local Scriptable storage when iCloud is off).
  */
+
+// ───────────────────────── Settings & version ─────────────────────────
+
+const CONFIG = {
+  CHECK_UPDATES: true, // offer new versions from GitHub (asks again 2 days after "Later")
+};
+
+// This build's version. When releasing, bump it and add a matching entry to releases.json.
+const VERSION = '1.1.0';
+const APP_ID = 'reading-stars';   // unique per app, never changes
+const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
+const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
+const UPDATE_SNOOZE_MS = 2 * 24 * 3600 * 1000;   // "Later" = 2 days
+const KC_UPDATE_SNOOZE = 'reading-stars-update-snooze';   // Keychain key, unique per app
 
 // ───────────────────────── Storage (native side) ─────────────────────────
 
@@ -77,6 +93,94 @@ function saveData(json) {
 
 function sleep(ms) {
   return new Promise((resolve) => Timer.schedule(ms, false, resolve));
+}
+
+// ───────────────────────── In-app updates (native side) ─────────────────────────
+
+// Compares "1.10.0" and "1.9.2" as numbers: returns 1, 0 or -1.
+function cmpVer(a, b) {
+  const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d > 0 ? 1 : -1;
+  }
+  return 0;
+}
+
+function updateSnoozed() {
+  try {
+    return Keychain.contains(KC_UPDATE_SNOOZE) && Date.now() < +Keychain.get(KC_UPDATE_SNOOZE);
+  } catch (e) {
+    return false;
+  }
+}
+
+function snoozeUpdate() {
+  try {
+    Keychain.set(KC_UPDATE_SNOOZE, String(Date.now() + UPDATE_SNOOZE_MS));
+  } catch (e) {}
+}
+
+function clearUpdateSnooze() {
+  try {
+    if (Keychain.contains(KC_UPDATE_SNOOZE)) Keychain.remove(KC_UPDATE_SNOOZE);
+  } catch (e) {}
+}
+
+// Never throws: any failure just means no update is offered this time.
+async function checkForUpdate() {
+  if (!CONFIG.CHECK_UPDATES || updateSnoozed()) return null;
+  try {
+    const req = new Request(`${REPO_RAW}releases.json?t=${Date.now()}`);
+    req.timeoutInterval = 10;
+    const data = await req.loadJSON();
+    if (!data || !Array.isArray(data.releases)) return null;
+    const newer = data.releases
+      .filter((r) => r && r.version && cmpVer(r.version, VERSION) > 0)
+      .sort((x, y) => cmpVer(y.version, x.version));
+    if (!newer.length) return null;
+    // The newest release's highlights first, topped up from older versions the user skipped.
+    const highlights = [];
+    newer.forEach((r) =>
+      (r.highlights || []).forEach((h) => {
+        if (highlights.length < 3 && h && h.title) highlights.push(h);
+      })
+    );
+    return {
+      current: VERSION, latest: newer[0].version, title: newer[0].title || '',
+      skipped: newer.length, highlights, script: data.script || SCRIPT_FILE,
+    };
+  } catch (e) {
+    console.log('Update check skipped: ' + e);
+    return null;
+  }
+}
+
+// Downloads the new script, checks it three ways, then writes it over the running script.
+async function applyUpdate(info) {
+  const req = new Request(`${REPO_RAW}${encodeURI((info && info.script) || SCRIPT_FILE)}?t=${Date.now()}`);
+  req.timeoutInterval = 30;
+  const code = await req.loadString();
+  const okStatus = req.response && req.response.statusCode === 200;
+  const m = code && code.match(/const VERSION = '([^']+)'/);
+  // 1. A real script for THIS app, not an error page or another project's file
+  if (!okStatus || !m || !code.includes(`const APP_ID = '${APP_ID}'`)) {
+    throw new Error("The download didn't look right. Try again later.");
+  }
+  // 2. Actually newer: GitHub's cache can serve the old file for a few minutes after a release
+  if (cmpVer(m[1], VERSION) <= 0) {
+    throw new Error('GitHub is still serving the old version. Try again in a few minutes.');
+  }
+  // 3. Write it where the running script lives (iCloud or on the phone)
+  const path = module.filename;
+  let sfm = FileManager.local();
+  try {
+    const ic = FileManager.iCloud();
+    if (path.startsWith(ic.documentsDirectory())) sfm = ic;
+  } catch (e) {}
+  sfm.writeString(path, code);
+  return m[1]; // the version now installed
 }
 
 // ───────────────────────── Styles ─────────────────────────
@@ -300,6 +404,23 @@ summary{font-weight:800;color:var(--muted)}
 @keyframes numDown{0%{transform:scale(1)}30%{transform:scale(.88);color:#D9483A}100%{transform:scale(1)}}
 @keyframes floatUp{0%{opacity:0;transform:translateY(12px) scale(.8)}20%{opacity:1;transform:translateY(0) scale(1.15)}100%{opacity:0;transform:translateY(-60px) scale(1)}}
 @keyframes floatDown{0%{opacity:0;transform:translateY(-6px) scale(1.1)}20%{opacity:1}100%{opacity:0;transform:translateY(56px) scale(.9)}}
+.ver{text-align:center;color:rgba(255,255,255,.85);font-weight:800;font-size:13px;margin:22px 0 0}
+#upd{position:fixed;inset:0;z-index:85;background:rgba(36,38,74,.55);display:flex;align-items:flex-end;animation:fade .2s}
+.updp{width:100%;max-width:760px;margin:0 auto;background:#fff;border-radius:26px 26px 0 0;padding:20px 18px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;animation:updUp .35s cubic-bezier(.2,.8,.3,1)}
+.updtag{align-self:flex-start;background:var(--grape);color:#fff;font-size:13px;font-weight:900;padding:5px 12px;border-radius:999px}
+.updt{margin:6px 0 0;font-size:24px;line-height:1.2;font-weight:900}
+.upds{color:var(--muted);font-size:15px;font-weight:700}
+.updl{display:flex;flex-direction:column;gap:10px;margin:8px 0 6px}
+.updi{display:flex;gap:12px;align-items:flex-start;background:#F2F4FA;border-radius:16px;padding:12px}
+.updic{font-size:28px;line-height:1.1;flex:none}
+.updi b{display:block;font-size:16px;font-weight:900}
+.updi span{display:block;color:var(--muted);font-size:14px;line-height:1.35;margin-top:2px;font-weight:700}
+.updmsg{font-weight:800;font-size:15px;line-height:1.4}
+.updmsg:empty{display:none}
+.updgo,.updlater{width:100%}
+.updlater{background:#F2F4FA;box-shadow:none}
+.updlater[hidden]{display:none}
+@keyframes updUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(10px)}60%{transform:translateX(-7px)}80%{transform:translateX(7px)}}
 @keyframes pop{0%{transform:scale(.8)}60%{transform:scale(1.12) rotate(-3deg)}100%{transform:scale(1.04)}}
@@ -407,6 +528,19 @@ function webApp() {
       currency: "Currency",
       invalidAmount: "Enter a number, e.g. 0.10",
       saved: "Saved ✅",
+      updNew: (v) => `New version ${v}`,
+      updDefaultTitle: "An update is ready",
+      updYouHave: (cur, more) => `You have ${cur}${more}. Here’s what you get:`,
+      updMore: (n) => ` (and ${n} more update${n > 1 ? "s" : ""})`,
+      updNow: "Update now",
+      updLater: "Later, remind me in 2 days",
+      updUpdating: "Updating…",
+      updatedTo: (v) => `Updated to ${v}`,
+      updDone: "✓ Done. Close the app and open it again to start using the new version.",
+      updGotIt: "Got it",
+      updRetry: "Try again",
+      updFailed: "Update failed",
+      version: "Version",
       sample: "ap-ple",
     },
     es: {
@@ -481,6 +615,19 @@ function webApp() {
       currency: "Moneda",
       invalidAmount: "Escribe un número, p. ej. 0,10",
       saved: "Guardado ✅",
+      updNew: (v) => `Nueva versión ${v}`,
+      updDefaultTitle: "Hay una actualización",
+      updYouHave: (cur, more) => `Tienes la ${cur}${more}. Esto es lo nuevo:`,
+      updMore: (n) => ` (y ${n} actualizaci${n > 1 ? "ones" : "ón"} más)`,
+      updNow: "Actualizar ahora",
+      updLater: "Más tarde, recuérdamelo en 2 días",
+      updUpdating: "Actualizando…",
+      updatedTo: (v) => `Actualizado a ${v}`,
+      updDone: "✓ Listo. Cierra la app y vuelve a abrirla para usar la nueva versión.",
+      updGotIt: "Entendido",
+      updRetry: "Reintentar",
+      updFailed: "Error al actualizar",
+      version: "Versión",
       sample: "ga-to",
     },
     lt: {
@@ -555,6 +702,19 @@ function webApp() {
       currency: "Valiuta",
       invalidAmount: "Įveskite skaičių, pvz., 0,10",
       saved: "Išsaugota ✅",
+      updNew: (v) => `Nauja versija ${v}`,
+      updDefaultTitle: "Paruoštas atnaujinimas",
+      updYouHave: (cur, more) => `Jūs turite ${cur}${more}. Štai kas naujo:`,
+      updMore: (n) => ` (ir dar ${n} atnaujinim${n % 10 === 1 && n % 100 !== 11 ? "as" : n % 10 >= 2 && (n % 100 < 10 || n % 100 >= 20) ? "ai" : "ų"})`,
+      updNow: "Atnaujinti dabar",
+      updLater: "Vėliau, priminti po 2 dienų",
+      updUpdating: "Atnaujinama…",
+      updatedTo: (v) => `Atnaujinta į ${v}`,
+      updDone: "✓ Atlikta. Uždarykite programėlę ir atidarykite iš naujo, kad pradėtumėte naudoti naują versiją.",
+      updGotIt: "Supratau",
+      updRetry: "Bandyti dar kartą",
+      updFailed: "Nepavyko atnaujinti",
+      version: "Versija",
       sample: "na-mas",
     },
   };
@@ -690,18 +850,49 @@ function webApp() {
     };
   }
 
-  // ── Bridge to Scriptable: a cancelled "navigation" carries the data to the native side ──
+  // ── Bridge to Scriptable: a cancelled "navigation" carries messages to the native side ──
+  // Messages are queued and sent one at a time so two never cancel each other.
+  const navQueue = [];
+  let navBusy = false;
+  function bridge(url) {
+    if (url.indexOf("readingstars://save?") === 0) {
+      for (let i = navQueue.length - 1; i >= 0; i--) if (navQueue[i].indexOf("readingstars://save?") === 0) navQueue.splice(i, 1);
+    }
+    navQueue.push(url);
+    pumpBridge();
+  }
+  function pumpBridge() {
+    if (navBusy || !navQueue.length) return;
+    navBusy = true;
+    const url = navQueue.shift();
+    try {
+      window.location.href = url;
+    } catch (e) {}
+    setTimeout(() => {
+      navBusy = false;
+      pumpBridge();
+    }, 150);
+  }
+  // send(action, params, callback): the native side answers through window.__done(req, ok, message)
+  let reqSeq = 0;
+  const replies = {};
+  function send(action, params, cb) {
+    const id = "r" + ++reqSeq + "-" + Date.now();
+    if (cb) replies[id] = cb;
+    bridge("readingstars://" + action + "?p=" + encodeURIComponent(JSON.stringify(Object.assign({ req: id }, params || {}))));
+  }
+  window.__done = function (id, ok, msg) {
+    const cb = replies[id];
+    delete replies[id];
+    if (cb) cb(ok, msg);
+  };
   let saveTimer = null;
   window.__flush = function () {
     return JSON.stringify(state);
   };
   function persist() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      try {
-        window.location.href = "readingstars://save?d=" + encodeURIComponent(JSON.stringify(state));
-      } catch (e) {}
-    }, 250);
+    saveTimer = setTimeout(() => bridge("readingstars://save?d=" + encodeURIComponent(JSON.stringify(state))), 250);
   }
 
   // ── Helpers ──
@@ -788,6 +979,75 @@ function webApp() {
       m.remove();
     });
     document.body.appendChild(m);
+  }
+
+  // ── In-app update sheet (shown on the home screen only, never during a round) ──
+  const APP_VERSION = window.__APP_VERSION || "";
+  let pendingUpd = null;
+  function locText(v) {
+    if (v && typeof v === "object") return v[state.lang] || v.en || Object.values(v)[0] || "";
+    return v == null ? "" : String(v);
+  }
+  window.__showUpdate = function (u) {
+    if (!u || !u.latest) return;
+    pendingUpd = u;
+    maybeShowUpdate();
+  };
+  function maybeShowUpdate() {
+    const u = pendingUpd;
+    if (!u || view.name !== "home" || document.getElementById("upd") || document.querySelector(".modal")) return;
+    const ov = document.createElement("div");
+    ov.id = "upd";
+    const cards = (u.highlights || [])
+      .slice(0, 3)
+      .map((h) => `<div class="updi"><span class="updic">${esc(locText(h.icon) || "✨")}</span><div><b>${esc(locText(h.title))}</b><span>${esc(locText(h.text))}</span></div></div>`)
+      .join("");
+    const more = u.skipped > 1 ? t("updMore", u.skipped - 1) : "";
+    ov.innerHTML = `<div class="updp" role="dialog" aria-label="${esc(t("updDefaultTitle"))}">
+      <div class="updtag">${esc(t("updNew", u.latest))}</div>
+      <h2 class="updt">${esc(locText(u.title) || t("updDefaultTitle"))}</h2>
+      <div class="upds">${esc(t("updYouHave", u.current, more))}</div>
+      <div class="updl">${cards}</div>
+      <div class="updmsg" aria-live="polite"></div>
+      <button class="btn go big updgo" data-action="updNow">⬆️ ${esc(t("updNow"))}</button>
+      <button class="btn updlater" data-action="updLater">${esc(t("updLater"))}</button></div>`;
+    ov.addEventListener("click", (e) => {
+      if (e.target === ov) updLater(); // outside = Later
+    });
+    document.body.appendChild(ov);
+  }
+  function updLater() {
+    const ov = document.getElementById("upd");
+    if (!ov) return;
+    ov.remove();
+    pendingUpd = null;
+    send("update-later", {});
+  }
+  function updNow(btn) {
+    const ov = document.getElementById("upd");
+    if (!ov || btn.disabled) return;
+    const msg = ov.querySelector(".updmsg");
+    const later = ov.querySelector(".updlater");
+    btn.disabled = true;
+    btn.textContent = t("updUpdating");
+    later.hidden = true;
+    msg.textContent = "";
+    send("update-now", {}, (ok, res) => {
+      if (ok) {
+        pendingUpd = null;
+        ov.querySelector(".updtag").textContent = t("updatedTo", res);
+        msg.textContent = t("updDone");
+        btn.disabled = false;
+        btn.textContent = t("updGotIt");
+        btn.dataset.action = "updClose";
+        sndWin();
+      } else {
+        msg.textContent = t("updFailed") + ": " + (res || "");
+        btn.disabled = false;
+        btn.textContent = t("updRetry");
+        later.hidden = false;
+      }
+    });
   }
 
   // ── Money (all amounts stored in cents; rate = cents per token) ──
@@ -1100,6 +1360,7 @@ function webApp() {
     try {
       app.innerHTML = VIEWS[view.name]();
       if (view.name === "game") fitWord();
+      if (view.name === "home") setTimeout(maybeShowUpdate, 250);
     } catch (e) {
       showError(e);
       if (view.name !== "home") {
@@ -1242,7 +1503,8 @@ function webApp() {
     <nav class="bottom">
       <button class="btn big gold" data-action="board">🏆 ${esc(t("leaderboard"))}</button>
       <button class="btn big ghost" data-action="parents">🔒 ${esc(t("parents"))}</button>
-    </nav>`;
+    </nav>
+    <p class="ver">Reading Stars v${esc(APP_VERSION)}</p>`;
 
   VIEWS.edit = () => {
     const d = draft;
@@ -1392,7 +1654,7 @@ function webApp() {
         ).join("")}</div></div>
         <div class="setrow"><span>${esc(t("sound"))}</span><button class="toggle ${state.settings.sound ? "on" : ""}" data-action="toggleSound">${state.settings.sound ? "🔊" : "🔇"}</button></div>
         <button class="btn ghost wide" data-action="changePin">🔑 ${esc(t("changePin"))}</button>
-        <p class="note">${esc(t("storageNote"))}</p>
+        <p class="note">${esc(t("storageNote"))}<br>${esc(t("version"))}: ${esc(APP_VERSION)}</p>
       </div>`;
   };
 
@@ -1627,6 +1889,16 @@ function webApp() {
       if (!requireParent()) return;
       openPin("set1", "parent");
     },
+    updNow(b) {
+      updNow(b);
+    },
+    updLater() {
+      updLater();
+    },
+    updClose() {
+      const ov = document.getElementById("upd");
+      if (ov) ov.remove();
+    },
   };
 
   document.addEventListener("click", (e) => {
@@ -1688,6 +1960,7 @@ window.onerror = function (msg, src, line, col) {
 </script>
 <script>
 window.__INITIAL__ = ${initJSON};
+window.__APP_VERSION = ${JSON.stringify(VERSION)};
 (${webApp.toString()})();
 </script>
 </body></html>`;
@@ -1698,8 +1971,36 @@ const SAVE_SCHEME = "readingstars://save?d=";
 const initialData = await loadData();
 const webView = new WebView();
 
-// The page asks to "navigate" to readingstars://save?d=<json> whenever something changes.
-// We catch that request, write the file and cancel the navigation. No polling needed.
+let pendingUpdate = null;
+const js = (code) => webView.evaluateJavaScript(code + "; 'ok'").catch(() => {});
+const offerUpdate = () => {
+  if (pendingUpdate) js(`window.__showUpdate && window.__showUpdate(${JSON.stringify(pendingUpdate)})`);
+};
+
+// Actions sent by the page with send(action, params): readingstars://<action>?p=<json>
+async function handleAction(head, p) {
+  if (head === "update-later") {
+    snoozeUpdate();
+    pendingUpdate = null;
+    return;
+  }
+  if (head === "update-now") {
+    let ok = false;
+    let msg = "";
+    try {
+      msg = await applyUpdate(pendingUpdate);
+      ok = true;
+      pendingUpdate = null;
+      clearUpdateSnooze();
+    } catch (e) {
+      msg = String((e && e.message) || e);
+    }
+    await js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
+  }
+}
+
+// The page "navigates" to readingstars://… to talk to this side. We catch the request,
+// act on it and cancel the navigation. readingstars://save?d=<json> writes the progress file.
 webView.shouldAllowRequest = (request) => {
   const url = String((request && request.url) || "");
   if (url.indexOf(SAVE_SCHEME) === 0) {
@@ -1709,11 +2010,26 @@ webView.shouldAllowRequest = (request) => {
     try { saveData(json); } catch (e) {}
     return false;
   }
+  const m = url.match(/^readingstars:\/\/([a-z-]+)(?:\?p=(.*))?$/);
+  if (m) {
+    let p = {};
+    try { p = JSON.parse(decodeURIComponent(m[2] || "") || "{}"); } catch (e) {}
+    handleAction(m[1], p);
+    return false;
+  }
   return true;
 };
 
 await webView.loadHTML(buildHTML(initialData));
-await webView.present(true);
+const presenting = webView.present(true);
+
+// Once per run, after the first screen is on: never slows the start, never throws.
+checkForUpdate().then((u) => {
+  pendingUpdate = u;
+  offerUpdate();
+});
+
+await presenting;
 
 // Final save after the game is closed.
 try {
