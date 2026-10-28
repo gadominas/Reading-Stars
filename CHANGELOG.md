@@ -2,6 +2,22 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.2.0 (2026-10-28): Make it yours
+
+- 🎨 **Colours and a night sky**: Six colour themes for parents to choose, including a calm night sky.
+- 🔠 **Bigger or smaller text**: Text size and layout to fit every reader; the game word still fills the card.
+- 🎛 **Parent settings in one place**: Letter style, sounds, money, PIN, round sizes and updates, behind the PIN.
+
+**Changes**
+
+- New Settings sheet in the parent zone (sliders icon, behind the PIN): Appearance, Game, Money, Parent, Updates with Check now, Rounds and Built with; changes apply at once, in Lithuanian, English or Spanish
+- Appearance shared with the other apps: six palettes plus Auto (the bright Ink look stays the default), Comfortable, Compact or Tiny layout, four text sizes, rounded or serif headings
+- Night and Slate palettes give the game a night sky; picture tiles, syllable colours and the copybook word card stay the same in every palette
+- Tiny layout: one line per player on the leaderboard and in the parent zone; tap a player for the details. The game screen is unchanged
+- Pictures per round can be set: Beginner 2–4 (3), Expert 3–5 (5)
+- Letter style, currency and sounds move from data.json to settings.json in the same folder, automatically; players, tokens, budgets and the PIN stay in data.json
+- Built with: the blueprints this app follows, with links to read them
+
 ## 1.1.0 (2026-10-27): Never miss an update
 
 - 🔔 **Update reminders**: The game tells you when a new version is out, and waits two days if you tap Later.

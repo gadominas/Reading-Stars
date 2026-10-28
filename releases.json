@@ -4,13 +4,81 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.2.0",
+      "date": "2026-10-28",
+      "title": {
+        "en": "Make it yours",
+        "lt": "Pritaikyk sau",
+        "es": "A tu manera"
+      },
+      "highlights": [
+        {
+          "icon": "🎨",
+          "title": {
+            "en": "Colours and a night sky",
+            "lt": "Spalvos ir naktinis dangus",
+            "es": "Colores y cielo nocturno"
+          },
+          "text": {
+            "en": "Six colour themes for parents to choose, including a calm night sky.",
+            "lt": "Šešios spalvų temos tėvams pasirinkti, tarp jų ramus naktinis dangus.",
+            "es": "Seis temas de color para que elijan los padres, con un cielo nocturno tranquilo."
+          }
+        },
+        {
+          "icon": "🔠",
+          "title": {
+            "en": "Bigger or smaller text",
+            "lt": "Didesnis ar mažesnis tekstas",
+            "es": "Texto más grande o más pequeño"
+          },
+          "text": {
+            "en": "Text size and layout to fit every reader; the game word still fills the card.",
+            "lt": "Teksto dydis ir išdėstymas kiekvienam skaitytojui; žaidimo žodis vis tiek užpildo kortelę.",
+            "es": "Tamaño de texto y diseño para cada lector; la palabra del juego sigue llenando la tarjeta."
+          }
+        },
+        {
+          "icon": "🎛",
+          "title": {
+            "en": "Parent settings in one place",
+            "lt": "Tėvų nustatymai vienoje vietoje",
+            "es": "Ajustes de padres en un solo lugar"
+          },
+          "text": {
+            "en": "Letter style, sounds, money, PIN, round sizes and updates, behind the PIN.",
+            "lt": "Raidžių stilius, garsai, pinigai, PIN, raundų dydis ir atnaujinimai – už PIN kodo.",
+            "es": "Estilo de letra, sonidos, dinero, PIN, tamaño de rondas y actualizaciones, tras el PIN."
+          }
+        }
+      ],
+      "changes": [
+        "New Settings sheet in the parent zone (sliders icon, behind the PIN): Appearance, Game, Money, Parent, Updates with Check now, Rounds and Built with; changes apply at once, in Lithuanian, English or Spanish",
+        "Appearance shared with the other apps: six palettes plus Auto (the bright Ink look stays the default), Comfortable, Compact or Tiny layout, four text sizes, rounded or serif headings",
+        "Night and Slate palettes give the game a night sky; picture tiles, syllable colours and the copybook word card stay the same in every palette",
+        "Tiny layout: one line per player on the leaderboard and in the parent zone; tap a player for the details. The game screen is unchanged",
+        "Pictures per round can be set: Beginner 2–4 (3), Expert 3–5 (5)",
+        "Letter style, currency and sounds move from data.json to settings.json in the same folder, automatically; players, tokens, budgets and the PIN stay in data.json",
+        "Built with: the blueprints this app follows, with links to read them"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.1.0",
       "date": "2026-10-27",
-      "title": { "en": "Never miss an update", "lt": "Nepraleisk nė vieno atnaujinimo", "es": "No te pierdas ninguna novedad" },
+      "title": {
+        "en": "Never miss an update",
+        "lt": "Nepraleisk nė vieno atnaujinimo",
+        "es": "No te pierdas ninguna novedad"
+      },
       "highlights": [
         {
           "icon": "🔔",
-          "title": { "en": "Update reminders", "lt": "Priminimai apie naujienas", "es": "Avisos de novedades" },
+          "title": {
+            "en": "Update reminders",
+            "lt": "Priminimai apie naujienas",
+            "es": "Avisos de novedades"
+          },
           "text": {
             "en": "The game tells you when a new version is out, and waits two days if you tap Later.",
             "lt": "Žaidimas praneša apie naują versiją, o paspaudus „Vėliau“ palaukia dvi dienas.",
@@ -19,7 +87,11 @@
         },
         {
           "icon": "⬆️",
-          "title": { "en": "One-tap update", "lt": "Atnaujinimas vienu paspaudimu", "es": "Actualiza con un toque" },
+          "title": {
+            "en": "One-tap update",
+            "lt": "Atnaujinimas vienu paspaudimu",
+            "es": "Actualiza con un toque"
+          },
           "text": {
             "en": "Update right from the game. No need to run the installer again.",
             "lt": "Atnaujink tiesiai žaidime, diegimo scenarijaus nebereikia.",
@@ -28,7 +100,11 @@
         },
         {
           "icon": "✨",
-          "title": { "en": "See what's new first", "lt": "Pirmiausia – naujienos", "es": "Mira primero lo nuevo" },
+          "title": {
+            "en": "See what's new first",
+            "lt": "Pirmiausia – naujienos",
+            "es": "Mira primero lo nuevo"
+          },
           "text": {
             "en": "Every update shows its three best features before you install it.",
             "lt": "Prieš diegiant matysi tris geriausias atnaujinimo naujoves.",
@@ -49,11 +125,19 @@
     {
       "version": "1.0.0",
       "date": "2026-10-21",
-      "title": { "en": "Reading Stars is here", "lt": "Skaitymo žvaigždės jau čia", "es": "Llega Estrellas lectoras" },
+      "title": {
+        "en": "Reading Stars is here",
+        "lt": "Skaitymo žvaigždės jau čia",
+        "es": "Llega Estrellas lectoras"
+      },
       "highlights": [
         {
           "icon": "📚",
-          "title": { "en": "Read and tap", "lt": "Perskaityk ir paspausk", "es": "Lee y toca" },
+          "title": {
+            "en": "Read and tap",
+            "lt": "Perskaityk ir paspausk",
+            "es": "Lee y toca"
+          },
           "text": {
             "en": "Big syllable-split words with 3 or 5 pictures that all start with the same letter.",
             "lt": "Dideli žodžiai skiemenimis ir 3 ar 5 paveikslėliai iš tos pačios raidės.",
@@ -62,7 +146,11 @@
         },
         {
           "icon": "🪙",
-          "title": { "en": "Tokens worth real money", "lt": "Žetonai virsta pinigais", "es": "Fichas con valor real" },
+          "title": {
+            "en": "Tokens worth real money",
+            "lt": "Žetonai virsta pinigais",
+            "es": "Fichas con valor real"
+          },
           "text": {
             "en": "+1 for a correct read, −1 for a wrong tap, shown as pocket money in a big wallet.",
             "lt": "+1 už teisingą, −1 už klaidą, o vertė pinigais matoma didelėje piniginėje.",
@@ -71,7 +159,11 @@
         },
         {
           "icon": "🔒",
-          "title": { "en": "Parent zone", "lt": "Tėvų zona", "es": "Zona de padres" },
+          "title": {
+            "en": "Parent zone",
+            "lt": "Tėvų zona",
+            "es": "Zona de padres"
+          },
           "text": {
             "en": "Set each kid's token value and hidden budget, top up and pay out behind a PIN.",
             "lt": "Su PIN kodu nustatykite žetono vertę, slaptą biudžetą, papildykite ir išmokėkite.",
