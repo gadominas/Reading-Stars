@@ -15,28 +15,36 @@
  * - Kid profiles with name, level and avatar. Leaderboard keeps all-time points.
  * - Parent zone (4-digit PIN): pay out (reset) a kid's tokens, edit/delete players,
  *   word letter style, sounds, change PIN. Payouts never reduce leaderboard points.
+ * - Settings (sliders icon in the parent zone, behind the PIN): appearance, game, money,
+ *   updates, round sizes and Built with (github.com/gadominas/app-blueprints · settings).
  *
  * - Money: per-kid token value (e.g. 1 token = 0.10 €) and a hidden per-kid budget the parent
  *   tops up. Kids see what their tokens are worth; if the budget can't cover it they're told
  *   to ask for a top-up. Payouts take money from that kid's budget.
  *
- * Data is saved to: iCloud Drive › Scriptable › ReadingStars › data.json
- * (falls back to local Scriptable storage when iCloud is off).
+ * Data is saved to: iCloud Drive › Scriptable › ReadingStars › data.json, and choices to settings.json
+ * next to it (falls back to local Scriptable storage when iCloud is off).
  */
 
 // ───────────────────────── Settings & version ─────────────────────────
 
-const CONFIG = {
-  CHECK_UPDATES: true, // offer new versions from GitHub (asks again 2 days after "Later")
-};
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
 const UPDATE_SNOOZE_MS = 2 * 24 * 3600 * 1000;   // "Later" = 2 days
 const KC_UPDATE_SNOOZE = 'reading-stars-update-snooze';   // Keychain key, unique per app
+
+// ───────── Blueprints ─────────
+// Shared blueprints this app was built with (github.com/gadominas/app-blueprints). One line per blueprint, in this exact shape:
+// inventory tools read it without running the script, and Settings › Built with shows it.
+const BLUEPRINTS_REPO = 'https://github.com/gadominas/app-blueprints';
+const BLUEPRINTS = [
+  { id: 'in-app-updates', name: 'In-app updates', version: '1.0.0', since: '1.1.0' },
+  { id: 'settings', name: 'Settings', version: '1.0.0', since: '1.2.0' },
+];
 
 // ───────────────────────── Storage (native side) ─────────────────────────
 
@@ -79,8 +87,10 @@ async function loadData() {
 let lastSaved = null;
 function saveData(json) {
   if (typeof json !== "string" || !json || json === lastSaved) return;
+  const seen = json;
   try {
-    JSON.parse(json);
+    const d = JSON.parse(json);
+    if (d && typeof d === "object") { delete d.settings; json = JSON.stringify(d); }   // settings live in settings.json
   } catch (e) {
     return;
   }
@@ -88,7 +98,107 @@ function saveData(json) {
     if (fm.fileExists(dataPath)) fm.writeString(backupPath, fm.readString(dataPath));
   } catch (e) {}
   fm.writeString(dataPath, json);
-  lastSaved = json;
+  lastSaved = seen;
+}
+
+// ───────────────────────── Settings (app-blueprints · settings) ─────────────────────────
+// settings.json sits next to data.json (iCloud Drive › Scriptable › ReadingStars). Players, tokens,
+// budgets and the PIN stay in data.json. Changed only from the Settings sheet in the parent zone.
+const settingsPath = fm.joinPath(folder, "settings.json");
+// Defaults first, saved choices on top. The bright Ink look is the default (not Auto): it is the game's own look.
+const settings = {
+  theme: "ink", density: "comfortable", font: "sans", textSize: 1,
+  wordCase: "cap", sound: true, currency: "EUR",
+  checkUpdates: true,   // offer new versions from GitHub (asks again 2 days after "Later")
+  cfg: {},
+};
+const saveSettings = () => { try { fm.writeString(settingsPath, JSON.stringify(settings)); return true; } catch (e) { return false; } };
+const CURRENCY_CODES = ["EUR", "USD", "GBP"];
+// Every key the page may change, with its check (all apply at once on the page).
+const SET_KEYS = {
+  theme: (v) => v === "auto" || !!PALETTES[v], density: (v) => ["comfortable", "compact", "tiny"].includes(v),
+  font: (v) => ["sans", "serif"].includes(v), textSize: (v) => [0.92, 1, 1.12, 1.25].includes(+v),
+  wordCase: (v) => ["cap", "upper", "lower"].includes(v), currency: (v) => CURRENCY_CODES.includes(v),
+  sound: "bool", checkUpdates: "bool",
+};
+function setSetting(k, v) {
+  const s = SET_KEYS[k];
+  if (!s) return false;
+  if (s === "bool") v = v === true || v === "true";
+  else if (!s(v)) return false;
+  if (k === "textSize") v = +v;
+  settings[k] = v;
+  return true;
+}
+async function loadSettings(data) {
+  await ensureDownloaded(settingsPath);
+  let saved = null;
+  try { if (fm.fileExists(settingsPath)) saved = JSON.parse(fm.readString(settingsPath)); } catch (e) {}
+  if (saved && typeof saved === "object") Object.assign(settings, saved);
+  else {   // first run of 1.2: letter style, currency and sounds move over from data.json
+    const old = (data && data.settings) || {};
+    for (const k of ["wordCase", "currency", "sound"]) if (old[k] !== undefined) settings[k] = old[k];
+    saveSettings();
+  }
+  const d = { theme: "ink", density: "comfortable", font: "sans", textSize: 1, wordCase: "cap", currency: "EUR" };
+  for (const k of Object.keys(d)) if (!setSetting(k, settings[k])) settings[k] = d[k];
+  settings.sound = settings.sound !== false;
+  settings.cfg = settings.cfg && typeof settings.cfg === "object" ? settings.cfg : {};
+}
+// Everything tunable lives here; the Settings screen edits these (stored in settings.cfg, defaults below).
+// Labels come in each app language.
+const CONFIG = [
+  [{ en: "Rounds", lt: "Raundai", es: "Rondas" }, [
+    { k: "beginnerPics", def: 3, min: 2, max: 4, step: 1,
+      en: { label: "Pictures per round, Beginner", unit: "pictures" }, lt: { label: "Paveikslėlių raunde, pradedantiesiems", unit: "pav." }, es: { label: "Imágenes por ronda, Principiante", unit: "imágenes" } },
+    { k: "expertPics", def: 5, min: 3, max: 5, step: 1,
+      en: { label: "Pictures per round, Expert", unit: "pictures" }, lt: { label: "Paveikslėlių raunde, ekspertams", unit: "pav." }, es: { label: "Imágenes por ronda, Experto", unit: "imágenes" } },
+  ]],
+];
+const CFG_FLAT = CONFIG.flatMap(([, items]) => items);
+const cfgDef = (k) => CFG_FLAT.find((x) => x.k === k);
+const cfg = (k) => { const v = settings.cfg && settings.cfg[k]; return v === undefined ? cfgDef(k).def : v; };
+const cfgValues = () => Object.fromEntries(CFG_FLAT.map((d) => [d.k, cfg(d.k)]));
+function setCfg(k, v) {
+  const d = cfgDef(k);
+  if (!d) return "Unknown setting";
+  settings.cfg = settings.cfg || {};
+  if (v === null) { delete settings.cfg[k]; return ""; }   // Reset
+  v = Number(String(v).replace(",", "."));   // accept a decimal comma
+  if (!isFinite(v)) v = d.def;
+  v = Math.min(d.max, Math.max(d.min, v));
+  v = d.step < 1 ? Math.round(v / d.step) * d.step : Math.round(v);
+  v = Number(v.toFixed(2));
+  if (v === d.def) delete settings.cfg[k]; else settings.cfg[k] = v;   // store only what differs
+  return "";
+}
+// Six palettes on the shared colour tokens. The game's purple is the accent in all of them; sky and sky2 are this
+// app's own extra colours (the backdrop: day sky in the light palettes, night sky in Slate and Night). Picture tiles,
+// syllable colours, the copybook word card, avatars and confetti are fixed artwork.
+const PALETTES = {
+  ink:      { paper: "#FFFDF5", sheet: "#FFFFFF", ink: "#24264A", ink2: "#3D4070", muted: "#6B6E91", rule: "#E3E6F0", signal: "#7C5CFA", signalWash: "#ECE6FF", amber: "#9A6200", amberWash: "#FFF3C4", danger: "#D9483A", sky: "#4FB3F6", sky2: "#7CCBFF", scheme: "light" },
+  sepia:    { paper: "#F7EEDB", sheet: "#FBF5E6", ink: "#2A1F14", ink2: "#4B3B2A", muted: "#73604A", rule: "#E1D3B5", signal: "#6E4FD8", signalWash: "#E8E0F5", amber: "#A16207", amberWash: "#F6E5BF", danger: "#B4372B", sky: "#E2A85C", sky2: "#F0C88A", scheme: "light" },
+  mint:     { paper: "#F4FBF7", sheet: "#FFFFFF", ink: "#0D2318", ink2: "#2C4A3B", muted: "#556D60", rule: "#D3E2D9", signal: "#7C5CFA", signalWash: "#ECE6FF", amber: "#B45309", amberWash: "#FBEED8", danger: "#C2412D", sky: "#3CC48C", sky2: "#7EDDB4", scheme: "light" },
+  contrast: { paper: "#FFFFFF", sheet: "#FFFFFF", ink: "#000000", ink2: "#111111", muted: "#333333", rule: "#9A9A9A", signal: "#4B1FD1", signalWash: "#E6DEFF", amber: "#7A4B00", amberWash: "#FFEEC2", danger: "#A30000", sky: "#1565C0", sky2: "#1E88E5", scheme: "light" },
+  slate:    { paper: "#22272E", sheet: "#2A3038", ink: "#E6EDF3", ink2: "#C5CED8", muted: "#9AA5B1", rule: "#3B434D", signal: "#A08CFF", signalWash: "#2E2850", amber: "#E3B341", amberWash: "#3A2F12", danger: "#FF8A7A", sky: "#26323F", sky2: "#3A4A5C", scheme: "dark" },
+  night:    { paper: "#161A33", sheet: "#1E2342", ink: "#EEF0FF", ink2: "#CDD1F0", muted: "#A3A8C9", rule: "#30365C", signal: "#A08CFF", signalWash: "#2C2560", amber: "#FFD23F", amberWash: "#3A300C", danger: "#FF7B6E", sky: "#0B1E3F", sky2: "#1B2F5C", scheme: "dark" },
+};
+const PALETTE_CSS = Object.entries(PALETTES).map(([k, p]) => `[data-theme=${k}]{--paper:${p.paper};--sheet:${p.sheet};--ink:${p.ink};--ink-2:${p.ink2};--muted:${p.muted};--rule:${p.rule};--signal:${p.signal};--signal-wash:${p.signalWash};--amber:${p.amber};--amber-wash:${p.amberWash};--danger:${p.danger};--sky:${p.sky};--sky2:${p.sky2};color-scheme:${p.scheme}}`).join("\n");
+// The look for the first paint, so the page never flashes the default palette (the page keeps Auto live afterwards).
+function lookState() {
+  return { theme: settings.theme, density: settings.density, font: settings.font, textSize: settings.textSize,
+           shown: settings.theme === "auto" ? (Device.isUsingDarkAppearance() ? "night" : "ink") : settings.theme };
+}
+// What the game reads from settings, and what the Settings sheet shows.
+const gameSettings = () => ({ wordCase: settings.wordCase, sound: settings.sound, currency: settings.currency });
+function settingsState() {
+  return {
+    settings: Object.fromEntries(Object.keys(SET_KEYS).map((k) => [k, settings[k]])),
+    cfg: cfgValues(),
+    cfgSchema: CONFIG.map(([title, items]) => ({ title, items })),
+    palettes: PALETTES, currencies: CURRENCY_CODES, version: VERSION, appName: "Reading Stars",
+    blueprints: BLUEPRINTS, blueprintsRepo: BLUEPRINTS_REPO,
+  };
 }
 
 function sleep(ms) {
@@ -130,7 +240,7 @@ function clearUpdateSnooze() {
 
 // Never throws: any failure just means no update is offered this time.
 async function checkForUpdate() {
-  if (!CONFIG.CHECK_UPDATES || updateSnoozed()) return null;
+  if (!settings.checkUpdates || updateSnoozed()) return null;
   try {
     const req = new Request(`${REPO_RAW}releases.json?t=${Date.now()}`);
     req.timeoutInterval = 10;
@@ -187,16 +297,22 @@ async function applyUpdate(info) {
 
 const CSS = `
 :root{
-  --sky:#4FB3F6; --sky2:#7CCBFF; --sun:#FFD23F; --sunDeep:#F5A300; --tomato:#FF6B5B;
-  --grass:#2FBF71; --grape:#7C5CFA; --paper:#FFFDF5; --ink:#24264A; --muted:#6B6E91;
-  --line:#BFD9F2; --margin:#FF8A8A;
+  --sun:#FFD23F; --sunDeep:#F5A300; --tomato:#FF6B5B; --grass:#2FBF71;
+  --line:#BFD9F2; --margin:#FF8A8A; --copybook:#FFFDF5;
+  --ts:1; --serif: ui-serif, "New York", Georgia, serif; --rounded: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+  --display: var(--rounded); --pad:18px; --gap:14px;
 }
+html[data-font=serif]{--display:var(--serif)}
+${PALETTE_CSS}
+:root{--grape:var(--signal);--chipbg:color-mix(in srgb,var(--ink) 7%,var(--sheet));--hair:color-mix(in srgb,var(--ink) 12%,var(--sheet))}
+body.d-compact{--pad:13px;--gap:10px}
+body.d-tiny{--pad:10px;--gap:8px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:manipulation}
 input{-webkit-user-select:text;user-select:text}
-html{background:#4FB3F6}
+html{background:var(--sky)}
 html,body{margin:0;min-height:100%}
 body{
-  font-family:ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;
+  font-family:var(--rounded);
   color:var(--ink);-webkit-font-smoothing:antialiased;
   background-color:var(--sky);
   background-image:
@@ -204,94 +320,94 @@ body{
     linear-gradient(180deg,var(--sky) 0%,var(--sky2) 100%);
   background-size:26px 26px,100% 100%;
 }
-#err{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:999;background:#fff;color:#C92A2A;border:3px solid #C92A2A;border-radius:14px;padding:12px;font:700 14px/1.35 -apple-system,system-ui,sans-serif;white-space:pre-wrap;word-break:break-word}
+#err{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:999;background:var(--sheet);color:#C92A2A;border:3px solid #C92A2A;border-radius:14px;padding:12px;font:700 calc(14px * var(--ts))/1.35 -apple-system,system-ui,sans-serif;white-space:pre-wrap;word-break:break-word}
 #app{position:relative;max-width:760px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 28px)}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
 button:disabled{opacity:.4}
 :focus-visible{outline:4px solid var(--sun);outline-offset:3px}
 
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 16px;border-radius:18px;font-weight:800;font-size:18px;background:#fff;box-shadow:0 5px 0 rgba(36,38,74,.18);transition:transform .08s,box-shadow .08s}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 16px;border-radius:18px;font-weight:800;font-size:calc(18px * var(--ts));background:var(--sheet);box-shadow:0 5px 0 rgba(36,38,74,.18);transition:transform .08s,box-shadow .08s}
 .btn:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 rgba(36,38,74,.18)}
 .btn.primary{background:var(--grape);color:#fff;box-shadow:0 5px 0 #5638C9}
 .btn.go{background:var(--grass);color:#fff;box-shadow:0 5px 0 #1E8E52}
 .btn.danger{background:var(--tomato);color:#fff;box-shadow:0 5px 0 #D9483A}
 .btn.gold{background:var(--sun);color:#5C3B00;box-shadow:0 5px 0 var(--sunDeep)}
-.btn.ghost{background:#fff}
-.btn.big{font-size:20px;padding:18px 14px;border-radius:22px}
-.btn.small{font-size:15px;padding:10px 14px;border-radius:14px}
+.btn.ghost{background:var(--sheet)}
+.btn.big{font-size:calc(20px * var(--ts));padding:18px 14px;border-radius:22px}
+.btn.small{font-size:calc(15px * var(--ts));padding:10px 14px;border-radius:14px}
 .btn.wide{width:100%}
 
 /* Home */
 .hero{text-align:center;color:#fff;padding:4px 0 2px}
-.logo{display:inline-flex;gap:2px;font-size:40px}
+.logo{display:inline-flex;gap:2px;font-size:calc(40px * var(--ts))}
 .logo span{display:inline-block;animation:float 3.2s ease-in-out infinite}
 .logo span:nth-child(2){animation-delay:.4s}
-h1{margin:2px 0 14px;font-size:36px;font-weight:900;letter-spacing:.3px;text-shadow:0 3px 0 rgba(36,38,74,.18)}
+h1{margin:2px 0 14px;font-family:var(--display);font-size:calc(36px * var(--ts));font-weight:900;letter-spacing:.3px;text-shadow:0 3px 0 rgba(36,38,74,.18)}
 .langs{display:inline-flex;gap:6px;background:rgba(255,255,255,.25);padding:6px;border-radius:20px}
-.lang{border-radius:14px;padding:8px 12px;font-size:16px;font-weight:900;color:#fff;display:flex;gap:6px;align-items:center}
-.lang .flag{font-size:22px}
-.lang.on{background:#fff;color:var(--ink);box-shadow:0 3px 0 rgba(36,38,74,.15)}
-.section{color:#fff;text-align:center;font-size:24px;font-weight:900;margin:24px 0 14px;text-shadow:0 2px 0 rgba(36,38,74,.15)}
-.empty{color:#fff;text-align:center;font-size:19px;font-weight:800}
+.lang{border-radius:14px;padding:8px 12px;font-size:calc(16px * var(--ts));font-weight:900;color:#fff;display:flex;gap:6px;align-items:center}
+.lang .flag{font-size:calc(22px * var(--ts))}
+.lang.on{background:var(--sheet);color:var(--ink);box-shadow:0 3px 0 rgba(36,38,74,.15)}
+.section{color:#fff;text-align:center;font-family:var(--display);font-size:calc(24px * var(--ts));font-weight:900;margin:24px 0 14px;text-shadow:0 2px 0 rgba(36,38,74,.15)}
+.empty{color:#fff;text-align:center;font-size:calc(19px * var(--ts));font-weight:800}
 .kids{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
-.kid{background:#fff;border-radius:28px;padding:16px 10px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 6px 0 rgba(36,38,74,.14);transition:transform .1s}
+.kid{background:var(--sheet);border-radius:28px;padding:16px 10px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 6px 0 rgba(36,38,74,.14);transition:transform .1s}
 .kid:active{transform:scale(.96)}
 .kid.add{background:rgba(255,255,255,.28);border:3px dashed #fff;box-shadow:none;color:#fff;justify-content:center}
-.ava{width:78px;height:78px;border-radius:50%;display:grid;place-items:center;font-size:46px;line-height:1;flex:none}
-.ava.plus{background:rgba(255,255,255,.4);font-size:34px}
-.ava.sm{width:40px;height:40px;font-size:23px}
-.kname{font-weight:900;font-size:20px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.stats{display:flex;gap:12px;font-weight:900;font-size:21px}
-.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap}
+.ava{width:78px;height:78px;border-radius:50%;display:grid;place-items:center;font-size:calc(46px * var(--ts));line-height:1;flex:none}
+.ava.plus{background:rgba(255,255,255,.4);font-size:calc(34px * var(--ts))}
+.ava.sm{width:40px;height:40px;font-size:calc(23px * var(--ts))}
+.kname{font-weight:900;font-size:calc(20px * var(--ts));max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stats{display:flex;gap:12px;font-weight:900;font-size:calc(21px * var(--ts))}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:calc(13px * var(--ts));font-weight:800;white-space:nowrap}
 .badge.beginner{background:#D8F5E5;color:#18794A}
 .badge.expert{background:#E9E2FF;color:#5232C7}
 .bottom{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:28px}
 
 /* Generic bars & panels */
 .bar{display:grid;grid-template-columns:48px 1fr 48px;align-items:center;gap:8px;margin-bottom:16px;color:#fff}
-.bar h2{margin:0;text-align:center;font-size:23px;font-weight:900;text-shadow:0 2px 0 rgba(36,38,74,.15)}
-.icon{width:48px;height:48px;border-radius:16px;background:#fff;color:var(--ink);font-size:22px;box-shadow:0 4px 0 rgba(36,38,74,.15);display:grid;place-items:center}
+.bar h2{margin:0;text-align:center;font-family:var(--display);font-size:calc(23px * var(--ts));font-weight:900;text-shadow:0 2px 0 rgba(36,38,74,.15)}
+.icon{width:48px;height:48px;border-radius:16px;background:var(--sheet);color:var(--ink);font-size:calc(22px * var(--ts));box-shadow:0 4px 0 rgba(36,38,74,.15);display:grid;place-items:center}
 .icon:active{transform:translateY(3px);box-shadow:none}
-.panel{background:#fff;border-radius:26px;padding:18px;margin-bottom:14px;box-shadow:0 6px 0 rgba(36,38,74,.12)}
-.panel h3{margin:0 0 14px;font-size:19px}
-.lbl{display:block;font-weight:900;font-size:17px;margin:18px 0 8px;color:var(--muted)}
+.panel{background:var(--sheet);border-radius:26px;padding:var(--pad);margin-bottom:var(--gap);box-shadow:0 6px 0 rgba(36,38,74,.12)}
+.panel h3{margin:0 0 14px;font-family:var(--display);font-size:calc(19px * var(--ts))}
+.lbl{display:block;font-weight:900;font-size:calc(17px * var(--ts));margin:18px 0 8px;color:var(--muted)}
 .lbl:first-child{margin-top:0}
-.input{width:100%;font:inherit;font-size:24px;font-weight:800;padding:14px 16px;border-radius:16px;border:3px solid #E3E6F0;outline:none;color:var(--ink);background:#fff}
+.input{width:100%;font:inherit;font-size:24px;font-weight:800;padding:14px 16px;border-radius:16px;border:3px solid var(--hair);outline:none;color:var(--ink);background:var(--sheet)}
 .input:focus{border-color:var(--grape)}
 .levels{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.lvl{border:3px solid #E3E6F0;border-radius:20px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff}
+.lvl{border:3px solid var(--hair);border-radius:20px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--sheet)}
 .lvl.on{border-color:var(--grape);background:#F3EFFF}
-.lvlIcon{font-size:38px}
-.lvl b{font-size:17px}
-.lvl small{color:var(--muted);font-weight:700;font-size:13px}
+.lvlIcon{font-size:calc(38px * var(--ts))}
+.lvl b{font-size:calc(17px * var(--ts))}
+.lvl small{color:var(--muted);font-weight:700;font-size:calc(13px * var(--ts))}
 .avatars{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.avpick{aspect-ratio:1;border-radius:18px;background:#F2F4FA;font-size:34px;display:grid;place-items:center;border:3px solid transparent;transition:transform .12s}
+.avpick{aspect-ratio:1;border-radius:18px;background:var(--chipbg);font-size:calc(34px * var(--ts));display:grid;place-items:center;border:3px solid transparent;transition:transform .12s}
 .avpick.on{border-color:var(--grape);background:#F3EFFF;transform:scale(1.08)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .row3{display:grid;grid-template-columns:1.5fr 1.2fr 56px;gap:8px;margin-top:14px}
 
 /* Game */
 .gamebar{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.who{flex:1;display:flex;align-items:center;gap:8px;min-width:0;color:#fff;font-weight:900;font-size:19px}
+.who{flex:1;display:flex;align-items:center;gap:8px;min-width:0;color:#fff;font-weight:900;font-size:calc(19px * var(--ts))}
 .wn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 2px 0 rgba(36,38,74,.15)}
-.pill{background:#fff;border-radius:999px;padding:8px 12px;font-weight:900;font-size:18px;box-shadow:0 4px 0 rgba(36,38,74,.15);white-space:nowrap}
+.pill{background:var(--sheet);border-radius:999px;padding:8px 12px;font-weight:900;font-size:calc(18px * var(--ts));box-shadow:0 4px 0 rgba(36,38,74,.15);white-space:nowrap}
 .coins{background:var(--sun);color:#5C3B00;box-shadow:0 4px 0 var(--sunDeep)}
 .bump{animation:bump .45s}
-.hint{text-align:center;color:#fff;font-weight:800;font-size:17px;margin:6px 0 12px;text-shadow:0 2px 0 rgba(36,38,74,.15)}
+.hint{text-align:center;color:#fff;font-weight:800;font-size:calc(17px * var(--ts));margin:6px 0 12px;text-shadow:0 2px 0 rgba(36,38,74,.15)}
 .pics{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
 .pics .pic{width:calc((100% - 24px) / 3)}
 .pic{aspect-ratio:1;border-radius:26px;border:5px solid #fff;display:grid;place-items:center;box-shadow:0 7px 0 rgba(36,38,74,.16);position:relative;transition:transform .1s,filter .2s,opacity .2s}
 .pic:active{transform:scale(.95)}
 .emo{font-size:min(19vw,112px);line-height:1}
 .pic.wrong{filter:grayscale(1);opacity:.45}
-.pic.wrong::after{content:"✖";position:absolute;top:4px;right:10px;font-size:22px;color:var(--tomato);font-weight:900}
+.pic.wrong::after{content:"✖";position:absolute;top:4px;right:10px;font-size:calc(22px * var(--ts));color:var(--tomato);font-weight:900}
 .pic.shake{animation:shake .45s}
 .pic.right{border-color:var(--sun);animation:pop .7s cubic-bezier(.3,1.6,.5,1) forwards;box-shadow:0 0 0 6px rgba(255,210,63,.7),0 0 40px 12px rgba(255,240,170,.95);z-index:2}
 
 /* The word: a strip of a school copybook */
 .wordcard{
   position:relative;margin-top:20px;border-radius:22px;padding:26px 14px 22px 30px;text-align:center;overflow:hidden;
-  background-color:var(--paper);
+  background-color:var(--copybook);
   background-image:
     linear-gradient(90deg,transparent 18px,var(--margin) 18px,var(--margin) 21px,transparent 21px),
     repeating-linear-gradient(180deg,transparent 0,transparent 31px,var(--line) 31px,var(--line) 33px);
@@ -302,7 +418,7 @@ h1{margin:2px 0 14px;font-size:36px;font-weight:900;letter-spacing:.3px;text-sha
 .dash{color:#A3A8C3;margin:0 .05em}
 .seg{display:inline-block}
 .word.cheer .seg{animation:hop .62s ease both}
-.feedback{min-height:56px;display:grid;place-items:center;text-align:center;font-weight:900;font-size:20px;margin-top:14px;color:#fff;text-shadow:0 2px 0 rgba(36,38,74,.18);line-height:1.25}
+.feedback{min-height:56px;display:grid;place-items:center;text-align:center;font-weight:900;font-size:calc(20px * var(--ts));margin-top:14px;color:#fff;text-shadow:0 2px 0 rgba(36,38,74,.18);line-height:1.25}
 .feedback.bad{animation:shake .4s}
 .gamefoot{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
 
@@ -315,30 +431,30 @@ h1{margin:2px 0 14px;font-size:36px;font-weight:900;letter-spacing:.3px;text-sha
 .flycoin{position:fixed;margin:-22px 0 0 -48px;width:96px;text-align:center;font-size:30px;font-weight:900;color:#5C3B00;text-shadow:0 2px 0 #fff;transition:transform .8s cubic-bezier(.5,-.3,.7,1),opacity .8s}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 30px);transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:16px;font-weight:800;z-index:90;animation:fade .2s;max-width:90vw;text-align:center}
 .modal{position:fixed;inset:0;background:rgba(36,38,74,.5);display:grid;place-items:center;z-index:80;padding:20px;animation:fade .2s}
-.sheet{background:#fff;border-radius:26px;padding:22px;max-width:420px;width:100%;animation:pop .35s forwards}
-.sheet .msg{font-size:19px;font-weight:800;margin-bottom:18px;line-height:1.35;text-align:center}
+.sheet{background:var(--sheet);border-radius:26px;padding:22px;max-width:420px;width:100%;animation:pop .35s forwards}
+.sheet .msg{font-size:calc(19px * var(--ts));font-weight:800;margin-bottom:18px;line-height:1.35;text-align:center}
 
 /* Leaderboard */
 .podium{display:flex;align-items:flex-end;justify-content:center;gap:10px;margin:6px 0 20px}
 .pod{flex:1;max-width:150px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;min-width:0}
-.pod .kname{font-size:17px;text-shadow:0 2px 0 rgba(36,38,74,.18)}
+.pod .kname{font-size:calc(17px * var(--ts));text-shadow:0 2px 0 rgba(36,38,74,.18)}
 .pod .ava{box-shadow:0 4px 0 rgba(36,38,74,.15)}
-.pod.p1 .ava{width:92px;height:92px;font-size:56px;animation:float 2.4s ease-in-out infinite}
-.block{width:100%;border-radius:18px 18px 8px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;font-weight:900;color:#fff}
-.block .pts{font-size:16px;text-shadow:0 1px 0 rgba(0,0,0,.2)}
+.pod.p1 .ava{width:92px;height:92px;font-size:calc(56px * var(--ts));animation:float 2.4s ease-in-out infinite}
+.block{width:100%;border-radius:18px 18px 8px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:calc(30px * var(--ts));font-weight:900;color:#fff}
+.block .pts{font-size:calc(16px * var(--ts));text-shadow:0 1px 0 rgba(0,0,0,.2)}
 .pod.p1 .block{height:124px;background:linear-gradient(#FFE066,#F5A300)}
 .pod.p2 .block{height:94px;background:linear-gradient(#E9ECF5,#A9AFC6)}
 .pod.p3 .block{height:74px;background:linear-gradient(#FFC59E,#E8742A)}
-.lrow{display:flex;align-items:center;gap:12px;background:#fff;border-radius:20px;padding:10px 14px;margin-bottom:10px;box-shadow:0 4px 0 rgba(36,38,74,.12)}
-.rank{width:34px;text-align:center;font-weight:900;font-size:22px;flex:none}
+.lrow{display:flex;align-items:center;gap:12px;background:var(--sheet);border-radius:20px;padding:10px 14px;margin-bottom:var(--gap);box-shadow:0 4px 0 rgba(36,38,74,.12)}
+.rank{width:34px;text-align:center;font-weight:900;font-size:calc(22px * var(--ts));flex:none}
 .lmain{flex:1;min-width:0}
-.lmain .kname{font-size:18px}
-.lscore{text-align:right;font-weight:900;font-size:20px;white-space:nowrap}
-.lscore small{display:block;font-size:13px;color:var(--muted);font-weight:800}
+.lmain .kname{font-size:calc(18px * var(--ts))}
+.lscore{text-align:right;font-weight:900;font-size:calc(20px * var(--ts));white-space:nowrap}
+.lscore small{display:block;font-size:calc(13px * var(--ts));color:var(--muted);font-weight:800}
 
 /* PIN */
 .center{text-align:center}
-.pintitle{font-size:21px;font-weight:900;margin-bottom:18px}
+.pintitle{font-size:calc(21px * var(--ts));font-weight:900;margin-bottom:18px}
 .dots{display:flex;justify-content:center;gap:16px;margin-bottom:10px}
 .dot{width:22px;height:22px;border-radius:50%;border:3px solid var(--grape)}
 .dot.on{background:var(--grape)}
@@ -346,52 +462,52 @@ h1{margin:2px 0 14px;font-size:36px;font-weight:900;letter-spacing:.3px;text-sha
 .pinmsg{min-height:24px;font-weight:800;color:var(--muted);margin-bottom:12px}
 .pinmsg.err{color:var(--tomato)}
 .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:300px;margin:0 auto}
-.key{height:66px;border-radius:20px;background:#F2F4FA;font-size:28px;font-weight:900;box-shadow:0 4px 0 rgba(36,38,74,.12)}
+.key{height:66px;border-radius:20px;background:var(--chipbg);font-size:calc(28px * var(--ts));font-weight:900;box-shadow:0 4px 0 rgba(36,38,74,.12)}
 .key:active{transform:translateY(3px);box-shadow:none}
 
 /* Parent zone */
 .pkhead{display:flex;align-items:center;gap:12px}
-.pkhead .kname{font-size:21px}
+.pkhead .kname{font-size:calc(21px * var(--ts))}
 .pkstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;text-align:center}
 .pkstats div{background:#F6F7FB;border-radius:14px;padding:8px 4px}
-.pkstats b{display:block;font-size:20px}
-.pkstats small{color:var(--muted);font-weight:800;font-size:12px}
+.pkstats b{display:block;font-size:calc(20px * var(--ts))}
+.pkstats small{color:var(--muted);font-weight:800;font-size:calc(12px * var(--ts))}
 details{margin-top:14px}
 summary{font-weight:800;color:var(--muted)}
-.hist{display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid #EEF0F6;font-weight:700}
+.hist{display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--hair);font-weight:700}
 .setrow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;font-weight:800}
 .seg3{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.chip{padding:8px 10px;border-radius:12px;background:#F2F4FA;font-weight:900;font-size:15px}
+.chip{padding:8px 10px;border-radius:12px;background:var(--chipbg);font-weight:900;font-size:calc(15px * var(--ts))}
 .chip.on{background:var(--grape);color:#fff}
-.toggle{font-size:24px;padding:6px 14px;border-radius:14px;background:#F2F4FA}
+.toggle{font-size:calc(24px * var(--ts));padding:6px 14px;border-radius:14px;background:var(--chipbg)}
 .toggle.on{background:#D8F5E5}
-.note{color:var(--muted);font-size:13px;font-weight:700;margin:16px 0 0;line-height:1.4}
+.note{color:var(--muted);font-size:calc(13px * var(--ts));font-weight:700;margin:16px 0 0;line-height:1.4}
 
-.worth{font-weight:900;font-size:19px;color:#18794A;background:#E6F8EE;border-radius:999px;padding:3px 10px}
-.warnchip{font-weight:800;font-size:12px;color:#B42318;background:#FFE4E1;border-radius:999px;padding:4px 10px;text-align:center;line-height:1.25}
-.piggy{display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border-radius:16px;padding:8px 12px;margin:0 0 6px;font-weight:900;font-size:17px;color:#18794A;box-shadow:0 4px 0 rgba(36,38,74,.12);text-align:center}
-.piggy.warn small{color:#B42318;font-size:14px;line-height:1.3;font-weight:800}
+.worth{font-weight:900;font-size:calc(19px * var(--ts));color:#18794A;background:#E6F8EE;border-radius:999px;padding:3px 10px}
+.warnchip{font-weight:800;font-size:calc(12px * var(--ts));color:#B42318;background:#FFE4E1;border-radius:999px;padding:4px 10px;text-align:center;line-height:1.25}
+.piggy{display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--sheet);border-radius:16px;padding:8px 12px;margin:0 0 6px;font-weight:900;font-size:calc(17px * var(--ts));color:#18794A;box-shadow:0 4px 0 rgba(36,38,74,.12);text-align:center}
+.piggy.warn small{color:#B42318;font-size:calc(14px * var(--ts));line-height:1.3;font-weight:800}
 .money{margin-top:14px;background:#F6F7FB;border-radius:18px;padding:12px 14px}
 .mrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-weight:800}
-.rateBox{display:flex;align-items:center;gap:6px;font-weight:900;font-size:17px;white-space:nowrap}
+.rateBox{display:flex;align-items:center;gap:6px;font-weight:900;font-size:calc(17px * var(--ts));white-space:nowrap}
 .input.sm{width:92px;font-size:19px;padding:8px 10px;border-radius:12px;text-align:right}
-.mhint{display:block;color:var(--muted);font-weight:700;font-size:12px;margin:-2px 0 12px}
-.budget{font-size:20px;font-weight:900}
+.mhint{display:block;color:var(--muted);font-weight:700;font-size:calc(12px * var(--ts));margin:-2px 0 12px}
+.budget{font-size:calc(20px * var(--ts));font-weight:900}
 .budget.neg{color:#B42318}
-.warnline{margin-top:10px;color:#B42318;font-weight:800;font-size:14px;line-height:1.35}
+.warnline{margin-top:10px;color:#B42318;font-weight:800;font-size:calc(14px * var(--ts));line-height:1.35}
 .quick{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:12px 0 16px}
 .sheet .input{text-align:center}
-.sheet .sub{color:var(--muted);font-weight:700;font-size:14px;text-align:center;margin:-8px 0 12px}
-.wallet{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;background:#fff;border-radius:24px;padding:12px 14px;margin:0 0 10px;box-shadow:0 6px 0 rgba(36,38,74,.14)}
+.sheet .sub{color:var(--muted);font-weight:700;font-size:calc(14px * var(--ts));text-align:center;margin:-8px 0 12px}
+.wallet{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;background:var(--sheet);border-radius:24px;padding:12px 14px;margin:0 0 10px;box-shadow:0 6px 0 rgba(36,38,74,.14)}
 .wallet.solo{grid-template-columns:1fr}
 .wcell{display:flex;flex-direction:column;align-items:center;line-height:1;min-width:0}
-.wcell small{font-size:13px;font-weight:800;color:var(--muted);margin-top:6px}
-.wbig{font-size:46px;font-weight:900;display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.wbig .ic{font-size:34px}
+.wcell small{font-size:calc(13px * var(--ts));font-weight:800;color:var(--muted);margin-top:6px}
+.wbig{font-size:calc(46px * var(--ts));font-weight:900;display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.wbig .ic{font-size:calc(34px * var(--ts))}
 .wtok .wbig{color:#B07800}
 .wmon .wbig{color:#18794A}
-.weq{font-size:30px;font-weight:900;color:#A3A8C3}
-.wwarn{grid-column:1/-1;text-align:center;color:#B42318;background:#FFE4E1;border-radius:14px;padding:6px 10px;margin-top:6px;font-weight:800;font-size:14px;line-height:1.3}
+.weq{font-size:calc(30px * var(--ts));font-weight:900;color:#A3A8C3}
+.wwarn{grid-column:1/-1;text-align:center;color:#B42318;background:#FFE4E1;border-radius:14px;padding:6px 10px;margin-top:6px;font-weight:800;font-size:calc(14px * var(--ts));line-height:1.3}
 .wallet.up{animation:walletUp .8s}
 .wallet.up .wbig{animation:numUp .8s}
 .wallet.down{animation:shake .45s}
@@ -404,21 +520,21 @@ summary{font-weight:800;color:var(--muted)}
 @keyframes numDown{0%{transform:scale(1)}30%{transform:scale(.88);color:#D9483A}100%{transform:scale(1)}}
 @keyframes floatUp{0%{opacity:0;transform:translateY(12px) scale(.8)}20%{opacity:1;transform:translateY(0) scale(1.15)}100%{opacity:0;transform:translateY(-60px) scale(1)}}
 @keyframes floatDown{0%{opacity:0;transform:translateY(-6px) scale(1.1)}20%{opacity:1}100%{opacity:0;transform:translateY(56px) scale(.9)}}
-.ver{text-align:center;color:rgba(255,255,255,.85);font-weight:800;font-size:13px;margin:22px 0 0}
+.ver{text-align:center;color:rgba(255,255,255,.85);font-weight:800;font-size:calc(13px * var(--ts));margin:22px 0 0}
 #upd{position:fixed;inset:0;z-index:85;background:rgba(36,38,74,.55);display:flex;align-items:flex-end;animation:fade .2s}
-.updp{width:100%;max-width:760px;margin:0 auto;background:#fff;border-radius:26px 26px 0 0;padding:20px 18px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;animation:updUp .35s cubic-bezier(.2,.8,.3,1)}
-.updtag{align-self:flex-start;background:var(--grape);color:#fff;font-size:13px;font-weight:900;padding:5px 12px;border-radius:999px}
-.updt{margin:6px 0 0;font-size:24px;line-height:1.2;font-weight:900}
-.upds{color:var(--muted);font-size:15px;font-weight:700}
+.updp{width:100%;max-width:760px;margin:0 auto;background:var(--sheet);border-radius:26px 26px 0 0;padding:20px 18px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;animation:updUp .35s cubic-bezier(.2,.8,.3,1)}
+.updtag{align-self:flex-start;background:var(--grape);color:#fff;font-size:calc(13px * var(--ts));font-weight:900;padding:5px 12px;border-radius:999px}
+.updt{margin:6px 0 0;font-size:calc(24px * var(--ts));line-height:1.2;font-weight:900}
+.upds{color:var(--muted);font-size:calc(15px * var(--ts));font-weight:700}
 .updl{display:flex;flex-direction:column;gap:10px;margin:8px 0 6px}
-.updi{display:flex;gap:12px;align-items:flex-start;background:#F2F4FA;border-radius:16px;padding:12px}
-.updic{font-size:28px;line-height:1.1;flex:none}
-.updi b{display:block;font-size:16px;font-weight:900}
-.updi span{display:block;color:var(--muted);font-size:14px;line-height:1.35;margin-top:2px;font-weight:700}
-.updmsg{font-weight:800;font-size:15px;line-height:1.4}
+.updi{display:flex;gap:12px;align-items:flex-start;background:var(--chipbg);border-radius:16px;padding:12px}
+.updic{font-size:calc(28px * var(--ts));line-height:1.1;flex:none}
+.updi b{display:block;font-size:calc(16px * var(--ts));font-weight:900}
+.updi span{display:block;color:var(--muted);font-size:calc(14px * var(--ts));line-height:1.35;margin-top:2px;font-weight:700}
+.updmsg{font-weight:800;font-size:calc(15px * var(--ts));line-height:1.4}
 .updmsg:empty{display:none}
 .updgo,.updlater{width:100%}
-.updlater{background:#F2F4FA;box-shadow:none}
+.updlater{background:var(--chipbg);box-shadow:none}
 .updlater[hidden]{display:none}
 @keyframes updUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
@@ -442,6 +558,79 @@ summary{font-weight:800;color:var(--muted)}
 @media (prefers-reduced-motion: reduce){
   .logo span,.pod.p1 .ava{animation:none}
 }
+
+/* Tiny: one line per player on the leaderboard and in the parent zone; tap for the details */
+body.d-tiny .podium{display:none}
+body.d-tiny .lrow{padding:7px 12px;cursor:pointer}
+body.d-tiny .lrow .ava.sm{width:30px;height:30px;font-size:calc(17px * var(--ts))}
+body.d-tiny .lrow:not(.open) .badge,body.d-tiny .lrow:not(.open) .lscore small{display:none}
+body.d-tiny .lrow .lmain{display:flex;align-items:center;gap:8px}
+body.d-compact .lrow{padding:8px 12px}
+.pkmini{display:none;margin-left:auto;font-weight:900;white-space:nowrap}
+body.d-tiny .panel.pk:not(.open)>:not(.pkhead){display:none}
+body.d-tiny .panel.pk .pkhead{cursor:pointer;margin:0}
+body.d-tiny .panel.pk .pkhead .ava{width:40px;height:40px;font-size:calc(23px * var(--ts))}
+body.d-tiny .panel.pk:not(.open) .pkhead .badge{display:none}
+body.d-tiny .panel.pk:not(.open) .pkmini{display:block}
+body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
+/* Settings sheet (scoped: the app already uses .sheet, .chip, .toggle and .icon) */
+#cfgsheet{position:fixed;inset:0;z-index:50;background:var(--paper);color:var(--ink);transform:translateY(102%);visibility:hidden;transition:transform .28s ease,visibility 0s linear .28s;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;text-align:left}
+#cfgsheet.open{transform:none;visibility:visible;transition:transform .28s ease}
+#cfgsheet button{font:inherit;color:inherit;background:none;border:0;border-radius:0;padding:0;font-weight:inherit;cursor:pointer;text-align:inherit}
+#cfgsheet .sh-head{position:sticky;top:0;z-index:2;background:var(--paper);display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top) + 14px) 18px 12px;border-bottom:1px solid var(--rule)}
+#cfgsheet .sh-head h2{font:700 calc(24px * var(--ts))/1 var(--display);margin:0}
+#cfgsheet .sh-body{padding:16px 18px calc(env(safe-area-inset-bottom) + 40px);max-width:680px;margin:0 auto}
+#cfgsheet .link{color:var(--signal);font-weight:600;font-size:16px}
+#cfgsheet .link.small{font-size:calc(14px * var(--ts))}
+#cfgsheet .hint{font-size:calc(13px * var(--ts));color:var(--muted);margin:8px 2px 0}
+#cfgsheet .muted{color:var(--muted)}
+#cfgsheet .sec{display:block;font:700 calc(17px * var(--ts))/1.2 var(--display);color:var(--ink);margin:26px 0 6px}
+#cfgsheet .srow{display:flex;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--rule)}
+#cfgsheet .grow{flex:1;min-width:0}
+#cfgsheet .grow b{display:block;font-weight:600}
+#cfgsheet .grow small{display:block;font-size:calc(13px * var(--ts));color:var(--ink-2)}
+#cfgsheet .switch{width:46px;height:28px;border-radius:14px;background:var(--rule);position:relative;flex:none;transition:background .2s}
+#cfgsheet .switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
+#cfgsheet .switch.on{background:var(--signal)}
+#cfgsheet .switch.on::after{transform:translateX(18px)}
+#cfgsheet .sm{font-size:calc(13px * var(--ts));padding:6px 11px;border-radius:8px;border:1px solid var(--rule);background:var(--sheet);white-space:nowrap;flex:none}
+#cfgsheet .danger{color:var(--danger)}
+#cfgsheet .danger.armed{background:var(--danger);color:#fff;border-color:var(--danger)}
+#cfgsheet .seg{display:flex;flex:none;gap:0;padding:0;border:1px solid var(--rule);border-radius:9px;overflow:hidden;background:var(--sheet)}
+#cfgsheet .seg button{font-size:calc(12.5px * var(--ts));padding:6px 10px;color:var(--ink-2);white-space:nowrap}
+#cfgsheet .seg button.on{background:var(--ink);color:var(--paper);font-weight:600}
+#cfgsheet .seg.wide button{flex:1;text-align:center;padding:9px 4px;font-size:calc(13.5px * var(--ts))}
+#cfgsheet .lk-row{margin:10px 0 14px}
+#cfgsheet .lk-l{display:block;font-size:calc(13px * var(--ts));font-weight:600;color:var(--ink-2);margin-bottom:6px}
+#cfgsheet .sws{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:3px 3px 2px}
+#cfgsheet .sws::-webkit-scrollbar{display:none}
+#cfgsheet .sw{display:flex;flex-direction:column;align-items:center;gap:5px;flex:none}
+#cfgsheet .sw .prev{position:relative;width:50px;height:50px;border-radius:13px;display:grid;place-items:center;border:1px solid rgba(127,127,127,.35);font:700 18px/1 var(--display)}
+#cfgsheet .sw .prev i{position:absolute;right:6px;bottom:6px;width:9px;height:9px;border-radius:5px}
+#cfgsheet .sw.on .prev{outline:2.5px solid var(--signal);outline-offset:2px}
+#cfgsheet .sw small{font-size:12px;color:var(--ink-2)}
+#cfgsheet .sw.on small{color:var(--ink);font-weight:600}
+#cfgsheet .cfg{padding:12px 0;border-bottom:1px solid var(--rule)}
+#cfgsheet .cfg.ch .cfg-h b::after{content:"";display:inline-block;width:7px;height:7px;border-radius:4px;background:var(--signal);margin-left:7px;vertical-align:2px}
+#cfgsheet .cfg-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+#cfgsheet .cfg-h b{font-weight:600}
+#cfgsheet .cfg small{display:block;font-size:calc(13px * var(--ts));margin-top:2px}
+#cfgsheet .stepper{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+#cfgsheet .stepper button{width:38px;height:36px;border-radius:9px;border:1px solid var(--rule);background:var(--sheet);font-size:20px;font-weight:600;text-align:center}
+#cfgsheet .stepper button[disabled]{opacity:.35}
+#cfgsheet .stepper input{width:86px;text-align:center;font:600 16px var(--sans);padding:7px 6px;border-radius:9px;border:1px solid var(--rule);background:var(--paper);color:var(--ink)}
+#cfgsheet .stepper .unit{font-size:calc(14px * var(--ts));color:var(--ink-2);min-width:2.5em}
+#cfgsheet .stepper .range{flex-basis:100%;font-size:calc(12px * var(--ts));color:var(--muted)}
+#cfgsheet .cfgin.wide,#cfgsheet .cfgsel{display:block;width:100%;margin-top:8px;font:16px/1.45 var(--sans);padding:9px 11px;border-radius:9px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);-webkit-appearance:none;appearance:none}
+#cfgsheet textarea.cfgsel{resize:none}
+#cfgsheet .cfgin:focus,#cfgsheet .cfgsel:focus{outline:2px solid var(--signal);outline-offset:-1px}
+#cfgsheet .cfg-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:18px}
+#cfgsheet .note{font-size:12.5px;color:var(--muted)}
+#cfgsheet .srow.bp{width:100%;text-align:left}
+#cfgsheet .chev{flex:none;color:var(--muted);font-size:calc(20px * var(--ts));line-height:1}
+#cfgsheet input{-webkit-user-select:text;user-select:text}
+#cfgsheet .srow.act{width:100%}
+#cfgsheet{font-family:var(--rounded)}
 `;
 
 // ───────────────────────── Web app (runs inside the WebView) ─────────────────────────
@@ -823,6 +1012,9 @@ function webApp() {
     return LANGS[l] ? l : "en";
   }
   const init = window.__INITIAL__ && typeof window.__INITIAL__ === "object" ? window.__INITIAL__ : {};
+  // Settings (app-blueprints · settings) come from settings.json through the Scriptable side.
+  const LOOK = Object.assign({ theme: "ink", density: "comfortable", font: "sans", textSize: 1 }, init.look || {});
+  const CFG = Object.assign({ beginnerPics: 3, expertPics: 5 }, init.cfg || {});
   const state = {
     version: 1,
     lang: LANGS[init.lang] ? init.lang : detectLang(),
@@ -1208,15 +1400,19 @@ function webApp() {
   function sameLetter(word) {
     return wordsFor(state.lang).filter((o) => o.k === word.k && o.w !== word.w && o.e !== word.e);
   }
-  // Beginner: 3 pictures. Expert: 5 pictures. All pictures share the word's first letter.
+  // Beginner: 3 pictures. Expert: 5 pictures (both set in Settings › Rounds). All pictures share the word's
+  // first letter; if the words can't fill the chosen number, the round uses the original number instead.
+  function poolForN(kid, n) {
+    return wordsFor(state.lang).filter(
+      (w) => (kid.level === "expert" ? w.n >= 3 && w.n <= 6 : w.n <= 2) && sameLetter(w).length >= n - 1
+    );
+  }
   function picCount(kid) {
-    return kid.level === "expert" ? 5 : 3;
+    const want = kid.level === "expert" ? CFG.expertPics : CFG.beginnerPics, def = kid.level === "expert" ? 5 : 3;
+    return want === def || poolForN(kid, want).length ? want : def;
   }
   function poolFor(kid) {
-    const need = picCount(kid) - 1;
-    return wordsFor(state.lang).filter(
-      (w) => (kid.level === "expert" ? w.n >= 3 && w.n <= 6 : w.n <= 2) && sameLetter(w).length >= need
-    );
+    return poolForN(kid, picCount(kid));
   }
   function caseWord(s) {
     const loc = LANGS[state.lang].locale;
@@ -1564,7 +1760,7 @@ function webApp() {
       .join("")}</div>`;
     const rows = ranked
       .map(
-        (k, i) => `<div class="lrow">
+        (k, i) => `<div class="lrow" data-action="rowToggle">
           <div class="rank">${i < 3 ? medals[i] : i + 1}</div>
           <span class="ava sm" style="background:${avaBg(k)}">${k.avatar}</span>
           <div class="lmain"><div class="kname">${esc(k.name)}</div>${levelBadge(k.level)}</div>
@@ -1605,10 +1801,11 @@ function webApp() {
     const short = isShort(k);
     const cantPay = moneyOn && k.budget < k.rate;
     return `
-      <div class="panel">
-        <div class="pkhead">
+      <div class="panel pk">
+        <div class="pkhead" data-action="rowToggle">
           <span class="ava" style="background:${avaBg(k)}">${k.avatar}</span>
           <div style="min-width:0"><div class="kname">${esc(k.name)}</div>${levelBadge(k.level)}</div>
+          <span class="pkmini">🪙 ${k.tokens} · ⭐ ${k.total}</span>
         </div>
         <div class="pkstats">
           <div><b>🪙 ${k.tokens}</b><small>${esc(moneyOn ? money(valueCents(k)) : t("balance"))}</small></div>
@@ -1633,30 +1830,10 @@ function webApp() {
       </div>`;
   }
 
-  VIEWS.parent = () => {
-    const sample = t("sample");
-    const styles = [["cap"], ["upper"], ["lower"]].map(([v]) => {
-      const prev = state.settings.wordCase;
-      state.settings.wordCase = v;
-      const label = caseWord(sample);
-      state.settings.wordCase = prev;
-      return `<button class="chip ${state.settings.wordCase === v ? "on" : ""}" data-action="wordCase" data-v="${v}">${esc(label)}</button>`;
-    });
-    return `
-      <div class="bar"><button class="icon" data-action="lockParent">⬅</button><h2>👨‍👩‍👧 ${esc(t("parentArea"))}</h2><button class="icon" data-action="lockParent">🔒</button></div>
+  VIEWS.parent = () => `
+      <div class="bar"><button class="icon" data-action="lockParent" aria-label="${esc(t("parents"))}">⬅</button><h2>👨‍👩‍👧 ${esc(t("parentArea"))}</h2><button class="icon" data-action="openSettings" aria-label="${esc(CT.title)}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button></div>
       ${state.kids.length ? "" : `<p class="empty">${esc(t("noKids"))}</p>`}
-      ${state.kids.map(parentKid).join("")}
-      <div class="panel">
-        <h3>⚙️ ${esc(t("settings"))}</h3>
-        <div class="setrow"><span>${esc(t("wordStyle"))}</span><div class="seg3">${styles.join("")}</div></div>
-        <div class="setrow"><span>${esc(t("currency"))}</span><div class="seg3">${CURRENCIES.map(
-          (c) => `<button class="chip ${state.settings.currency === c ? "on" : ""}" data-action="currency" data-v="${c}">${c}</button>`
-        ).join("")}</div></div>
-        <div class="setrow"><span>${esc(t("sound"))}</span><button class="toggle ${state.settings.sound ? "on" : ""}" data-action="toggleSound">${state.settings.sound ? "🔊" : "🔇"}</button></div>
-        <button class="btn ghost wide" data-action="changePin">🔑 ${esc(t("changePin"))}</button>
-        <p class="note">${esc(t("storageNote"))}<br>${esc(t("version"))}: ${esc(APP_VERSION)}</p>
-      </div>`;
-  };
+      ${state.kids.map(parentKid).join("")}`;
 
   // ── PIN handling ──
   function openPin(mode, from) {
@@ -1708,6 +1885,158 @@ function webApp() {
       }
     }
   }
+
+  // ── Settings (app-blueprints · settings): every change applies at once and is saved; Done closes ──
+  const CT_ALL = {
+    en: { title: "Settings", done: "Done", hint: "Changes apply right away and are kept on this iPhone.", appearance: "Appearance", colours: "Colours", layout: "Layout", textSize: "Text size", font: "Headline font",
+      themes: { auto: "Auto", ink: "Ink", sepia: "Sepia", mint: "Mint", contrast: "Contrast", slate: "Slate", night: "Night" },
+      layouts: ["Comfortable", "Compact", "Tiny"], sizes: ["Small", "Default", "Large", "Larger"], fonts: ["Sans serif", "Serif"],
+      game: "Game", money: "Money", parent: "Parent", pinHelp: "Opens the PIN pad to set a new PIN",
+      updates: "Updates", offer: "Offer new versions", offerHelp: (v) => `You have Reading Stars ${v}. “Later” waits two days.`, check: "Check for updates now", checkBtn: "Check", checking: "Checking…",
+      latest: (v) => `You're on the latest version (${v})`, avail: (v) => `Version ${v} is available`,
+      reset: "Reset", original: "original", changed: (n) => `${n} setting${n === 1 ? "" : "s"} changed`, none: "All settings are at their original values", resetAll: "Reset all", confirmReset: "Confirm reset",
+      builtWith: "Built with", builtHint: (a) => `${a} is built from shared blueprints that the other apps use too. Tap one to read how that part works.`, bp: (v, a, s) => `Blueprint ${v} · since ${a} ${s}`, all: "All blueprints", dec: "Decrease", inc: "Increase" },
+    lt: { title: "Nustatymai", done: "Baigti", hint: "Pakeitimai įsigalioja iš karto ir saugomi šiame iPhone.", appearance: "Išvaizda", colours: "Spalvos", layout: "Išdėstymas", textSize: "Teksto dydis", font: "Antraščių šriftas",
+      themes: { auto: "Automatiškai", ink: "Rašalas", sepia: "Sepija", mint: "Mėtinė", contrast: "Kontrastas", slate: "Skalūnas", night: "Naktis" },
+      layouts: ["Erdvus", "Glaustas", "Mažytis"], sizes: ["Mažas", "Įprastas", "Didelis", "Didesnis"], fonts: ["Be serifų", "Su serifais"],
+      game: "Žaidimas", money: "Pinigai", parent: "Tėvams", pinHelp: "Atidaro PIN klaviatūrą naujam PIN",
+      updates: "Atnaujinimai", offer: "Siūlyti naujas versijas", offerHelp: (v) => `Jūsų versija: Reading Stars ${v}. „Vėliau“ palaukia dvi dienas.`, check: "Tikrinti atnaujinimus dabar", checkBtn: "Tikrinti", checking: "Tikrinama…",
+      latest: (v) => `Naudojate naujausią versiją (${v})`, avail: (v) => `Yra versija ${v}`,
+      reset: "Atstatyti", original: "pradinė", changed: (n) => `Pakeista nustatymų: ${n}`, none: "Visi nustatymai pradiniai", resetAll: "Atstatyti viską", confirmReset: "Patvirtinti",
+      builtWith: "Sukurta pagal", builtHint: (a) => `${a} sukurta pagal bendrus šablonus, kuriuos naudoja ir kitos programos. Paspauskite, kad perskaitytumėte, kaip veikia ta dalis.`, bp: (v, a, s) => `Šablonas ${v} · nuo ${a} ${s}`, all: "Visi šablonai", dec: "Mažinti", inc: "Didinti" },
+    es: { title: "Ajustes", done: "Listo", hint: "Los cambios se aplican al momento y se guardan en este iPhone.", appearance: "Apariencia", colours: "Colores", layout: "Diseño", textSize: "Tamaño del texto", font: "Fuente de títulos",
+      themes: { auto: "Automático", ink: "Tinta", sepia: "Sepia", mint: "Menta", contrast: "Contraste", slate: "Pizarra", night: "Noche" },
+      layouts: ["Amplio", "Compacto", "Mínimo"], sizes: ["Pequeño", "Normal", "Grande", "Más grande"], fonts: ["Sin serifa", "Con serifa"],
+      game: "Juego", money: "Dinero", parent: "Padres", pinHelp: "Abre el teclado para poner un PIN nuevo",
+      updates: "Actualizaciones", offer: "Ofrecer versiones nuevas", offerHelp: (v) => `Tienes Reading Stars ${v}. «Más tarde» espera dos días.`, check: "Buscar actualizaciones ahora", checkBtn: "Buscar", checking: "Buscando…",
+      latest: (v) => `Tienes la última versión (${v})`, avail: (v) => `Hay una versión ${v}`,
+      reset: "Restablecer", original: "original", changed: (n) => `${n} ajuste${n === 1 ? "" : "s"} cambiado${n === 1 ? "" : "s"}`, none: "Todos los ajustes están en sus valores originales", resetAll: "Restablecer todo", confirmReset: "Confirmar",
+      builtWith: "Hecho con", builtHint: (a) => `${a} está hecho con plantillas compartidas que también usan las otras apps. Toca una para leer cómo funciona esa parte.`, bp: (v, a, s) => `Plantilla ${v} · desde ${a} ${s}`, all: "Todas las plantillas", dec: "Menos", inc: "Más" },
+  };
+  const CT = new Proxy({}, { get: (_, k) => (CT_ALL[state.lang] || CT_ALL.en)[k] });
+  let SET = null, cfgIsOpen = false, cfgArmed = false;
+  const darkMQ = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : { matches: false };
+  function applyLook() {
+    const root = document.documentElement;
+    root.dataset.theme = LOOK.theme === "auto" ? (darkMQ.matches ? "night" : "ink") : LOOK.theme;
+    root.dataset.font = LOOK.font;
+    root.style.setProperty("--ts", LOOK.textSize);
+    document.body.classList.remove("d-comfortable", "d-compact", "d-tiny");
+    document.body.classList.add("d-" + LOOK.density);
+    document.body.style.backgroundColor = "";
+  }
+  const onDark = () => { if (LOOK.theme === "auto") applyLook(); };
+  if (darkMQ.addEventListener) darkMQ.addEventListener("change", onDark); else if (darkMQ.addListener) darkMQ.addListener(onDark);
+  const cfgSheet = () => {
+    let el = document.getElementById("cfgsheet");
+    if (!el) {
+      el = document.createElement("div"); el.id = "cfgsheet"; el.setAttribute("role", "dialog");
+      document.body.appendChild(el);
+      el.addEventListener("click", cfgClick);
+      el.addEventListener("change", cfgChange);
+    }
+    el.setAttribute("aria-label", CT.title);
+    return el;
+  };
+  const loc = (d) => Object.assign({}, d, d[state.lang] || d.en);
+  const cfgItem = (k) => { for (const sec of SET.cfgSchema) for (const d of sec.items) if (d.k === k) return loc(d); return null; };
+  const cfgChanged = (k) => { const d = cfgItem(k); return !!d && JSON.stringify(SET.cfg[k]) !== JSON.stringify(d.def); };
+  const fmtCfg = (d, v) => (d.step && d.step < 1 ? Number(v).toFixed(String(d.step).split(".")[1].length) : String(v));
+  const segRow = (k, opts, cur, act) => `<div class="seg wide">${opts.map(([v, l]) => `<button class="${String(cur) === String(v) ? "on" : ""}" data-act="${act || "look"}" data-k="${k}" data-v="${v}">${esc(l)}</button>`).join("")}</div>`;
+  function lookHTML() {
+    const P = SET.palettes, themes = ["auto"].concat(Object.keys(P));
+    return `<div class="lk-row"><span class="lk-l">${esc(CT.colours)}</span><div class="sws">${themes.map((k) => {
+        const st = k === "auto" ? `background:linear-gradient(135deg,${P.ink.sky} 50%,${P.night.sky} 50%);color:#fff` : `background:${P[k].sky};color:#fff`;
+        return `<button class="sw ${LOOK.theme === k ? "on" : ""}" data-act="look" data-k="theme" data-v="${k}" aria-label="${esc(CT.themes[k])}"><span class="prev" style="${st}">Aa<i style="background:${(P[k] || P.night).signal}"></i></span><small>${esc(CT.themes[k])}</small></button>`;
+      }).join("")}</div></div>
+      <div class="lk-row"><span class="lk-l">${esc(CT.layout)}</span>${segRow("density", [["comfortable", CT.layouts[0]], ["compact", CT.layouts[1]], ["tiny", CT.layouts[2]]], LOOK.density)}</div>
+      <div class="lk-row"><span class="lk-l">${esc(CT.textSize)}</span>${segRow("textSize", [[0.92, CT.sizes[0]], [1, CT.sizes[1]], [1.12, CT.sizes[2]], [1.25, CT.sizes[3]]], LOOK.textSize)}</div>
+      <div class="lk-row"><span class="lk-l">${esc(CT.font)}</span>${segRow("font", [["sans", CT.fonts[0]], ["serif", CT.fonts[1]]], LOOK.font)}</div>`;
+  }
+  function fieldHTML(d0) {
+    const d = loc(d0), v = SET.cfg[d.k], ch = cfgChanged(d.k);
+    const reset = ch ? `<button class="link small" data-act="cfgreset" data-k="${d.k}">${esc(CT.reset)}</button>` : "";
+    return `<div class="cfg ${ch ? "ch" : ""}"><div class="cfg-h"><b>${esc(d.label)}</b>${reset}</div>
+      <div class="stepper"><button data-act="cfgstep" data-k="${d.k}" data-v="-1" aria-label="${esc(CT.dec)}" ${v <= d.min ? "disabled" : ""}>−</button>
+      <input class="cfgin" data-k="${d.k}" value="${fmtCfg(d, v)}" inputmode="numeric" aria-label="${esc(d.label)}">
+      <button data-act="cfgstep" data-k="${d.k}" data-v="1" aria-label="${esc(CT.inc)}" ${v >= d.max ? "disabled" : ""}>+</button>
+      <span class="unit">${esc(d.unit || "")}</span><span class="range">${fmtCfg(d, d.min)}–${fmtCfg(d, d.max)}${ch ? ` — ${esc(CT.original)} ${fmtCfg(d, d.def)}` : ""}</span></div></div>`;
+  }
+  const bpLink = (b) => `${SET.blueprintsRepo}/blob/${b.id}-v${b.version}/blueprints/${b.id}.md`;
+  function builtWithHTML() {
+    return `<h3 class="sec">${esc(CT.builtWith)}</h3><p class="hint">${esc(CT.builtHint(SET.appName))}</p>
+      ${SET.blueprints.map((b) => `<button class="srow bp" data-act="openurl" data-v="${esc(bpLink(b))}"><div class="grow"><b>${esc(b.name)}</b><small class="muted">${esc(CT.bp(b.version, SET.appName, b.since))}</small></div><span class="chev" aria-hidden="true">›</span></button>`).join("")}
+      <button class="srow bp" data-act="openurl" data-v="${esc(SET.blueprintsRepo)}"><div class="grow"><b>${esc(CT.all)}</b><small class="muted">${esc(SET.blueprintsRepo.replace("https://", ""))}</small></div><span class="chev" aria-hidden="true">›</span></button>`;
+  }
+  function renderCfg() {
+    const el = cfgSheet(), keep = el.scrollTop;
+    el.classList.toggle("open", cfgIsOpen);
+    document.body.style.overflow = cfgIsOpen ? "hidden" : "";
+    if (!cfgIsOpen || !SET) return;
+    const s = SET.settings, changed = Object.keys(SET.cfg).filter(cfgChanged).length;
+    const sample = t("sample"), caseLabel = (v) => { const prev = state.settings.wordCase; state.settings.wordCase = v; const l = caseWord(sample); state.settings.wordCase = prev; return l; };
+    el.innerHTML = `<div class="sh-head"><h2>${esc(CT.title)}</h2><button class="link" data-act="cfgclose">${esc(CT.done)}</button></div><div class="sh-body">
+      <p class="hint">${esc(CT.hint)}</p>
+      <h3 class="sec">${esc(CT.appearance)}</h3>${lookHTML()}
+      <h3 class="sec">${esc(CT.game)}</h3>
+      <div class="lk-row"><span class="lk-l">${esc(t("wordStyle"))}</span>${segRow("wordCase", [["cap", caseLabel("cap")], ["upper", caseLabel("upper")], ["lower", caseLabel("lower")]], s.wordCase, "set")}</div>
+      <div class="srow"><div class="grow"><b>${esc(t("sound"))}</b></div><button class="switch ${s.sound ? "on" : ""}" data-act="toggle" data-v="sound" aria-label="${esc(t("sound"))}"></button></div>
+      <h3 class="sec">${esc(CT.money)}</h3>
+      <div class="lk-row"><span class="lk-l">${esc(t("currency"))}</span>${segRow("currency", SET.currencies.map((c) => [c, c]), s.currency, "set")}</div>
+      <h3 class="sec">${esc(CT.parent)}</h3>
+      <button class="srow act" data-act="changePin"><div class="grow"><b>🔑 ${esc(t("changePin"))}</b><small>${esc(CT.pinHelp)}</small></div><span class="chev" aria-hidden="true">›</span></button>
+      <p class="hint">${esc(t("storageNote"))}</p>
+      <h3 class="sec">${esc(CT.updates)}</h3>
+      <div class="srow"><div class="grow"><b>${esc(CT.offer)}</b><small>${esc(CT.offerHelp(SET.version))}</small></div><button class="switch ${s.checkUpdates ? "on" : ""}" data-act="toggle" data-v="checkUpdates" aria-label="${esc(CT.offer)}"></button></div>
+      <div class="srow"><div class="grow"><b>${esc(CT.check)}</b><small id="updmsg" class="muted" aria-live="polite"></small></div><button class="sm" data-act="updcheck">${esc(CT.checkBtn)}</button></div>
+      ${SET.cfgSchema.map((sec) => `<h3 class="sec">${esc(sec.title[state.lang] || sec.title.en)}</h3>${sec.items.map(fieldHTML).join("")}`).join("")}
+      <div class="cfg-foot"><span class="note">${esc(changed ? CT.changed(changed) : CT.none)}</span>
+        ${changed ? `<button class="sm danger ${cfgArmed ? "armed" : ""}" data-act="cfgall">${esc(cfgArmed ? CT.confirmReset : CT.resetAll)}</button>` : ""}</div>
+      ${builtWithHTML()}</div>`;
+    el.scrollTop = keep;   // re-renders must not jump back to the top
+  }
+  function useState(st) {   // the game reads its settings from here
+    SET = st;
+    Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, currency: st.settings.currency });
+    Object.assign(CFG, st.cfg);
+  }
+  const sendCfg = (action, params) => send(action, params, (ok, st) => { if (ok && st && st.cfgSchema) useState(st); else if (!ok) toast(st); renderCfg(); });
+  function openSettings() {
+    if (cfgIsOpen) return;
+    send("settings-get", {}, (ok, st) => { if (!ok) return toast(st); useState(st); cfgIsOpen = true; renderCfg(); cfgSheet().scrollTop = 0; });
+  }
+  function closeSettings() { cfgIsOpen = false; cfgArmed = false; renderCfg(); render(); }
+  function cfgClick(e) {
+    e.stopPropagation();   // the sheet's taps never reach the game's own click handler
+    if (e.target.closest("select, option, input, textarea")) return;
+    const el = e.target.closest("[data-act]"); if (!el || el.disabled) return;
+    const act = el.dataset.act, v = el.dataset.v, k = el.dataset.k;
+    if (act === "cfgclose") return closeSettings();
+    if (act === "look") { const val = k === "textSize" ? +v : v; LOOK[k] = val; applyLook(); renderCfg(); return sendCfg("set", { k, v: val }); }
+    if (act === "set") { SET.settings[k] = v; renderCfg(); return sendCfg("set", { k, v }); }
+    if (act === "toggle") { SET.settings[v] = !SET.settings[v]; renderCfg(); return sendCfg("set", { k: v, v: SET.settings[v] }); }
+    if (act === "cfgreset") return sendCfg("cfg", { k, reset: 1 });
+    if (act === "cfgstep") { const d = cfgItem(k), step = d.step || 1; SET.cfg[k] = Math.min(d.max, Math.max(d.min, Number(SET.cfg[k]) + step * +v)); renderCfg(); return sendCfg("cfg", { k, v: SET.cfg[k] }); }
+    if (act === "cfgall") {
+      if (cfgArmed) { cfgArmed = false; return sendCfg("cfg", { k: "*" }); }
+      cfgArmed = true; renderCfg(); setTimeout(() => { if (cfgArmed) { cfgArmed = false; renderCfg(); } }, 3500); return;
+    }
+    if (act === "changePin") { closeSettings(); return openPin("set1", "parent"); }
+    if (act === "openurl") return send("openurl", { v });
+    if (act === "updcheck") {
+      const um = document.getElementById("updmsg"); el.disabled = true; if (um) um.textContent = CT.checking;
+      return send("update-check", {}, (ok, r) => {
+        el.disabled = false;
+        if (um) um.textContent = !ok ? String(r) : r.available ? CT.avail(r.version) : CT.latest(r.version);
+        if (ok && r.available) { closeSettings(); if (window.__showUpdate) window.__showUpdate(r.info); }
+      });
+    }
+  }
+  function cfgChange(e) {
+    e.stopPropagation();
+    if (e.target.classList.contains("cfgin")) sendCfg("cfg", { k: e.target.dataset.k, v: e.target.value });
+  }
+  applyLook();
 
   // ── Actions ──
   function requireParent() {
@@ -1851,12 +2180,6 @@ function webApp() {
       render();
       toast(t("toppedUp", k.name, (change > 0 ? "+" : "") + money(change)));
     },
-    currency(b) {
-      if (!requireParent()) return;
-      state.settings.currency = b.dataset.v;
-      persist();
-      render();
-    },
     editKid(b) {
       if (!requireParent()) return;
       const k = getKid(b.dataset.id);
@@ -1873,17 +2196,12 @@ function webApp() {
       persist();
       render();
     },
-    wordCase(b) {
-      if (!requireParent()) return;
-      state.settings.wordCase = b.dataset.v;
-      persist();
-      render();
+    rowToggle(el) {   // Tiny layout: a player's line opens to show the details
+      (el.closest(".panel") || el).classList.toggle("open");
     },
-    toggleSound() {
+    openSettings() {
       if (!requireParent()) return;
-      state.settings.sound = !state.settings.sound;
-      persist();
-      render();
+      openSettings();
     },
     changePin() {
       if (!requireParent()) return;
@@ -1943,12 +2261,13 @@ function webApp() {
 
 function buildHTML(data) {
   const initJSON = JSON.stringify(data || null).replace(/</g, "\\u003c");
+  const look = lookState(), sky = PALETTES[look.shown].sky;
   return `<!doctype html>
-<html><head>
+<html data-theme="${look.shown}" data-font="${look.font}" style="--ts:${look.textSize}"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <style>${CSS}</style>
-</head><body style="background-color:#4FB3F6">
+</head><body class="d-${look.density}" style="background-color:${sky}">
 <div id="app"></div>
 <div id="fx"></div>
 <script>
@@ -1969,6 +2288,7 @@ window.__APP_VERSION = ${JSON.stringify(VERSION)};
 const SAVE_SCHEME = "readingstars://save?d=";
 
 const initialData = await loadData();
+await loadSettings(initialData);
 const webView = new WebView();
 
 let pendingUpdate = null;
@@ -1979,6 +2299,31 @@ const offerUpdate = () => {
 
 // Actions sent by the page with send(action, params): readingstars://<action>?p=<json>
 async function handleAction(head, p) {
+  const answer = (ok, msg) => js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
+  // Settings (app-blueprints · settings): each change is applied and saved at once; the answer is the fresh state.
+  if (head === "settings-get") return answer(true, settingsState());
+  if (head === "set") {
+    if (!setSetting(p.k, p.v)) return answer(false, "That setting can't be changed here.");
+    saveSettings();
+    return answer(true, settingsState());
+  }
+  if (head === "cfg") {
+    if (p.k === "*") settings.cfg = {}; else setCfg(p.k, p.reset ? null : p.v);
+    saveSettings();
+    return answer(true, settingsState());
+  }
+  if (head === "update-check") {   // Settings › Check for updates now: clears "Later" and checks at once
+    clearUpdateSnooze();
+    const was = settings.checkUpdates; settings.checkUpdates = true;
+    const u = await checkForUpdate(); settings.checkUpdates = was;
+    if (u) pendingUpdate = u;
+    return answer(true, { available: !!u, info: u, version: u ? u.latest : VERSION });
+  }
+  if (head === "openurl") {   // Built with: only the blueprints repository opens from here
+    const v = String(p.v || "");
+    if (v === BLUEPRINTS_REPO || v.startsWith(BLUEPRINTS_REPO + "/")) await Safari.openInApp(v, false);
+    return;
+  }
   if (head === "update-later") {
     snoozeUpdate();
     pendingUpdate = null;
@@ -2020,7 +2365,7 @@ webView.shouldAllowRequest = (request) => {
   return true;
 };
 
-await webView.loadHTML(buildHTML(initialData));
+await webView.loadHTML(buildHTML(Object.assign({}, initialData || {}, { settings: gameSettings(), look: lookState(), cfg: cfgValues() })));
 const presenting = webView.present(true);
 
 // Once per run, after the first screen is on: never slows the start, never throws.

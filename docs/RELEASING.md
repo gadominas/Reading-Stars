@@ -47,7 +47,7 @@ If a user skipped several versions, the pitch shows the newest release's highlig
 - The sheet appears on the **home screen only**, never during a kid's round. If the check finishes mid-round, it waits until the home screen.
 - **Update now** downloads the script over the current one after three checks (a real Reading Stars script, `APP_ID` matches, version is actually newer); the user closes and reopens the game to start the new version. Players, tokens, budgets and the PIN are stored separately and are kept.
 - **Later**, or tapping outside the sheet, hides the offer for two days (stored in the iOS Keychain as `reading-stars-update-snooze`).
-- Turn checks off with `CHECK_UPDATES: false` in the `CONFIG` block at the top of the script.
+- Turn checks off in Parent zone › Settings › Updates › Offer new versions (saved in `settings.json`).
 
 ## Testing an update
 

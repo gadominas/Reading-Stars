@@ -34,7 +34,7 @@ When a new version is out, the home screen shows what it brings, with **Update n
 
 <img src="docs/screenshots/18-update-lt.png" width="240" alt="Update sheet in Lithuanian">
 
-Every version is listed in [CHANGELOG.md](CHANGELOG.md). To publish one, follow [docs/RELEASING.md](docs/RELEASING.md). To turn the checks off, set `CHECK_UPDATES: false` at the top of the script.
+Every version is listed in [CHANGELOG.md](CHANGELOG.md). To publish one, follow [docs/RELEASING.md](docs/RELEASING.md). To turn the checks off, switch off **Parent zone › Settings › Updates › Offer new versions**; **Check for updates now** checks at once.
 
 ## How a round works
 
@@ -153,7 +153,12 @@ Protected by a 4-digit PIN (5 wrong tries lock it for a minute). For each kid:
 - *Pay out*, *Edit* (name, level, avatar) and *Delete*
 - a history of payouts and top-ups with dates
 
-Settings: word letter style (*Na-mas*, *NA-MAS*, *na-mas*), currency (EUR, USD, GBP), sounds and PIN change.
+**Settings** (sliders icon in the parent zone, so only parents can reach it), in the game's language:
+
+- **Appearance:** six colour palettes plus Auto (the bright look is the default; Night and Slate give a night sky), Comfortable, Compact or Tiny layout (one line per player on the leaderboard and in the parent zone), text size and headline font. The game screen looks the same in every layout.
+- **Game:** word letter style (*Na-mas*, *NA-MAS*, *na-mas*) and sounds. **Money:** currency (EUR, USD, GBP). **Parent:** change PIN.
+- **Updates:** offer new versions, and check now. **Rounds:** pictures per round for Beginner (2–4) and Expert (3–5), with Reset.
+- **Built with:** the [shared blueprints](https://github.com/gadominas/app-blueprints) the app follows (see [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md)).
 
 <table>
 <tr>
@@ -191,7 +196,7 @@ The game speaks **Lithuanian 🇱🇹, English 🇬🇧 and Spanish 🇪🇸**, 
 
 ## Data
 
-Progress is saved to `iCloud Drive › Scriptable › ReadingStars › data.json`, with `data.backup.json` next to it, or to local Scriptable storage if iCloud is off. Kids' names, tokens, budgets and the PIN hash live only in that file, never in this repository.
+Progress is saved to `iCloud Drive › Scriptable › ReadingStars › data.json`, with `data.backup.json` and the parent's choices (`settings.json`) next to it, or to local Scriptable storage if iCloud is off. Kids' names, tokens, budgets and the PIN hash live only in that file, never in this repository.
 
 Forgot the parent PIN? Remove the `pinHash` value from `data.json` and set a new PIN on the next launch.
 
