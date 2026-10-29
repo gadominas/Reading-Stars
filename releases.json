@@ -4,6 +4,63 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.3.0",
+      "date": "2026-10-29",
+      "title": {
+        "en": "Read. Match. Shine.",
+        "lt": "Skaityk. Rask. Spindėk.",
+        "es": "Lee. Elige. Brilla."
+      },
+      "highlights": [
+        {
+          "icon": "⭐",
+          "title": {
+            "en": "A logo of its own",
+            "lt": "Savas logotipas",
+            "es": "Un logo propio"
+          },
+          "text": {
+            "en": "A big yellow star with a sparkle and a teal reading line.",
+            "lt": "Didelė geltona žvaigždė su žybsniu ir žalsva skaitymo linija.",
+            "es": "Una gran estrella amarilla con un destello y una línea de lectura turquesa."
+          }
+        },
+        {
+          "icon": "🎬",
+          "title": {
+            "en": "Launch screen",
+            "lt": "Pradžios ekranas",
+            "es": "Pantalla de inicio"
+          },
+          "text": {
+            "en": "The star pops in and the tagline appears for about 2 seconds; tap to skip.",
+            "lt": "Žvaigždė iššoka ir apie 2 sekundes rodomas šūkis; paspausk, kad praleistum.",
+            "es": "La estrella aparece y el lema se muestra unos 2 segundos; toca para saltarlo."
+          }
+        },
+        {
+          "icon": "✨",
+          "title": {
+            "en": "Branded everywhere",
+            "lt": "Logotipas visur",
+            "es": "La marca en todas partes"
+          },
+          "text": {
+            "en": "The star sits on top of the home screen and in the README.",
+            "lt": "Žvaigždė puikuojasi pradžios ekrano viršuje ir README.",
+            "es": "La estrella está arriba en la pantalla principal y en el README."
+          }
+        }
+      ],
+      "changes": [
+        "New Reading Stars logo (the big star): docs/logo.svg and a 1024 px app icon, docs/icon-1024.png",
+        "Launch screen shown for 2.4 s with a short animation and the tagline in the game's language (Read. Match. Shine. / Skaityk. Rask. Spindėk. / Lee. Elige. Brilla.); tap to skip; still with Reduce Motion; follows the shared launch-screen blueprint 1.0.0",
+        "The logo replaces the book and star emoji at the top of the home screen, and heads the README",
+        "Built with lists the launch-screen blueprint"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.2.0",
       "date": "2026-10-28",
       "title": {

@@ -2,6 +2,19 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.3.0 (2026-10-29): Read. Match. Shine.
+
+- ⭐ **A logo of its own**: A big yellow star with a sparkle and a teal reading line.
+- 🎬 **Launch screen**: The star pops in and the tagline appears for about 2 seconds; tap to skip.
+- ✨ **Branded everywhere**: The star sits on top of the home screen and in the README.
+
+**Changes**
+
+- New Reading Stars logo (the big star): docs/logo.svg and a 1024 px app icon, docs/icon-1024.png
+- Launch screen shown for 2.4 s with a short animation and the tagline in the game's language (Read. Match. Shine. / Skaityk. Rask. Spindėk. / Lee. Elige. Brilla.); tap to skip; still with Reduce Motion; follows the shared launch-screen blueprint 1.0.0
+- The logo replaces the book and star emoji at the top of the home screen, and heads the README
+- Built with lists the launch-screen blueprint
+
 ## 1.2.0 (2026-10-28): Make it yours
 
 - 🎨 **Colours and a night sky**: Six colour themes for parents to choose, including a calm night sky.
