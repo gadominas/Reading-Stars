@@ -1,14 +1,19 @@
-# Reading Stars ⭐ (Skaitymo žvaigždės)
+<p align="center"><img src="docs/logo.svg" width="112" alt="Reading Stars logo: a big yellow star with a white sparkle over a teal reading line"></p>
+
+<h1 align="center">Reading Stars</h1>
+<p align="center"><b>Read. Match. Shine.</b><br><sub>Skaitymo žvaigždės · Estrellas lectoras</sub></p>
 
 A picture-and-word reading game for kids, built as a single [Scriptable](https://scriptable.app) script for iPhone and iPad. Kids earn tokens for reading correctly, and parents can exchange those tokens for real pocket money from a budget the kids never see.
 
 <table>
 <tr>
-<td><img src="docs/screenshots/01-home.png" width="240" alt="Home screen"></td>
-<td><img src="docs/screenshots/02-game-beginner.png" width="240" alt="Beginner round"></td>
-<td><img src="docs/screenshots/11-parent-zone.png" width="240" alt="Parent zone"></td>
+<td><img src="docs/screenshots/launch.png" width="190" alt="Launch screen: the Reading Stars star pops in, then the tagline Read. Match. Shine."></td>
+<td><img src="docs/screenshots/01-home.png" width="190" alt="Home screen"></td>
+<td><img src="docs/screenshots/02-game-beginner.png" width="190" alt="Beginner round"></td>
+<td><img src="docs/screenshots/11-parent-zone.png" width="190" alt="Parent zone"></td>
 </tr>
 <tr>
+<td align="center"><sub>Opens on its star</sub></td>
 <td align="center"><sub>Pick a player</sub></td>
 <td align="center"><sub>Read the word, tap the picture</sub></td>
 <td align="center"><sub>Parent zone: value, budget, payout</sub></td>
@@ -35,6 +40,10 @@ When a new version is out, the home screen shows what it brings, with **Update n
 <img src="docs/screenshots/18-update-lt.png" width="240" alt="Update sheet in Lithuanian">
 
 Every version is listed in [CHANGELOG.md](CHANGELOG.md). To publish one, follow [docs/RELEASING.md](docs/RELEASING.md). To turn the checks off, switch off **Parent zone › Settings › Updates › Offer new versions**; **Check for updates now** checks at once.
+
+## Launch screen
+
+Reading Stars opens on its logo for 2.4 seconds: the star traces its outline and pops in, the sparkle and the reading line follow, then "Read. Match. Shine." (*Skaityk. Rask. Spindėk.*, *Lee. Elige. Brilla.* in the game's language). Tap to skip; with Reduce Motion it appears without movement. It is the shared [launch-screen](https://github.com/gadominas/app-blueprints/blob/main/blueprints/launch-screen.md) blueprint, so all the apps start the same way. The same star sits on top of the home screen, and [docs/icon-1024.png](docs/icon-1024.png) is the 1024 px icon for a Home Screen shortcut.
 
 ## How a round works
 
@@ -199,5 +208,9 @@ The game speaks **Lithuanian 🇱🇹, English 🇬🇧 and Spanish 🇪🇸**, 
 Progress is saved to `iCloud Drive › Scriptable › ReadingStars › data.json`, with `data.backup.json` and the parent's choices (`settings.json`) next to it, or to local Scriptable storage if iCloud is off. Kids' names, tokens, budgets and the PIN hash live only in that file, never in this repository.
 
 Forgot the parent PIN? Remove the `pinHash` value from `data.json` and set a new PIN on the next launch.
+
+## Notes
+
+- Reading Stars follows three shared blueprints: in-app updates, settings and launch screen. **Settings › Built with** lists them with their versions; [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md) adds the deviations.
 
 <sub>The screenshots use demo players (Ema, Leo, Ona). Kids' names are blurred in the photos.</sub>

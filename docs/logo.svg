@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Reading Stars logo: a big yellow star with a white sparkle over a teal reading line">
+  <rect width="240" height="240" rx="54" fill="#0E1116"/>
+  <path d="M120.0 52.0 L138.8 100.1 L190.4 103.1 L150.4 135.9 L163.5 185.9 L120.0 158.0 L76.5 185.9 L89.6 135.9 L49.6 103.1 L101.2 100.1 Z" fill="#FACC15" stroke="#FACC15" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M186 40 Q186 58 204 58 Q186 58 186 76 Q186 58 168 58 Q186 58 186 40 Z" fill="#F6F7F9" stroke="#F6F7F9" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M84 210 H156" stroke="#2DD4BF" stroke-width="7" stroke-linecap="round"/>
+</svg>

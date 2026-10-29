@@ -17,6 +17,8 @@
  *   word letter style, sounds, change PIN. Payouts never reduce leaderboard points.
  * - Settings (sliders icon in the parent zone, behind the PIN): appearance, game, money,
  *   updates, round sizes and Built with (github.com/gadominas/app-blueprints · settings).
+ * - Opens on a 2.4 s launch screen with the Reading Stars star (app-blueprints · launch-screen).
+ *   The BLUEPRINTS block below lists every shared blueprint this app follows (Settings › Built with).
  *
  * - Money: per-kid token value (e.g. 1 token = 0.10 €) and a hidden per-kid budget the parent
  *   tops up. Kids see what their tokens are worth; if the budget can't cover it they're told
@@ -30,7 +32,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -44,6 +46,7 @@ const BLUEPRINTS_REPO = 'https://github.com/gadominas/app-blueprints';
 const BLUEPRINTS = [
   { id: 'in-app-updates', name: 'In-app updates', version: '1.0.0', since: '1.1.0' },
   { id: 'settings', name: 'Settings', version: '1.0.0', since: '1.2.0' },
+  { id: 'launch-screen', name: 'Launch screen', version: '1.0.0', since: '1.3.0' },
 ];
 
 // ───────────────────────── Storage (native side) ─────────────────────────
@@ -340,8 +343,8 @@ button:disabled{opacity:.4}
 /* Home */
 .hero{text-align:center;color:#fff;padding:4px 0 2px}
 .logo{display:inline-flex;gap:2px;font-size:calc(40px * var(--ts))}
-.logo span{display:inline-block;animation:float 3.2s ease-in-out infinite}
-.logo span:nth-child(2){animation-delay:.4s}
+/* Reading Stars logo: the big star (home header mark and launch screen) */
+.brand-mark{display:block;width:64px;height:64px;border-radius:15px;background:#0E1116;box-shadow:0 4px 0 rgba(36,38,74,.22),inset 0 0 0 1px rgba(246,247,249,.14);animation:float 3.2s ease-in-out infinite}
 h1{margin:2px 0 14px;font-family:var(--display);font-size:calc(36px * var(--ts));font-weight:900;letter-spacing:.3px;text-shadow:0 3px 0 rgba(36,38,74,.18)}
 .langs{display:inline-flex;gap:6px;background:rgba(255,255,255,.25);padding:6px;border-radius:20px}
 .lang{border-radius:14px;padding:8px 12px;font-size:calc(16px * var(--ts));font-weight:900;color:#fff;display:flex;gap:6px;align-items:center}
@@ -556,7 +559,38 @@ summary{font-weight:800;color:var(--muted)}
 }
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion: reduce){
-  .logo span,.pod.p1 .ava{animation:none}
+  .brand-mark,.pod.p1 .ava{animation:none}
+}
+
+/* Launch screen (app-blueprints · launch-screen 1.0.0) */
+.splash{--sp-bg:#0E1116;--sp-ink:#F6F7F9;--sp-accent:#FACC15;--sp-accent2:#2DD4BF;--sp-muted:#9AA3AE;--sp-font:var(--display);
+  position:fixed;inset:0;z-index:1000;background:var(--sp-bg);color:var(--sp-ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;cursor:pointer;
+  animation:spOut .4s ease 2.4s forwards}
+.splash.gone{display:none}
+.spIcon{width:148px;height:148px;opacity:0;transform:scale(.86);animation:spIn .5s cubic-bezier(.2,.9,.3,1.2) .05s forwards}
+.spIcon svg{width:100%;height:100%;display:block;overflow:visible}
+.spFrame{fill:none;stroke:var(--sp-ink);stroke-opacity:.35;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;opacity:0;animation:spFade .4s ease .25s forwards}
+.spDraw{fill:none;stroke:var(--sp-ink);stroke-width:13;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:100;stroke-dashoffset:100;animation:spDraw .8s ease-in-out .15s forwards}
+.spPop{fill:var(--sp-accent);transform-box:fill-box;transform-origin:center;transform:scale(0);animation:spPop .45s cubic-bezier(.3,1.7,.5,1) .75s forwards}
+.spDetail{fill:var(--sp-ink);opacity:0;animation:spFade .3s ease 1.05s forwards}
+.spSweep{fill:none;stroke:var(--sp-accent2);stroke-width:7;stroke-linecap:round;opacity:0;transform:translateX(var(--sp-sweep-from,-120px));animation:spSweep 1s ease-in-out .95s forwards}
+.spWord{font:800 40px/1 var(--sp-font,ui-rounded,-apple-system,system-ui,sans-serif);letter-spacing:-.02em;opacity:0;transform:translateY(10px);animation:spUp .45s ease 1.05s forwards}
+.spWord span{color:var(--sp-accent)}
+.spTag{font:600 15px/1.3 -apple-system,system-ui,sans-serif;letter-spacing:.06em;color:var(--sp-muted);opacity:0;transform:translateY(8px);animation:spUp .45s ease 1.4s forwards}
+/* Reading Stars logo: the star's rounded edge is drawn in the accent (it has no white outline), the sparkle keeps its soft edge */
+.spDraw{stroke:var(--sp-accent);stroke-width:12}
+.spDetail{stroke:var(--sp-ink);stroke-width:3;stroke-linejoin:round}
+@keyframes spIn{to{opacity:1;transform:scale(1)}}
+@keyframes spFade{to{opacity:1}}
+@keyframes spDraw{to{stroke-dashoffset:0}}
+@keyframes spPop{to{transform:scale(1)}}
+@keyframes spSweep{0%{opacity:0}15%{opacity:1}100%{opacity:1;transform:translateX(0)}}
+@keyframes spUp{to{opacity:1;transform:none}}
+@keyframes spOut{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){
+  .splash *{animation:none!important;opacity:1!important;transform:none!important;stroke-dashoffset:0!important}
+  .splash{animation:spOut .3s ease 1.6s forwards!important}
 }
 
 /* Tiny: one line per player on the leaderboard and in the parent zone; tap for the details */
@@ -1684,7 +1718,7 @@ function webApp() {
 
   VIEWS.home = () => `
     <header class="hero">
-      <div class="logo"><span>📚</span><span>⭐</span></div>
+      <div class="logo"><svg class="brand-mark" viewBox="0 0 240 240" aria-hidden="true"><path d="M120.0 52.0 L138.8 100.1 L190.4 103.1 L150.4 135.9 L163.5 185.9 L120.0 158.0 L76.5 185.9 L89.6 135.9 L49.6 103.1 L101.2 100.1 Z" fill="#FACC15" stroke="#FACC15" stroke-width="12" stroke-linejoin="round"></path><path d="M186 40 Q186 58 204 58 Q186 58 186 76 Q186 58 168 58 Q186 58 186 40 Z" fill="#F6F7F9" stroke="#F6F7F9" stroke-width="3" stroke-linejoin="round"></path><path d="M84 210 H156" stroke="#2DD4BF" stroke-width="7" stroke-linecap="round"></path></svg></div>
       <h1>${esc(t("appTitle"))}</h1>
       <div class="langs">${Object.entries(LANGS)
         .map(([k, l]) => `<button class="lang ${state.lang === k ? "on" : ""}" data-action="lang" data-v="${k}"><span class="flag">${l.flag}</span>${l.code}</button>`)
@@ -2259,7 +2293,16 @@ function webApp() {
 
 // ───────────────────────── Boot ─────────────────────────
 
+// Launch screen (app-blueprints · launch-screen 1.0.0): the tagline follows the game's language
+const SPLASH_TAG = { en: "Read. Match. Shine.", lt: "Skaityk. Rask. Spindėk.", es: "Lee. Elige. Brilla." };
+function splashLang(data) {
+  let l = data && data.lang;
+  if (!SPLASH_TAG[l]) { try { l = String(Device.language() || "en").slice(0, 2).toLowerCase(); } catch (e) { l = "en"; } }
+  return SPLASH_TAG[l] ? l : "en";
+}
+
 function buildHTML(data) {
+  const spLang = splashLang(data), spTag = SPLASH_TAG[spLang];
   const initJSON = JSON.stringify(data || null).replace(/</g, "\\u003c");
   const look = lookState(), sky = PALETTES[look.shown].sky;
   return `<!doctype html>
@@ -2268,6 +2311,16 @@ function buildHTML(data) {
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <style>${CSS}</style>
 </head><body class="d-${look.density}" style="background-color:${sky}">
+<div class="splash" id="splash" role="img" lang="${spLang}" aria-label="Reading Stars. ${spTag}">
+  <div class="spIcon"><svg viewBox="0 0 240 240" aria-hidden="true">
+    <path class="spDraw" pathLength="100" d="M120.0 52.0 L138.8 100.1 L190.4 103.1 L150.4 135.9 L163.5 185.9 L120.0 158.0 L76.5 185.9 L89.6 135.9 L49.6 103.1 L101.2 100.1 Z"></path>
+    <path class="spPop" d="M120.0 52.0 L138.8 100.1 L190.4 103.1 L150.4 135.9 L163.5 185.9 L120.0 158.0 L76.5 185.9 L89.6 135.9 L49.6 103.1 L101.2 100.1 Z"></path>
+    <path class="spDetail" d="M186 40 Q186 58 204 58 Q186 58 186 76 Q186 58 168 58 Q186 58 186 40 Z"></path>
+    <path class="spSweep" d="M84 210 H156"></path>
+  </svg></div>
+  <div class="spWord">Reading <span>Stars</span></div>
+  <div class="spTag">${spTag}</div>
+</div>
 <div id="app"></div>
 <div id="fx"></div>
 <script>
@@ -2278,6 +2331,14 @@ window.onerror = function (msg, src, line, col) {
 };
 </script>
 <script>
+// Launch screen (app-blueprints · launch-screen 1.0.0): first, self-contained
+(function () {
+  var sp = document.getElementById("splash");
+  if (!sp) return;
+  function gone() { sp.classList.add("gone"); sp.setAttribute("aria-hidden", "true"); }
+  sp.addEventListener("click", gone);   // tap to skip
+  setTimeout(gone, 2900);               // out of the page once the CSS fade is done
+})();
 window.__INITIAL__ = ${initJSON};
 window.__APP_VERSION = ${JSON.stringify(VERSION)};
 (${webApp.toString()})();
