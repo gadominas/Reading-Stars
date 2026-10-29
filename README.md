@@ -45,6 +45,12 @@ Every version is listed in [CHANGELOG.md](CHANGELOG.md). To publish one, follow 
 
 Reading Stars opens on its logo for 2.4 seconds: the star traces its outline and pops in, the sparkle and the reading line follow, then "Read. Match. Shine." (*Skaityk. Rask. Spindėk.*, *Lee. Elige. Brilla.* in the game's language). Tap to skip; with Reduce Motion it appears without movement. It is the shared [launch-screen](https://github.com/gadominas/app-blueprints/blob/main/blueprints/launch-screen.md) blueprint, so all the apps start the same way. The same star sits on top of the home screen, and [docs/icon-1024.png](docs/icon-1024.png) is the 1024 px icon for a Home Screen shortcut.
 
+## Widget
+
+Add a Scriptable widget to the Home Screen or Lock Screen, long-press it, tap **Edit Widget** and choose *Reading Stars* as the script. It shows the top reader with their ⭐ points and 🪙 tokens to spend, and on medium and large the other players ranked as on the leaderboard. Type a player's name in **Parameter** to show only that player, with their tokens as the big number. It never shows money, budgets or the PIN, because kids see the Home Screen.
+
+The widget shows what the game saved last, so it works offline and updates after every round, payout and player change; if nobody has played for a while, its footer says when it was last updated. It is the shared [widgets](https://github.com/gadominas/app-blueprints/blob/main/blueprints/widgets.md) blueprint, in the same frame as the other apps' widgets. **Parent zone › Settings › Widget** sets how often iOS is asked to refresh it and when it counts as out of date.
+
 ## How a round works
 
 A word is shown big, split into syllables with dashes and a different colour per syllable: **Na-mas**, **Kar-vė**, **He-li-cop-ter**. Above it are pictures, and the kid taps the one that matches.
@@ -205,12 +211,12 @@ The game speaks **Lithuanian 🇱🇹, English 🇬🇧 and Spanish 🇪🇸**, 
 
 ## Data
 
-Progress is saved to `iCloud Drive › Scriptable › ReadingStars › data.json`, with `data.backup.json` and the parent's choices (`settings.json`) next to it, or to local Scriptable storage if iCloud is off. Kids' names, tokens, budgets and the PIN hash live only in that file, never in this repository.
+Progress is saved to `iCloud Drive › Scriptable › ReadingStars › data.json`, with `data.backup.json` and the parent's choices (`settings.json`) next to it, or to local Scriptable storage if iCloud is off. Kids' names, tokens, budgets and the PIN hash live only in that file, never in this repository. The widget reads a small copy with only names, avatars, points and tokens, kept in Scriptable's local storage on this device (`reading-stars-widget.json`).
 
 Forgot the parent PIN? Remove the `pinHash` value from `data.json` and set a new PIN on the next launch.
 
 ## Notes
 
-- Reading Stars follows three shared blueprints: in-app updates, settings and launch screen. **Settings › Built with** lists them with their versions; [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md) adds the deviations.
+- Reading Stars follows four shared blueprints: in-app updates, settings, launch screen and widgets. **Settings › Built with** lists them with their versions; [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md) adds the deviations.
 
 <sub>The screenshots use demo players (Ema, Leo, Ona). Kids' names are blurred in the photos.</sub>

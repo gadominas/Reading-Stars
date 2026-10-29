@@ -18,6 +18,8 @@
  * - Settings (sliders icon in the parent zone, behind the PIN): appearance, game, money,
  *   updates, round sizes and Built with (github.com/gadominas/app-blueprints · settings).
  * - Opens on a 2.4 s launch screen with the Reading Stars star (app-blueprints · launch-screen).
+ * - Home Screen and Lock Screen widget: the top reader and the leaderboard, or one player's tokens
+ *   when the widget's Parameter is that player's name (app-blueprints · widgets). Never money, budgets or the PIN.
  *   The BLUEPRINTS block below lists every shared blueprint this app follows (Settings › Built with).
  *
  * - Money: per-kid token value (e.g. 1 token = 0.10 €) and a hidden per-kid budget the parent
@@ -32,7 +34,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -47,6 +49,7 @@ const BLUEPRINTS = [
   { id: 'in-app-updates', name: 'In-app updates', version: '1.0.0', since: '1.1.0' },
   { id: 'settings', name: 'Settings', version: '1.0.0', since: '1.2.0' },
   { id: 'launch-screen', name: 'Launch screen', version: '1.0.0', since: '1.3.0' },
+  { id: 'widgets', name: 'Widgets', version: '1.0.0', since: '1.4.0' },
 ];
 
 // ───────────────────────── Storage (native side) ─────────────────────────
@@ -91,8 +94,9 @@ let lastSaved = null;
 function saveData(json) {
   if (typeof json !== "string" || !json || json === lastSaved) return;
   const seen = json;
+  let d;
   try {
-    const d = JSON.parse(json);
+    d = JSON.parse(json);
     if (d && typeof d === "object") { delete d.settings; json = JSON.stringify(d); }   // settings live in settings.json
   } catch (e) {
     return;
@@ -102,6 +106,8 @@ function saveData(json) {
   } catch (e) {}
   fm.writeString(dataPath, json);
   lastSaved = seen;
+  // Every round, payout and player change reaches this save, so the widget's snapshot follows it (names, points, tokens only).
+  saveWidget(widgetSnapshot(d));
 }
 
 // ───────────────────────── Settings (app-blueprints · settings) ─────────────────────────
@@ -156,6 +162,16 @@ const CONFIG = [
       en: { label: "Pictures per round, Beginner", unit: "pictures" }, lt: { label: "Paveikslėlių raunde, pradedantiesiems", unit: "pav." }, es: { label: "Imágenes por ronda, Principiante", unit: "imágenes" } },
     { k: "expertPics", def: 5, min: 3, max: 5, step: 1,
       en: { label: "Pictures per round, Expert", unit: "pictures" }, lt: { label: "Paveikslėlių raunde, ekspertams", unit: "pav." }, es: { label: "Imágenes por ronda, Experto", unit: "imágenes" } },
+  ]],
+  [{ en: "Widget", lt: "Valdiklis", es: "Widget" }, [
+    { k: "widgetRefreshMin", def: 30, min: 15, max: 240, step: 15,
+      en: { label: "Ask iOS to refresh every", help: "iOS decides the exact timing", unit: "min" },
+      lt: { label: "Prašyti iOS atnaujinti kas", help: "Tikslų laiką nusprendžia iOS", unit: "min." },
+      es: { label: "Pedir a iOS que actualice cada", help: "iOS decide el momento exacto", unit: "min" } },
+    { k: "widgetStaleMin", def: 720, min: 60, max: 2880, step: 60,
+      en: { label: "Mark the widget as out of date after", help: "Older data shows \"Updated …\" in amber", unit: "min" },
+      lt: { label: "Laikyti valdiklį pasenusiu po", help: "Senesni duomenys rodo „Atnaujinta …“ gintaro spalva", unit: "min." },
+      es: { label: "Marcar el widget como desactualizado tras", help: "Los datos antiguos muestran «Actualizado …» en ámbar", unit: "min" } },
   ]],
 ];
 const CFG_FLAT = CONFIG.flatMap(([, items]) => items);
@@ -2291,6 +2307,311 @@ function webApp() {
   render();
 }
 
+// ───────────────────────── Widget content (app-blueprints · widgets) ─────────────────────────
+// The leaderboard at a glance, in the game's language. Never money, budgets or the PIN: kids see the Home Screen.
+// Plural forms: English and Spanish one/other; Lithuanian 1, 21… / 2–9, 22… / 0, 10–20, 30….
+const plOne = (n, one, other) => (n === 1 ? one : other);
+const plLt = (n, one, few, many) => (n % 10 === 0 || (n % 100 > 10 && n % 100 < 20) ? many : n % 10 === 1 ? one : few);
+const WIDGET_TEXT = {
+  en: { open: 'Tap to open', nothing: 'Nothing to show yet.', updated: 'Updated', yesterday: 'yesterday',
+    top: 'Top reader', empty: 'Add a player to start',
+    caption: (p, t) => `⭐ ${p} ${plOne(p, 'point', 'points')} and 🪙 ${t} ${plOne(t, 'token', 'tokens')} to spend`,
+    toSpend: (t) => `🪙 ${plOne(t, 'token', 'tokens')} to spend`,
+    players: (n) => `${n} ${plOne(n, 'player', 'players')}`,
+    place: (p, i, n) => `⭐ ${p} · #${i} of ${n}`,
+    leads: (name, p) => `⭐ ${name} leads with ${p}` },
+  lt: { open: 'Paspausk, kad atidarytum', nothing: 'Kol kas nėra ką rodyti.', updated: 'Atnaujinta', yesterday: 'vakar',
+    top: 'Pirmauja', empty: 'Pridėk žaidėją ir pradėk',
+    caption: (p, t) => `⭐ ${p} ${plLt(p, 'taškas', 'taškai', 'taškų')} ir 🪙 ${t} ${plLt(t, 'žetonas', 'žetonai', 'žetonų')} išleisti`,
+    toSpend: (t) => `🪙 ${plLt(t, 'žetonas', 'žetonai', 'žetonų')} išleisti`,
+    players: (n) => `${n} ${plLt(n, 'žaidėjas', 'žaidėjai', 'žaidėjų')}`,
+    place: (p, i, n) => `⭐ ${p} · #${i} iš ${n}`,
+    leads: (name, p) => `⭐ ${name} pirmauja: ${p}` },
+  es: { open: 'Toca para abrir', nothing: 'Aún no hay nada que mostrar.', updated: 'Actualizado', yesterday: 'ayer',
+    top: 'Líder de lectura', empty: 'Añade un jugador para empezar',
+    caption: (p, t) => `⭐ ${p} ${plOne(p, 'punto', 'puntos')} y 🪙 ${t} ${plOne(t, 'ficha', 'fichas')} para gastar`,
+    toSpend: (t) => `🪙 ${plOne(t, 'ficha', 'fichas')} para gastar`,
+    players: (n) => `${n} ${plOne(n, 'jugador', 'jugadores')}`,
+    place: (p, i, n) => `⭐ ${p} · #${i} de ${n}`,
+    leads: (name, p) => `⭐ ${name} lidera con ${p}` },
+};
+
+// What the widget may see, taken from the game's own save: names, avatars, points and tokens, and the language.
+// Never token values, budgets, payouts, top-ups or the PIN hash.
+function widgetSnapshot(d) {
+  const num = (v) => (typeof v === 'number' && isFinite(v) ? Math.max(0, v) : 0);
+  const kids = d && Array.isArray(d.kids) ? d.kids.filter((k) => k && typeof k === 'object') : [];
+  return {
+    lang: (d && d.lang) || null,
+    kids: kids.map((k) => ({ name: String(k.name || '?'), avatar: String(k.avatar || ''), points: num(k.total), tokens: num(k.tokens) })),
+  };
+}
+
+// Top reader, then the others ranked as on the leaderboard (points, then tokens, then name).
+// Parameter = a player's name: that player only, with the tokens they can spend as the big value.
+async function widgetModel(param) {
+  const s = readWidget();
+  const T = WIDGET_TEXT[splashLang(s)];
+  const kids = (s && Array.isArray(s.kids) ? s.kids : []).slice()
+    .sort((a, b) => b.points - a.points || b.tokens - a.tokens || String(a.name).localeCompare(String(b.name)));
+  if (!kids.length) return { empty: T.empty };
+  const who = (k) => (k.avatar ? k.avatar + ' ' : '') + k.name;
+  const q = String(param || '').trim().toLowerCase();
+  const i = q ? kids.findIndex((k) => String(k.name).trim().toLowerCase() === q) : -1;
+  if (i >= 0) {
+    const k = kids[i];
+    return {
+      kicker: who(k), value: k.tokens, caption: T.toSpend(k.tokens),
+      footer: T.place(k.points, i + 1, kids.length), at: s.at,
+      accessory: { glyph: '🪙', inline: '🪙 ' + k.tokens + ' · ' + k.name },
+    };
+  }
+  const lead = kids[0];
+  return {
+    kicker: T.top,
+    title: who(lead),
+    caption: T.caption(lead.points, lead.tokens),
+    rows: kids.slice(1).map((k, n) => ({ icon: k.avatar, text: (n + 2) + '. ' + k.name, sub: '⭐ ' + k.points + ' · 🪙 ' + k.tokens })),
+    footer: T.players(kids.length),
+    at: s.at,
+    accessory: { glyph: '⭐', inline: T.leads(lead.name, lead.points), value: lead.points },
+  };
+}
+
+// ───────── Widget ─────────
+// Shared widget frame (github.com/gadominas/app-blueprints › blueprints/widgets.md).
+// An app changes only WIDGET and widgetModel(); everything below WB is the same in every app.
+const WIDGET = {
+  name: ['Reading ', 'Stars'],            // as on the launch screen: plain part, highlighted part, optional rest
+  accent: '#FACC15',                      // the logo's focal colour (the launch screen's --sp-accent)
+  icon: REPO_RAW + 'docs/icon-1024.png',  // the app icon, cached on the phone after the first fetch
+  get words() { return WIDGET_TEXT[splashLang(readWidget())]; },   // in the app's language (the game's, saved with the snapshot)
+};
+// Brand colours, the same in every app and in light and dark mode: the logo tile's ground and lines.
+const WB = { ground: '#0E1116', raised: '#171B22', ink: '#F6F7F9', ink2: '#C9CED6', muted: '#9AA3AE', good: '#2DD4BF', warn: '#FBBF24' };
+const wfm = FileManager.local();
+const wPath = (n) => wfm.joinPath(wfm.documentsDirectory(), APP_ID + '-' + n);
+
+// What the widget shows is saved by the app and only read by the widget: fast, offline, no sign-in.
+function saveWidget(data) {
+  try { wfm.writeString(wPath('widget.json'), JSON.stringify(Object.assign({}, data, { at: Date.now() }))); }
+  catch (e) { console.log('Widget: not saved: ' + e); }
+}
+function readWidget() {
+  try { const p = wPath('widget.json'); return wfm.fileExists(p) ? JSON.parse(wfm.readString(p)) : null; }
+  catch (e) { return null; }
+}
+
+// Tones: ink, soft, muted, accent, good, warn, or a hex colour.
+const wColor = (c, a = 1) => {
+  const k = c === 'soft' ? 'ink2' : c;
+  return new Color(k === 'accent' ? WIDGET.accent : (WB[k] || k), a);
+};
+// Rounded system fonts, falling back to the plain system font on older Scriptable versions.
+function wFont(weight, size) {
+  const name = { bold: 'boldRoundedSystemFont', semi: 'semiboldRoundedSystemFont', med: 'mediumRoundedSystemFont' }[weight] || 'regularRoundedSystemFont';
+  if (typeof Font[name] === 'function') return Font[name](size);
+  return weight === 'bold' ? Font.boldSystemFont(size) : weight === 'semi' ? Font.semiboldSystemFont(size) : weight === 'med' ? Font.mediumSystemFont(size) : Font.systemFont(size);
+}
+function wText(stack, s, size, weight, tone, lines = 1) {
+  const t = stack.addText(String(s));
+  t.font = wFont(weight, size);
+  t.textColor = wColor(tone);
+  t.lineLimit = lines;
+  if (lines === 1) t.minimumScaleFactor = 0.75;
+  return t;
+}
+function wWhen(ts) {
+  const d = new Date(ts), now = new Date(), f = new DateFormatter();
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const ago = Math.round((day(now) - day(d)) / 864e5);
+  if (ago === 1) return WIDGET.words.yesterday;
+  f.dateFormat = ago === 0 ? 'HH:mm' : 'd MMM';
+  return f.string(d);
+}
+
+// The app's logo tile, from the repository's icon, cached per app version; a monogram until then.
+async function widgetIcon() {
+  const p = wPath('widget-icon-' + VERSION + '.png');
+  try {
+    if (wfm.fileExists(p)) return wfm.readImage(p);
+    const r = new Request(WIDGET.icon);
+    r.timeoutInterval = 8;
+    const dc = new DrawContext();
+    dc.size = new Size(96, 96); dc.opaque = false; dc.respectScreenScale = false;
+    dc.drawImageInRect(await r.loadImage(), new Rect(0, 0, 96, 96));
+    const img = dc.getImage();
+    const dir = wfm.documentsDirectory();
+    wfm.listContents(dir).filter((f) => f.startsWith(APP_ID + '-widget-icon-')).forEach((f) => { try { wfm.remove(wfm.joinPath(dir, f)); } catch (e) {} });
+    wfm.writeImage(p, img);
+    return img;
+  } catch (e) {
+    return widgetMonogram();
+  }
+}
+function widgetMonogram() {
+  const dc = new DrawContext();
+  dc.size = new Size(96, 96); dc.opaque = false; dc.respectScreenScale = false;
+  dc.setFillColor(wColor('raised')); dc.fillRect(new Rect(0, 0, 96, 96));
+  dc.setFont(wFont('bold', 54)); dc.setTextColor(wColor('accent')); dc.setTextAlignedCenter();
+  dc.drawTextInRect(WIDGET.name.join('').charAt(0), new Rect(0, 14, 96, 70));
+  return dc.getImage();
+}
+
+// Rows that fit: a line counts 1, a sub line 0.8; medium holds 5.5 (3 rows at most), large 12 (6 at most).
+function wFit(rows, budget, max) {
+  const out = [];
+  let used = 0;
+  for (const r of rows || []) {
+    const n = (r.lines || 1) + (r.sub ? 0.8 : 0);
+    if (out.length >= max || used + n > budget + 1e-9) break;   // 1e-9: 3 + 5 × 1.8 must still fit in 12
+    used += n;
+    out.push(r);
+  }
+  return out;
+}
+function wRows(stack, rows) {
+  rows.forEach((r, i) => {
+    if (i) stack.addSpacer(5);
+    const row = stack.addStack();
+    row.topAlignContent(); row.spacing = 6;
+    if (r.url) row.url = r.url;
+    if (r.icon) { const ic = row.addStack(); ic.size = new Size(15, 0); wText(ic, r.icon, 11.5, 'reg', 'ink'); }
+    const tx = row.addStack();
+    tx.layoutVertically();
+    wText(tx, r.text, 12.5, r.lines ? 'reg' : 'med', r.tone || (r.lines ? 'soft' : 'ink'), r.lines || 1);
+    if (r.sub) wText(tx, r.sub, 11, 'reg', 'muted');
+  });
+}
+
+async function renderWidget(m) {
+  const fam = config.widgetFamily || 'medium';
+  const w = new ListWidget();
+  w.url = m.url || URLScheme.forRunningScript();
+  w.refreshAfterDate = new Date(Date.now() + cfg('widgetRefreshMin') * 60e3);
+  if (fam.startsWith('accessory')) return renderAccessory(w, fam, m);
+  const small = fam === 'small', medium = fam === 'medium', large = !small && !medium;
+  const g = new LinearGradient();
+  g.colors = [wColor('raised'), wColor('ground')]; g.locations = [0, 1];
+  g.startPoint = new Point(0, 0); g.endPoint = new Point(0, 1);
+  w.backgroundGradient = g;
+  w.setPadding(14, 14, 14, 14);
+
+  // 1. Header: logo tile, name (highlighted part in the accent), badge
+  const hd = w.addStack();
+  hd.centerAlignContent();
+  const icon = hd.addImage(await widgetIcon());
+  const is = small ? 18 : 20;
+  icon.imageSize = new Size(is, is); icon.cornerRadius = is * 0.225;
+  hd.addSpacer(6);
+  WIDGET.name.forEach((part, i) => {
+    if (!part) return;
+    const t = hd.addText(part);
+    t.font = wFont('bold', small ? 13 : 14); t.textColor = wColor(i === 1 ? 'accent' : 'ink'); t.lineLimit = 1;
+  });
+  hd.addSpacer();
+  if (m.badge && !small) {
+    const b = hd.addStack();
+    b.setPadding(2, 7, 2, 7); b.cornerRadius = 8;
+    b.backgroundColor = wColor(m.badgeTone || 'accent', 0.16);
+    wText(b, m.badge, 11.5, 'semi', m.badgeTone || 'accent');
+  }
+  w.addSpacer(small ? 8 : 10);
+
+  // Empty state: what to do next, never an error
+  if (m.empty) {
+    wText(w, m.empty, 13, 'semi', 'soft', 3);
+    w.addSpacer();
+    wText(w, m.footer || WIDGET.words.open, 11, 'reg', 'muted');
+    Script.setWidget(w);
+    return;
+  }
+
+  // 2. Hero: kicker, then a big value with its caption, or a title with its caption
+  const body = w.addStack();
+  body.topAlignContent();
+  const left = body.addStack();
+  left.layoutVertically();
+  if (medium) left.size = new Size(136, 0);
+  if (m.kicker) wText(left, m.kicker, 11, 'semi', m.kickerTone || 'accent');
+  if (m.value != null && m.value !== '') {
+    wText(left, m.value, small ? 40 : 42, 'bold', m.valueTone || 'ink');
+    if (m.caption) wText(left, m.caption, 13, 'semi', 'ink');
+  } else {
+    if (m.title) wText(left, m.title, small ? 16 : 18, 'bold', 'ink', 2);
+    if (m.caption) { left.addSpacer(2); wText(left, m.caption, 12, 'reg', 'soft', 2); }
+  }
+
+  // 3. Rows: beside the hero on medium, under it on large, none on small
+  const rows = m.rows || [];
+  if (medium && wFit(rows, 5.5, 3).length) {
+    body.addSpacer(12);
+    const right = body.addStack();
+    right.layoutVertically();
+    wRows(right, wFit(rows, 5.5, 3));
+  }
+  body.addSpacer();
+  if (large && wFit(rows, 12, 6).length) { w.addSpacer(14); wRows(w, wFit(rows, 12, 6)); }
+
+  // 4. Footer: one muted line; amber when the data is stale. Small shows the badge here if there's no footer.
+  w.addSpacer();
+  const ft = small ? (m.footer || m.badge) : m.footer;
+  if (ft) wText(w, (m.stale ? '⟳ ' : '') + ft, 11, 'reg', m.stale ? 'warn' : 'muted');
+  Script.setWidget(w);
+}
+
+// Lock Screen: iOS tints these, so text only, no colours or logo.
+function renderAccessory(w, fam, m) {
+  const name = WIDGET.name.join('');
+  const a = m.accessory || {};
+  const hasValue = m.value != null && m.value !== '';
+  const hero = m.empty || (hasValue ? (m.value + ' ' + (m.caption || '')).trim() : (m.title || ''));
+  if (fam === 'accessoryInline') {
+    w.addText(a.inline || (hero ? name + ': ' + hero : name));
+  } else if (fam === 'accessoryCircular') {
+    w.addAccessoryWidgetBackground = true;
+    const c = w.addStack();
+    c.layoutVertically(); c.centerAlignContent();
+    const gl = c.addText(a.glyph || name.charAt(0)); gl.font = Font.systemFont(11); gl.centerAlignText();
+    const v = c.addText(String(a.value != null ? a.value : hasValue ? m.value : '–'));
+    v.font = wFont('bold', 20); v.minimumScaleFactor = 0.5; v.centerAlignText();
+  } else {
+    const lines = [
+      [[name, m.badge || m.kicker].filter(Boolean).join(' · '), 'semi', 12],
+      [hero, 'bold', 15],
+      [m.empty ? '' : hasValue ? (m.footer || '') : (m.caption || m.footer || ''), 'reg', 12],
+    ];
+    lines.forEach(([s, wt, size]) => { if (!s) return; const t = w.addText(s); t.font = wFont(wt, size); t.lineLimit = 1; t.minimumScaleFactor = 0.7; });
+  }
+  Script.setWidget(w);
+}
+
+// Widget runs come here and only here: no WebView, Alert or QuickLook may be built or presented.
+async function runWidget() {
+  const name = WIDGET.name.join('');
+  let m = null;
+  try { m = await widgetModel(args.widgetParameter || '', config.widgetFamily || 'medium'); }
+  catch (e) { console.error('Widget model: ' + e); }
+  if (!m) m = { empty: WIDGET.words.nothing };
+  try {
+    if (m.at && !m.empty && Date.now() - m.at > cfg('widgetStaleMin') * 60e3) {
+      m.stale = true;
+      m.footer = WIDGET.words.updated + ' ' + wWhen(m.at);
+    }
+    await renderWidget(m);
+  } catch (e) {
+    console.error('Widget render: ' + e);
+    const w = new ListWidget();
+    w.backgroundColor = wColor('ground');
+    w.url = URLScheme.forRunningScript();
+    wText(w, name, 14, 'bold', 'ink');
+    w.addSpacer(4);
+    wText(w, WIDGET.words.open, 12, 'reg', 'muted');
+    Script.setWidget(w);
+  }
+}
+// ───────── end of Widget ─────────
+
 // ───────────────────────── Boot ─────────────────────────
 
 // Launch screen (app-blueprints · launch-screen 1.0.0): the tagline follows the game's language
@@ -2348,102 +2669,114 @@ window.__APP_VERSION = ${JSON.stringify(VERSION)};
 
 const SAVE_SCHEME = "readingstars://save?d=";
 
-const initialData = await loadData();
-await loadSettings(initialData);
-const webView = new WebView();
+// The app: everything that builds and presents the WebView. Only the app branch below runs it, never a widget.
+async function main() {
+  saveWidget(widgetSnapshot(initialData));   // the widget shows the players as loaded, before the first round
+  const webView = new WebView();
 
-let pendingUpdate = null;
-const js = (code) => webView.evaluateJavaScript(code + "; 'ok'").catch(() => {});
-const offerUpdate = () => {
-  if (pendingUpdate) js(`window.__showUpdate && window.__showUpdate(${JSON.stringify(pendingUpdate)})`);
-};
+  let pendingUpdate = null;
+  const js = (code) => webView.evaluateJavaScript(code + "; 'ok'").catch(() => {});
+  const offerUpdate = () => {
+    if (pendingUpdate) js(`window.__showUpdate && window.__showUpdate(${JSON.stringify(pendingUpdate)})`);
+  };
 
-// Actions sent by the page with send(action, params): readingstars://<action>?p=<json>
-async function handleAction(head, p) {
-  const answer = (ok, msg) => js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
-  // Settings (app-blueprints · settings): each change is applied and saved at once; the answer is the fresh state.
-  if (head === "settings-get") return answer(true, settingsState());
-  if (head === "set") {
-    if (!setSetting(p.k, p.v)) return answer(false, "That setting can't be changed here.");
-    saveSettings();
-    return answer(true, settingsState());
-  }
-  if (head === "cfg") {
-    if (p.k === "*") settings.cfg = {}; else setCfg(p.k, p.reset ? null : p.v);
-    saveSettings();
-    return answer(true, settingsState());
-  }
-  if (head === "update-check") {   // Settings › Check for updates now: clears "Later" and checks at once
-    clearUpdateSnooze();
-    const was = settings.checkUpdates; settings.checkUpdates = true;
-    const u = await checkForUpdate(); settings.checkUpdates = was;
-    if (u) pendingUpdate = u;
-    return answer(true, { available: !!u, info: u, version: u ? u.latest : VERSION });
-  }
-  if (head === "openurl") {   // Built with: only the blueprints repository opens from here
-    const v = String(p.v || "");
-    if (v === BLUEPRINTS_REPO || v.startsWith(BLUEPRINTS_REPO + "/")) await Safari.openInApp(v, false);
-    return;
-  }
-  if (head === "update-later") {
-    snoozeUpdate();
-    pendingUpdate = null;
-    return;
-  }
-  if (head === "update-now") {
-    let ok = false;
-    let msg = "";
-    try {
-      msg = await applyUpdate(pendingUpdate);
-      ok = true;
-      pendingUpdate = null;
-      clearUpdateSnooze();
-    } catch (e) {
-      msg = String((e && e.message) || e);
+  // Actions sent by the page with send(action, params): readingstars://<action>?p=<json>
+  async function handleAction(head, p) {
+    const answer = (ok, msg) => js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
+    // Settings (app-blueprints · settings): each change is applied and saved at once; the answer is the fresh state.
+    if (head === "settings-get") return answer(true, settingsState());
+    if (head === "set") {
+      if (!setSetting(p.k, p.v)) return answer(false, "That setting can't be changed here.");
+      saveSettings();
+      return answer(true, settingsState());
     }
-    await js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
+    if (head === "cfg") {
+      if (p.k === "*") settings.cfg = {}; else setCfg(p.k, p.reset ? null : p.v);
+      saveSettings();
+      return answer(true, settingsState());
+    }
+    if (head === "update-check") {   // Settings › Check for updates now: clears "Later" and checks at once
+      clearUpdateSnooze();
+      const was = settings.checkUpdates; settings.checkUpdates = true;
+      const u = await checkForUpdate(); settings.checkUpdates = was;
+      if (u) pendingUpdate = u;
+      return answer(true, { available: !!u, info: u, version: u ? u.latest : VERSION });
+    }
+    if (head === "openurl") {   // Built with: only the blueprints repository opens from here
+      const v = String(p.v || "");
+      if (v === BLUEPRINTS_REPO || v.startsWith(BLUEPRINTS_REPO + "/")) await Safari.openInApp(v, false);
+      return;
+    }
+    if (head === "update-later") {
+      snoozeUpdate();
+      pendingUpdate = null;
+      return;
+    }
+    if (head === "update-now") {
+      let ok = false;
+      let msg = "";
+      try {
+        msg = await applyUpdate(pendingUpdate);
+        ok = true;
+        pendingUpdate = null;
+        clearUpdateSnooze();
+      } catch (e) {
+        msg = String((e && e.message) || e);
+      }
+      await js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
+    }
   }
+
+  // The page "navigates" to readingstars://… to talk to this side. We catch the request,
+  // act on it and cancel the navigation. readingstars://save?d=<json> writes the progress file.
+  webView.shouldAllowRequest = (request) => {
+    const url = String((request && request.url) || "");
+    if (url.indexOf(SAVE_SCHEME) === 0) {
+      const raw = url.slice(SAVE_SCHEME.length);
+      let json = raw;
+      try { json = decodeURIComponent(raw); } catch (e) {}
+      try { saveData(json); } catch (e) {}
+      return false;
+    }
+    const m = url.match(/^readingstars:\/\/([a-z-]+)(?:\?p=(.*))?$/);
+    if (m) {
+      let p = {};
+      try { p = JSON.parse(decodeURIComponent(m[2] || "") || "{}"); } catch (e) {}
+      handleAction(m[1], p);
+      return false;
+    }
+    return true;
+  };
+
+  await webView.loadHTML(buildHTML(Object.assign({}, initialData || {}, { settings: gameSettings(), look: lookState(), cfg: cfgValues() })));
+  const presenting = webView.present(true);
+
+  // Once per run, after the first screen is on: never slows the start, never throws.
+  checkForUpdate().then((u) => {
+    pendingUpdate = u;
+    offerUpdate();
+  });
+
+  await presenting;
+
+  // Final save after the game is closed.
+  try {
+    const finalState = await Promise.race([
+      webView.evaluateJavaScript("window.__flush ? window.__flush() : null", false),
+      sleep(1500).then(() => null),
+    ]);
+    saveData(finalState);
+  } catch (e) {}
 }
 
-// The page "navigates" to readingstars://… to talk to this side. We catch the request,
-// act on it and cancel the navigation. readingstars://save?d=<json> writes the progress file.
-webView.shouldAllowRequest = (request) => {
-  const url = String((request && request.url) || "");
-  if (url.indexOf(SAVE_SCHEME) === 0) {
-    const raw = url.slice(SAVE_SCHEME.length);
-    let json = raw;
-    try { json = decodeURIComponent(raw); } catch (e) {}
-    try { saveData(json); } catch (e) {}
-    return false;
-  }
-  const m = url.match(/^readingstars:\/\/([a-z-]+)(?:\?p=(.*))?$/);
-  if (m) {
-    let p = {};
-    try { p = JSON.parse(decodeURIComponent(m[2] || "") || "{}"); } catch (e) {}
-    handleAction(m[1], p);
-    return false;
-  }
-  return true;
-};
-
-await webView.loadHTML(buildHTML(Object.assign({}, initialData || {}, { settings: gameSettings(), look: lookState(), cfg: cfgValues() })));
-const presenting = webView.present(true);
-
-// Once per run, after the first screen is on: never slows the start, never throws.
-checkForUpdate().then((u) => {
-  pendingUpdate = u;
-  offerUpdate();
-});
-
-await presenting;
-
-// Final save after the game is closed.
-try {
-  const finalState = await Promise.race([
-    webView.evaluateJavaScript("window.__flush ? window.__flush() : null", false),
-    sleep(1500).then(() => null),
-  ]);
-  saveData(finalState);
-} catch (e) {}
-
+// ───────────────────────── Start ─────────────────────────
+// Settings load before every branch; loadSettings reads data.json first for its one-time 1.2 migration.
+const initialData = await loadData();
+await loadSettings(initialData);
+if (config.runsInWidget || config.runsInAccessoryWidget) {
+  await runWidget();             // never builds or presents a WebView, Alert or QuickLook
+} else {
+  widgetIcon();                  // caches the logo tile for the widget, in the background
+  await main();
+}
 Script.complete();
