@@ -4,6 +4,68 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.4.0",
+      "date": "2026-10-29",
+      "title": {
+        "en": "Stars on your Home Screen",
+        "lt": "Žvaigždės pagrindiniame ekrane",
+        "es": "Estrellas en tu pantalla de inicio"
+      },
+      "highlights": [
+        {
+          "icon": "🏆",
+          "title": {
+            "en": "Leaderboard widget",
+            "lt": "Lyderių valdiklis",
+            "es": "Widget de clasificación"
+          },
+          "text": {
+            "en": "See the top reader and everyone's stars on the Home Screen without opening the game.",
+            "lt": "Matyk pirmaujantį skaitytoją ir visų žvaigždes pagrindiniame ekrane, neatidaręs žaidimo.",
+            "es": "Ve al líder y las estrellas de todos en la pantalla de inicio sin abrir el juego."
+          }
+        },
+        {
+          "icon": "🪙",
+          "title": {
+            "en": "One player's tokens",
+            "lt": "Vieno žaidėjo žetonai",
+            "es": "Las fichas de un jugador"
+          },
+          "text": {
+            "en": "Type a player's name in the widget's Parameter to show just their tokens.",
+            "lt": "Įrašyk žaidėjo vardą valdiklio parametre ir matysi tik jo žetonus.",
+            "es": "Escribe el nombre de un jugador en el parámetro del widget para ver solo sus fichas."
+          }
+        },
+        {
+          "icon": "🔒",
+          "title": {
+            "en": "Safe for kids",
+            "lt": "Saugu vaikams",
+            "es": "Seguro para niños"
+          },
+          "text": {
+            "en": "Works offline and on the Lock Screen, and never shows money, budgets or the PIN.",
+            "lt": "Veikia be interneto ir užrakinimo ekrane, niekada nerodo pinigų, biudžetų ar PIN.",
+            "es": "Funciona sin conexión y en la pantalla bloqueada; nunca muestra dinero ni el PIN."
+          }
+        }
+      ],
+      "changes": [
+        "Home Screen and Lock Screen widget in the shared frame of the other apps (widgets blueprint 1.0.0): the Reading Stars star and name, the top reader with ⭐ points and 🪙 tokens to spend, the other players ranked as on the leaderboard (medium and large) and the number of players",
+        "Widget Parameter: a player's name shows only that player, with their tokens as the big number and their place on the leaderboard",
+        "Lock Screen: \"⭐ Ema leads with 120\" inline, the leader's points in the circle, the leaderboard line in the rectangle",
+        "The widget follows the game's language (Lithuanian, English, Spanish) and shows only names, avatars, points and tokens: never token values, budgets, payouts or the PIN",
+        "The widget reads a small snapshot saved after every round, payout and player change, so it works offline; data older than 12 hours shows \"⟳ Updated …\" in amber",
+        "Parent zone › Settings › Widget: how often iOS is asked to refresh it (30 min) and when it counts as out of date (720 min)",
+        "Built with lists the widgets blueprint"
+      ],
+      "fixes": [
+        "A widget pointing at Reading Stars no longer shows Scriptable's error (\"Presenting a configured web view is not supported\"): the game's start-up now runs only when the game is opened"
+      ]
+    },
+    {
       "version": "1.3.0",
       "date": "2026-10-29",
       "title": {

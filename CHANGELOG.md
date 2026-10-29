@@ -2,6 +2,26 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.4.0 (2026-10-29): Stars on your Home Screen
+
+- 🏆 **Leaderboard widget**: See the top reader and everyone's stars on the Home Screen without opening the game.
+- 🪙 **One player's tokens**: Type a player's name in the widget's Parameter to show just their tokens.
+- 🔒 **Safe for kids**: Works offline and on the Lock Screen, and never shows money, budgets or the PIN.
+
+**Changes**
+
+- Home Screen and Lock Screen widget in the shared frame of the other apps (widgets blueprint 1.0.0): the Reading Stars star and name, the top reader with ⭐ points and 🪙 tokens to spend, the other players ranked as on the leaderboard (medium and large) and the number of players
+- Widget Parameter: a player's name shows only that player, with their tokens as the big number and their place on the leaderboard
+- Lock Screen: "⭐ Ema leads with 120" inline, the leader's points in the circle, the leaderboard line in the rectangle
+- The widget follows the game's language (Lithuanian, English, Spanish) and shows only names, avatars, points and tokens: never token values, budgets, payouts or the PIN
+- The widget reads a small snapshot saved after every round, payout and player change, so it works offline; data older than 12 hours shows "⟳ Updated …" in amber
+- Parent zone › Settings › Widget: how often iOS is asked to refresh it (30 min) and when it counts as out of date (720 min)
+- Built with lists the widgets blueprint
+
+**Fixes**
+
+- A widget pointing at Reading Stars no longer shows Scriptable's error ("Presenting a configured web view is not supported"): the game's start-up now runs only when the game is opened
+
 ## 1.3.0 (2026-10-29): Read. Match. Shine.
 
 - ⭐ **A logo of its own**: A big yellow star with a sparkle and a teal reading line.
