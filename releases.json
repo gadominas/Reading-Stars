@@ -53,14 +53,16 @@
         }
       ],
       "changes": [
-        "Safe start-up (app-blueprints recipe safe-startup 1.0.0): an empty window in the launch screen colour comes up first, the launch screen is built inside it, and the players are read and handed over after that, with a \"Loading your players…\" placeholder until they arrive",
+        "Safe start-up (app-blueprints recipe safe-startup 1.1.0): an empty window in the launch screen colour comes up first, the launch screen is built inside it, and the players are read and handed over after that, with a \"Loading your players…\" placeholder until they arrive",
         "Only settings.json is read before the window; data.json (and its backup) is read in loadData(), and every iCloud read gives up after 10 s instead of waiting forever",
         "The players reach the page in pieces (window.__parts, then window.__boot) instead of inside the page itself, and every message to the page has a time limit",
         "One window at a time: quick taps on the widget wait at most 1.5 s for an earlier window, then open anyway",
         "The update check starts 3.5 s after the first screen and the widget icon download 6 s after it, so neither competes with opening",
         "If opening stalls for 25 s or fails, the page says so in the game's language and shows the last lines of the start-up log",
-        "Settings › Updates › Start-up log (behind the parent PIN) shows the last 40 lines: timings, the number of players and late files only, never money, budgets or the PIN",
-        "The one-time move of letter style, currency and sounds from data.json into settings.json now happens after the data is read, and only if it was read"
+        "Settings › Updates › Start-up log (behind the parent PIN) shows the last 40 lines: timings, the number of players and the names of late or started-fresh files only, never money, budgets or the PIN",
+        "The one-time move of letter style, currency and sounds from data.json into settings.json now happens after the data is read, and only if it was read",
+        "A data.json that arrived damaged no longer stops the game from saving: it is copied aside as data.broken-<time>.json, the backup takes its place as before, and if the backup is damaged too the game starts fresh, says so in the game's language and saves again (safe-startup 1.1.0)",
+        "Only a file that iCloud didn't deliver (or that couldn't be read at all) is left unsaved for the run"
       ],
       "fixes": [
         "Opening Reading Stars from its widget, after several quick taps, or with slow or offline iCloud could leave a blank screen",
