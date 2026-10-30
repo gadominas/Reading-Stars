@@ -4,6 +4,61 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.6.0",
+      "date": "2026-10-31",
+      "title": {
+        "en": "Clearer Settings",
+        "lt": "Aiškesni nustatymai",
+        "es": "Ajustes más claros"
+      },
+      "highlights": [
+        {
+          "icon": "🗂️",
+          "title": {
+            "en": "Sections you can see",
+            "lt": "Matomos sekcijos",
+            "es": "Secciones claras"
+          },
+          "text": {
+            "en": "Each Settings section now sits in its own card, so you can tell where it starts and ends.",
+            "lt": "Kiekviena nustatymų sekcija dabar savo kortelėje, todėl aišku, kur ji prasideda ir baigiasi.",
+            "es": "Cada sección de Ajustes está ahora en su propia tarjeta: se ve dónde empieza y dónde acaba."
+          }
+        },
+        {
+          "icon": "🔤",
+          "title": {
+            "en": "Quieter headings",
+            "lt": "Ramesnės antraštės",
+            "es": "Títulos más discretos"
+          },
+          "text": {
+            "en": "Section names are small grey capitals, so they no longer look like settings.",
+            "lt": "Sekcijų pavadinimai – mažos pilkos didžiosios raidės, todėl nebeatrodo kaip nustatymai.",
+            "es": "Los nombres de sección son pequeñas mayúsculas en gris y ya no parecen ajustes."
+          }
+        },
+        {
+          "icon": "🎨",
+          "title": {
+            "en": "In every palette",
+            "lt": "Visose spalvose",
+            "es": "En todos los colores"
+          },
+          "text": {
+            "en": "The cards follow your colours, text size and layout, light or dark.",
+            "lt": "Kortelės prisitaiko prie jūsų spalvų, teksto dydžio ir išdėstymo, šviesiai ar tamsiai.",
+            "es": "Las tarjetas siguen tus colores, el tamaño del texto y el diseño, claro u oscuro."
+          }
+        }
+      ],
+      "changes": [
+        "Settings (app-blueprints · settings 1.1.0): each section's rows sit in one card, with a thin border and a slightly lighter background, under a small muted uppercase heading",
+        "The changed-count line and a section's explanation sit outside the cards; Built with is a card too"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.5.0",
       "date": "2026-10-30",
       "title": {
