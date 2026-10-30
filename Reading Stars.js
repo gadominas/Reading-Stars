@@ -38,12 +38,21 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
 const UPDATE_SNOOZE_MS = 2 * 24 * 3600 * 1000;   // "Later" = 2 days
 const KC_UPDATE_SNOOZE = 'reading-stars-update-snooze';   // Keychain key, unique per app
+
+// ── Anonymous usage counts (opt-in), sent to PostHog (app-blueprints · usage-analytics) ──
+// A kids' app: only a parent can say yes, in the PIN-protected parent zone. Nothing is sent until KEY is filled in
+// AND the parent agrees. Each event carries a random install ID (made on this iPhone), the app version and counts:
+// never names, avatars, tokens, money or words. Events are anonymous (no person profiles).
+// The key is PostHog's project key, made to sit in public apps: it can only add events.
+// HOST must be the region the project lives in: PostHog's other region answers "accepted" and then drops the events.
+const USAGE = { HOST: 'https://us.i.posthog.com', KEY: 'phc_yAi2PxJCRioWEKLF3uockdCf3QvyQdNABivwqpE4NCWR' };   // the shared project
+const KC_INSTALL = 'reading-stars-install-id';
 
 // ───────── Blueprints ─────────
 // Shared blueprints this app was built with (github.com/gadominas/app-blueprints). One line per blueprint, in this exact shape:
@@ -54,6 +63,7 @@ const BLUEPRINTS = [
   { id: 'settings', name: 'Settings', version: '1.1.0', since: '1.6.0' },
   { id: 'launch-screen', name: 'Launch screen', version: '1.0.0', since: '1.3.0' },
   { id: 'widgets', name: 'Widgets', version: '1.0.0', since: '1.4.0' },
+  { id: 'usage-analytics', name: 'Anonymous usage analytics', version: '1.1.0', since: '1.7.0' },
 ];
 
 // ───────────────────────── Storage (native side) ─────────────────────────
@@ -182,16 +192,67 @@ const settings = {
   theme: "ink", density: "comfortable", font: "sans", textSize: 1,
   wordCase: "cap", sound: true, currency: "EUR",
   checkUpdates: true,   // offer new versions from GitHub (asks again 2 days after "Later")
+  shareUsage: false, usageAsked: false,  // anonymous usage counts: off until a parent agrees
   cfg: {},
 };
 const saveSettings = () => { if (!settingsOk) return false; try { fm.writeString(settingsPath, JSON.stringify(settings)); return true; } catch (e) { return false; } };
+let usageQueue = [], usageTimer = null;
+const usageAvailable = () => !!USAGE.KEY;
+const usageOn = () => usageAvailable() && !!settings.shareUsage;
+function installId() {
+  if (Keychain.contains(KC_INSTALL)) return Keychain.get(KC_INSTALL);
+  const id = UUID.string().toLowerCase();
+  Keychain.set(KC_INSTALL, id);
+  return id;
+}
+function track(event, props = {}) {
+  if (!usageOn()) return;
+  try {
+    usageQueue.push({ event, timestamp: new Date().toISOString(),
+      properties: Object.assign({ distinct_id: installId(), $process_person_profile: false, app: APP_ID, app_version: VERSION, $lib: APP_ID }, props) });
+    if (usageQueue.length >= 25) flushUsage();
+    else if (!usageTimer) usageTimer = Timer.schedule(3000, false, () => { usageTimer = null; flushUsage(); });
+  } catch (e) {}
+}
+let usageLast = null;   // { at, events, ok, status, host, error }: shown in Settings › Privacy
+async function postUsage(host, batch) {
+  const r = new Request(host + '/batch/');
+  r.method = 'POST'; r.timeoutInterval = 10; r.headers = { 'Content-Type': 'application/json' };
+  r.body = JSON.stringify({ api_key: USAGE.KEY, batch });
+  let body = '';
+  try { body = await r.loadString(); } catch (e) { return { ok: false, status: 0, host, error: String(e.message || e) }; }
+  const status = (r.response && r.response.statusCode) || 0;
+  return { ok: status >= 200 && status < 300, status, host, error: status >= 200 && status < 300 ? '' : String(body || '').slice(0, 200) };
+}
+// Sends what's queued in one request. Never slows the app; if it fails, those counts are gone (and the log says why).
+async function flushUsage() {
+  if (!usageQueue.length) return usageLast;
+  if (!usageOn()) { usageQueue = []; return usageLast; }
+  const batch = usageQueue.splice(0, usageQueue.length);
+  const res = await postUsage(USAGE.HOST, batch);
+  usageLast = Object.assign({ at: Date.now(), events: batch.length }, res);
+  try { startLog(`usage: ${batch.length} event${batch.length === 1 ? '' : 's'} → ${res.ok ? 'sent to ' + res.host.replace('https://', '') : 'not sent: ' + (res.status ? 'HTTP ' + res.status + ' ' : '') + res.error}`); } catch (e) {}
+  return usageLast;
+}
+function usageStatus() {
+  const u = usageLast;
+  if (!u) return '';
+  const t = new Date(u.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return u.ok ? `Last sent ${t}: ${u.events} event${u.events === 1 ? '' : 's'}, accepted (${u.host.replace('https://', '')})`
+              : `Last try ${t} failed: ${u.status ? 'HTTP ' + u.status + ' ' : ''}${u.error}`;
+}
+function setUsage(on) {
+  settings.shareUsage = !!on; settings.usageAsked = true; saveSettings();
+  if (on) track('usage_opt_in');
+  else { usageQueue = []; if (Keychain.contains(KC_INSTALL)) Keychain.remove(KC_INSTALL); }   // a fresh ID if switched on again
+}
 const CURRENCY_CODES = ["EUR", "USD", "GBP"];
 // Every key the page may change, with its check (all apply at once on the page).
 const SET_KEYS = {
   theme: (v) => v === "auto" || !!PALETTES[v], density: (v) => ["comfortable", "compact", "tiny"].includes(v),
   font: (v) => ["sans", "serif"].includes(v), textSize: (v) => [0.92, 1, 1.12, 1.25].includes(+v),
   wordCase: (v) => ["cap", "upper", "lower"].includes(v), currency: (v) => CURRENCY_CODES.includes(v),
-  sound: "bool", checkUpdates: "bool",
+  sound: "bool", checkUpdates: "bool", shareUsage: "bool",
 };
 function setSetting(k, v) {
   const s = SET_KEYS[k];
@@ -274,6 +335,7 @@ function settingsState() {
     cfg: cfgValues(),
     cfgSchema: CONFIG.map(([title, items]) => ({ title, items })),
     palettes: PALETTES, currencies: CURRENCY_CODES, version: VERSION, appName: "Reading Stars",
+    usageAvailable: usageAvailable(), usageStatus: usageStatus(),
     blueprints: BLUEPRINTS, blueprintsRepo: BLUEPRINTS_REPO,
   };
 }
@@ -689,6 +751,10 @@ body.d-tiny .panel.pk:not(.open) .pkhead .badge{display:none}
 body.d-tiny .panel.pk:not(.open) .pkmini{display:block}
 body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 /* Settings sheet (scoped: the app already uses .sheet, .chip, .toggle and .icon) */
+#usageask b{display:block;font-size:calc(18px * var(--ts));font-weight:900}
+#usageask p{margin:6px 0 12px;color:var(--muted);font-size:calc(15px * var(--ts));line-height:1.4}
+.uabtns{display:flex;gap:10px}
+.uabtns .btn{flex:1;margin:0}
 #cfgsheet{position:fixed;inset:0;z-index:50;background:var(--paper);color:var(--ink);transform:translateY(102%);visibility:hidden;transition:transform .28s ease,visibility 0s linear .28s;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;text-align:left}
 #cfgsheet.open{transform:none;visibility:visible;transition:transform .28s ease}
 #cfgsheet button{font:inherit;color:inherit;background:none;border:0;border-radius:0;padding:0;font-weight:inherit;cursor:pointer;text-align:inherit}
@@ -1135,6 +1201,8 @@ function webApp() {
   const init = window.__INITIAL__ && typeof window.__INITIAL__ === "object" ? window.__INITIAL__ : {};
   // Settings (app-blueprints · settings) come from settings.json through the Scriptable side.
   const LOOK = Object.assign({ theme: "ink", density: "comfortable", font: "sans", textSize: 1 }, init.look || {});
+  let usageAsk = !!init.usageAsk;   // the one-time usage question, for a parent only (usage-analytics)
+  const usageEvent = (params) => send("usage-event", params);
   const CFG = Object.assign({ beginnerPics: 3, expertPics: 5 }, init.cfg || {});
   const state = {
     version: 1,
@@ -1738,6 +1806,7 @@ function webApp() {
         game.streak++;
       }
       persist();
+      usageEvent({ e: "round_finished", level: kid.level === "expert" ? "expert" : "beginner", correct: earned ? "1" : "0" });
       btn.classList.add("right");
       const r = btn.getBoundingClientRect();
       const cx = r.left + r.width / 2;
@@ -1954,6 +2023,7 @@ function webApp() {
 
   VIEWS.parent = () => `
       <div class="bar"><button class="icon" data-action="lockParent" aria-label="${esc(t("parents"))}">⬅</button><h2>👨‍👩‍👧 ${esc(t("parentArea"))}</h2><button class="icon" data-action="openSettings" aria-label="${esc(CT.title)}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button></div>
+      ${usageAsk ? `<section id="usageask" class="panel" aria-label="${esc(CT.uaTitle)}"><b>${esc(CT.uaTitle)}</b><p>${esc(CT.uaText)}</p><div class="uabtns"><button class="btn" data-action="usageAnswer" data-v="1">${esc(CT.uaYes)}</button><button class="btn ghost" data-action="usageAnswer" data-v="0">${esc(CT.uaNo)}</button></div></section>` : ""}
       ${state.kids.length ? "" : `<p class="empty">${esc(t("noKids"))}</p>`}
       ${state.kids.map(parentKid).join("")}`;
 
@@ -2010,7 +2080,8 @@ function webApp() {
 
   // ── Settings (app-blueprints · settings): every change applies at once and is saved; Done closes ──
   const CT_ALL = {
-    en: { title: "Settings", done: "Done", hint: "Changes apply right away and are kept on this iPhone.", appearance: "Appearance", colours: "Colours", layout: "Layout", textSize: "Text size", font: "Headline font",
+    en: { uaTitle: "Help improve Reading Stars?", uaText: "Share anonymous counts, like rounds played and payouts made. Never names, avatars, tokens or money. You can change this in Settings.", uaYes: "Yes, share", uaNo: "No thanks", uaThanks: "Thank you! Change it any time in Settings.", uaNope: "No problem. Nothing is shared.", privacy: "Privacy", share: "Share anonymous usage", shareHelp: "Counts like rounds played and payouts made, with a random install ID. Never names, avatars, tokens or money. Off removes the ID.", test: "Test the connection", testHelp: "Sends one test event now and shows PostHog’s answer.", testBtn: "Send test", sending: "Sending…",
+      title: "Settings", done: "Done", hint: "Changes apply right away and are kept on this iPhone.", appearance: "Appearance", colours: "Colours", layout: "Layout", textSize: "Text size", font: "Headline font",
       themes: { auto: "Auto", ink: "Ink", sepia: "Sepia", mint: "Mint", contrast: "Contrast", slate: "Slate", night: "Night" },
       layouts: ["Comfortable", "Compact", "Tiny"], sizes: ["Small", "Default", "Large", "Larger"], fonts: ["Sans serif", "Serif"],
       game: "Game", money: "Money", parent: "Parent", pinHelp: "Opens the PIN pad to set a new PIN",
@@ -2019,7 +2090,8 @@ function webApp() {
       latest: (v) => `You're on the latest version (${v})`, avail: (v) => `Version ${v} is available`,
       reset: "Reset", original: "original", changed: (n) => `${n} setting${n === 1 ? "" : "s"} changed`, none: "All settings are at their original values", resetAll: "Reset all", confirmReset: "Confirm reset",
       builtWith: "Built with", builtHint: (a) => `${a} is built from shared blueprints that the other apps use too. Tap one to read how that part works.`, bp: (v, a, s) => `Blueprint ${v} · since ${a} ${s}`, all: "All blueprints", dec: "Decrease", inc: "Increase" },
-    lt: { title: "Nustatymai", done: "Baigti", hint: "Pakeitimai įsigalioja iš karto ir saugomi šiame iPhone.", appearance: "Išvaizda", colours: "Spalvos", layout: "Išdėstymas", textSize: "Teksto dydis", font: "Antraščių šriftas",
+    lt: { uaTitle: "Padėti tobulinti Reading Stars?", uaText: "Siųsti anoniminius skaičius, pvz., sužaistus raundus ir išmokėjimus. Niekada vardų, avatarų, žetonų ar pinigų. Tai galite pakeisti nustatymuose.", uaYes: "Taip, siųsti", uaNo: "Ne, ačiū", uaThanks: "Ačiū! Tai galite pakeisti nustatymuose bet kada.", uaNope: "Gerai. Niekas nesiunčiama.", privacy: "Privatumas", share: "Siųsti anoniminę statistiką", shareHelp: "Skaičiai, pvz., sužaisti raundai ir išmokėjimai, su atsitiktiniu įrenginio ID. Niekada vardų, avatarų, žetonų ar pinigų. Išjungus ID ištrinamas.", test: "Patikrinti ryšį", testHelp: "Dabar išsiunčia vieną bandomąjį įvykį ir parodo PostHog atsakymą.", testBtn: "Siųsti bandymą", sending: "Siunčiama…",
+      title: "Nustatymai", done: "Baigti", hint: "Pakeitimai įsigalioja iš karto ir saugomi šiame iPhone.", appearance: "Išvaizda", colours: "Spalvos", layout: "Išdėstymas", textSize: "Teksto dydis", font: "Antraščių šriftas",
       themes: { auto: "Automatiškai", ink: "Rašalas", sepia: "Sepija", mint: "Mėtinė", contrast: "Kontrastas", slate: "Skalūnas", night: "Naktis" },
       layouts: ["Erdvus", "Glaustas", "Mažytis"], sizes: ["Mažas", "Įprastas", "Didelis", "Didesnis"], fonts: ["Be serifų", "Su serifais"],
       game: "Žaidimas", money: "Pinigai", parent: "Tėvams", pinHelp: "Atidaro PIN klaviatūrą naujam PIN",
@@ -2028,7 +2100,8 @@ function webApp() {
       latest: (v) => `Naudojate naujausią versiją (${v})`, avail: (v) => `Yra versija ${v}`,
       reset: "Atstatyti", original: "pradinė", changed: (n) => `Pakeista nustatymų: ${n}`, none: "Visi nustatymai pradiniai", resetAll: "Atstatyti viską", confirmReset: "Patvirtinti",
       builtWith: "Sukurta pagal", builtHint: (a) => `${a} sukurta pagal bendrus šablonus, kuriuos naudoja ir kitos programos. Paspauskite, kad perskaitytumėte, kaip veikia ta dalis.`, bp: (v, a, s) => `Šablonas ${v} · nuo ${a} ${s}`, all: "Visi šablonai", dec: "Mažinti", inc: "Didinti" },
-    es: { title: "Ajustes", done: "Listo", hint: "Los cambios se aplican al momento y se guardan en este iPhone.", appearance: "Apariencia", colours: "Colores", layout: "Diseño", textSize: "Tamaño del texto", font: "Fuente de títulos",
+    es: { uaTitle: "¿Ayudar a mejorar Reading Stars?", uaText: "Comparte recuentos anónimos, como rondas jugadas y pagos hechos. Nunca nombres, avatares, fichas ni dinero. Puedes cambiarlo en Ajustes.", uaYes: "Sí, compartir", uaNo: "No, gracias", uaThanks: "¡Gracias! Cámbialo cuando quieras en Ajustes.", uaNope: "De acuerdo. No se comparte nada.", privacy: "Privacidad", share: "Compartir uso anónimo", shareHelp: "Recuentos como rondas jugadas y pagos hechos, con un ID de instalación aleatorio. Nunca nombres, avatares, fichas ni dinero. Al desactivarlo se borra el ID.", test: "Probar la conexión", testHelp: "Envía ahora un evento de prueba y muestra la respuesta de PostHog.", testBtn: "Enviar prueba", sending: "Enviando…",
+      title: "Ajustes", done: "Listo", hint: "Los cambios se aplican al momento y se guardan en este iPhone.", appearance: "Apariencia", colours: "Colores", layout: "Diseño", textSize: "Tamaño del texto", font: "Fuente de títulos",
       themes: { auto: "Automático", ink: "Tinta", sepia: "Sepia", mint: "Menta", contrast: "Contraste", slate: "Pizarra", night: "Noche" },
       layouts: ["Amplio", "Compacto", "Mínimo"], sizes: ["Pequeño", "Normal", "Grande", "Más grande"], fonts: ["Sin serifa", "Con serifa"],
       game: "Juego", money: "Dinero", parent: "Padres", pinHelp: "Abre el teclado para poner un PIN nuevo",
@@ -2125,6 +2198,9 @@ function webApp() {
       <h3 class="sec">${esc(CT.parent)}</h3>
       <button class="srow act" data-act="changePin"><div class="grow"><b>🔑 ${esc(t("changePin"))}</b><small>${esc(CT.pinHelp)}</small></div><span class="chev" aria-hidden="true">›</span></button>
       <p class="hint">${esc(t("storageNote"))}</p>
+      ${SET.usageAvailable ? `<h3 class="sec">${esc(CT.privacy)}</h3>
+      <div class="srow"><div class="grow"><b>${esc(CT.share)}</b><small>${esc(CT.shareHelp)}</small></div><button class="switch ${s.shareUsage ? "on" : ""}" data-act="toggle" data-v="shareUsage" aria-label="${esc(CT.share)}"></button></div>
+      <div class="srow"><div class="grow"><b>${esc(CT.test)}</b><small id="usagemsg" class="muted" aria-live="polite">${esc(SET.usageStatus || CT.testHelp)}</small></div><button class="sm" data-act="usage-test">${esc(CT.testBtn)}</button></div>` : ""}
       <h3 class="sec">${esc(CT.updates)}</h3>
       <div class="srow"><div class="grow"><b>${esc(CT.offer)}</b><small>${esc(CT.offerHelp(SET.version))}</small></div><button class="switch ${s.checkUpdates ? "on" : ""}" data-act="toggle" data-v="checkUpdates" aria-label="${esc(CT.offer)}"></button></div>
       <div class="srow"><div class="grow"><b>${esc(CT.check)}</b><small id="updmsg" class="muted" aria-live="polite"></small></div><button class="sm" data-act="updcheck">${esc(CT.checkBtn)}</button></div>
@@ -2165,6 +2241,10 @@ function webApp() {
     }
     if (act === "changePin") { closeSettings(); return openPin("set1", "parent"); }
     if (act === "openurl") return send("openurl", { v });
+    if (act === "usage-test") {
+      const um = document.getElementById("usagemsg"); el.disabled = true; if (um) um.textContent = CT.sending;
+      return send("usage-test", {}, (ok, msg) => { el.disabled = false; const m = document.getElementById("usagemsg"); if (m) m.textContent = (ok ? "✓ " : "✗ ") + msg; });
+    }
     if (act === "updcheck") {
       const um = document.getElementById("updmsg"); el.disabled = true; if (um) um.textContent = CT.checking;
       return send("update-check", {}, (ok, r) => {
@@ -2242,6 +2322,7 @@ function webApp() {
         if (k) Object.assign(k, { name, avatar: draft.avatar, level: parentUnlocked ? draft.level : k.level });
       } else {
         state.kids.push(normalizeKid({ name, avatar: draft.avatar, level: draft.level }));
+        usageEvent({ e: "player_added" });
       }
       persist();
       go({ name: view.from === "parent" && parentUnlocked ? "parent" : "home" });
@@ -2308,6 +2389,7 @@ function webApp() {
       k.budget -= cents;
       k.payouts.push({ d: Date.now(), n, m: cents });
       persist();
+      usageEvent({ e: "payout_made" });
       render();
       confetti(window.innerWidth / 2, window.innerHeight / 3, 60);
       sndWin();
@@ -2342,6 +2424,12 @@ function webApp() {
       state.kids = state.kids.filter((x) => x.id !== k.id);
       persist();
       render();
+    },
+    usageAnswer(el) {   // the parent's answer to the usage question
+      if (!requireParent()) return;
+      send("usage-consent", { on: el.dataset.v });
+      usageAsk = false; render();
+      toast(el.dataset.v === "1" ? CT.uaThanks : CT.uaNope);
     },
     rowToggle(el) {   // Tiny layout: a player's line opens to show the details
       (el.closest(".panel") || el).classList.toggle("open");
@@ -2739,7 +2827,7 @@ const safeJSON = (x) => JSON.stringify(x === undefined ? null : x).replace(/</g,
 
 // The state the page starts from, handed over by bootApp() (never inlined in buildHTML): the game's save plus the settings it reads.
 function clientState() {
-  return Object.assign({}, gameData || {}, { settings: gameSettings(), look: lookState(), cfg: cfgValues() });
+  return Object.assign({}, gameData || {}, { settings: gameSettings(), look: lookState(), cfg: cfgValues(), usageAsk: usageAvailable() && !settings.usageAsked && !settings.shareUsage });
 }
 
 // The page, without any data: the launch screen and a "Loading your players…" placeholder. Only settings are read here.
@@ -2827,6 +2915,20 @@ async function handleAction(head, p) {
   const answer = (ok, msg) => js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
   // Settings (app-blueprints · settings): each change is applied and saved at once; the answer is the fresh state.
   if (head === "settings-get") return answer(true, settingsState());
+  if (head === "set" && p.k === "shareUsage") { setUsage(p.v === true || p.v === "true" || p.v === "1"); return answer(true, settingsState()); }   // off also deletes the install ID
+  if (head === "usage-consent") { setUsage(p.on === "1"); flushUsage(); return; }
+  if (head === "usage-test") {
+    let ok = false, msg = "";
+    if (!usageOn()) msg = "Turn on Share anonymous usage first.";
+    else { track("usage_test"); const r = await flushUsage(); ok = !!(r && r.ok); msg = usageStatus() || "Nothing was sent."; }
+    return answer(ok, msg);
+  }
+  if (head === "usage-event") {   // what happens in the game: only these events, with fixed values
+    if (p.e === "round_finished") track("round_finished", { level: p.level === "expert" ? "expert" : "beginner", correct: p.correct === "1" });
+    else if (p.e === "payout_made") track("payout_made");
+    else if (p.e === "player_added") track("player_added");
+    return;
+  }
   if (head === "set") {
     if (!setSetting(p.k, p.v)) return answer(false, "That setting can't be changed here.");
     saveSettings();
@@ -2864,6 +2966,7 @@ async function handleAction(head, p) {
     let msg = "";
     try {
       msg = await applyUpdate(pendingUpdate);
+      track("app_updated", { from: VERSION, to: (String(msg).match(/[0-9]+\.[0-9]+\.[0-9]+/) || [""])[0] }); flushUsage();
       ok = true;
       pendingUpdate = null;
       clearUpdateSnooze();
@@ -2933,6 +3036,7 @@ async function bootApp(isClosed) {
   let seen = "";
   try { seen = await ev(`document.visibilityState + ", " + innerWidth + "x" + innerHeight`, 5000); } catch (e) { seen = String(e.message || e); }
   startLog(`screen ready in ${((Date.now() - t0) / 1000).toFixed(1)} s (page: ${seen})`);
+  track("app_open", { layout: settings.density, theme: settings.theme, language: (gameData && gameData.lang) || "", players });
   if (loadIssues.length) toast(bootText().late);
   else if (loadRepaired.length) toast(bootText().fresh);
   // Deferred work, once the first screen is drawn: updates, then the widget's icon. Reading Stars has no refresh of its own.
@@ -2956,7 +3060,7 @@ async function main() {
   startLog("window on screen");
   await Promise.race([wv.loadHTML(buildHTML()), pause(15000)]);   // the launch screen, drawn on screen
   let closed = false;
-  presented.then(() => { closed = true; releaseLock(); });
+  presented.then(() => { closed = true; releaseLock(); flushUsage(); });
   bootApp(() => closed).catch(e => {         // runs beside the window: closing it never waits on this
     startLog("start-up failed: " + (e.message || e));
     let log = "";

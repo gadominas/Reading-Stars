@@ -227,6 +227,8 @@ The sheet appears only on the home screen and never interrupts a round, in the g
 
 ## Privacy and security
 
+- **Anonymous usage, only if a parent agrees.** A one-time question in the PIN-protected parent zone (and **Settings › Privacy › Share anonymous usage**, also behind the PIN) decides whether Reading Stars sends anonymous counts to PostHog's US cloud: app opens with the number of players, rounds played (the level and whether the first try was right), payouts made and players added, the app version and a few display settings (including the language). Each event carries a random install ID made on your phone. Never sent: names, avatars, words, tokens, money or the PIN. Turning it off stops sending and deletes the install ID. The kids never see the question.
+
 - Progress is saved to `iCloud Drive › Scriptable › ReadingStars › data.json`, with `data.backup.json` and the parent's choices (`settings.json`) next to it, or to local Scriptable storage if iCloud is off. Kids' names, tokens, budgets and the PIN hash live only in that file, never in this repository.
 - The widget reads a small copy with only names, avatars, points and tokens, kept in Scriptable's local storage on this device (`reading-stars-widget.json`).
 - Nothing about the players leaves the phone. Apart from the update check, the app downloads only from this repository: the new script when you tap **Update now**, and the app icon the widget caches once per version.
