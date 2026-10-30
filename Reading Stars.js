@@ -89,18 +89,35 @@ function startLog(msg) {
 }
 
 // Reads with a time limit (app-blueprints · safe-startup).
-const loadIssues = [];   // files iCloud didn't hand over in time
+const loadIssues = [];    // files that didn't arrive (iCloud too slow, or unreadable): never written this run
+const loadRepaired = [];  // files that arrived damaged: kept aside as <name>.broken-<time>.json, then started fresh
 async function load(n, def, waitMs = 10000) {
   const p = P(n);
   if (!fm.fileExists(p)) return def;
+  let txt;
   try {
     if (fm.isFileStoredIniCloud(p) && !fm.isFileDownloaded(p)) {
       // iCloud can take a long time (or forever, offline): never let start-up hang on it
       await Promise.race([fm.downloadFileFromiCloud(p), new Promise(r => Timer.schedule(waitMs, false, r))]);
       if (!fm.isFileDownloaded(p)) { loadIssues.push(n); startLog(`iCloud didn't deliver ${n}.json in ${waitMs / 1000} s`); return def; }
     }
-    return JSON.parse(fm.readString(p));
-  } catch (e) { loadIssues.push(n); startLog(`Couldn't read ${n}.json: ${e}`); return def; }   // a broken file falls back to defaults, never crashes
+    txt = fm.readString(p);
+  } catch (e) { loadIssues.push(n); startLog(`Couldn't read ${n}.json: ${e}`); return def; }   // not read: never saved over
+  try { return JSON.parse(txt); }
+  catch (e) { keepBroken(fm, p, n, txt); return def; }
+}
+// It arrived but is damaged: keep a copy next to it, then start this file fresh so saving can carry on (1.1.0).
+// Without this, one damaged file stopped the app from ever saving again. The widget reads the data on every refresh
+// and never saves, so a copy that's already there is not made again. The parse error isn't logged: it can quote the file.
+function keepBroken(fm, p, n, txt) {
+  try {
+    const base = p.replace(/\.json$/, ""), dir = p.slice(0, p.lastIndexOf("/")), pre = base.slice(dir.length + 1) + ".broken-";
+    let kept = false;
+    try { kept = fm.listContents(dir).some(f => f.startsWith(pre) && fm.readString(fm.joinPath(dir, f)) === txt); } catch (_) {}
+    if (!kept) fm.writeString(base + ".broken-" + Date.now() + ".json", txt);
+    if (!loadRepaired.includes(n)) loadRepaired.push(n);
+    startLog(`${n}.json was damaged (not valid JSON); ${kept ? "a copy was already kept" : "kept a copy"} and started it fresh`);
+  } catch (e) { loadIssues.push(n); startLog(`${n}.json was damaged and couldn't be copied aside`); }   // no copy, no overwrite
 }
 
 // Data is read in loadData(): the app shows its first screen before reading it, because iCloud can be slow.
@@ -108,15 +125,18 @@ async function load(n, def, waitMs = 10000) {
 let gameData = null;
 let dataLoaded = false;   // data.json is only written once it was read, so a slow start can never save an empty game over it
 async function loadData() {
-  loadIssues.length = 0;
+  loadIssues.length = 0;   // loadRepaired is kept, so a damaged settings.json (read before this) still gets its toast
   gameData = await load("data", null);
-  // On the phone but missing or broken (not just late from iCloud): the backup takes its place, as before.
+  // On the phone but missing, unreadable or damaged (not just late from iCloud): the backup takes its place, as before.
+  // A damaged data.json is already copied aside (data.broken-<time>.json). If the backup is damaged too, the game
+  // starts fresh and saves again; the damaged data.json stays in its copy.
   const late = loadIssues.includes("data") && fm.fileExists(dataPath) && !fm.isFileDownloaded(dataPath);
   if (!gameData && !late && fm.fileExists(backupPath)) {
     const b = await load("data.backup", null);
     if (b && typeof b === "object") {
       gameData = b;
-      if (loadIssues.includes("data")) { loadIssues.splice(loadIssues.indexOf("data"), 1); startLog("data.json was broken: using data.backup.json"); }
+      if (loadIssues.includes("data")) { loadIssues.splice(loadIssues.indexOf("data"), 1); startLog("data.json couldn't be read: using data.backup.json"); }
+      if (loadRepaired.includes("data")) { loadRepaired.splice(loadRepaired.indexOf("data"), 1); startLog("data.json was damaged: using data.backup.json"); }
     }
   }
   if (gameData && typeof gameData !== "object") gameData = null;
@@ -2682,13 +2702,16 @@ function splashLang(data) {
 const BOOT_TEXT = {
   en: { loading: "Loading your players…", still: "Still loading…", cant: "Reading Stars couldn't open",
     again: "Close Reading Stars and open it again. If it keeps happening, run the installer once more.",
-    late: "Some of your data is still coming from iCloud. Nothing will be saved until you reopen Reading Stars." },
+    late: "Some of your data is still coming from iCloud. Nothing will be saved until you reopen Reading Stars.",
+    fresh: "Some of your data couldn't be read, so Reading Stars kept a copy and started it fresh." },
   lt: { loading: "Įkeliami žaidėjai…", still: "Vis dar įkeliama…", cant: "Reading Stars nepavyko atidaryti",
     again: "Uždarykite Reading Stars ir atidarykite iš naujo. Jei tai kartojasi, dar kartą paleiskite diegimo programą.",
-    late: "Dalis duomenų dar keliauja iš iCloud. Kol iš naujo neatidarysite Reading Stars, niekas nebus išsaugota." },
+    late: "Dalis duomenų dar keliauja iš iCloud. Kol iš naujo neatidarysite Reading Stars, niekas nebus išsaugota.",
+    fresh: "Dalies duomenų nepavyko perskaityti, todėl Reading Stars išsaugojo jų kopiją ir pradėjo iš naujo." },
   es: { loading: "Cargando tus jugadores…", still: "Sigue cargando…", cant: "Reading Stars no se pudo abrir",
     again: "Cierra Reading Stars y ábrelo de nuevo. Si sigue pasando, ejecuta el instalador otra vez.",
-    late: "Parte de tus datos aún está llegando desde iCloud. No se guardará nada hasta que vuelvas a abrir Reading Stars." },
+    late: "Parte de tus datos aún está llegando desde iCloud. No se guardará nada hasta que vuelvas a abrir Reading Stars.",
+    fresh: "Parte de tus datos no se pudo leer, así que Reading Stars guardó una copia y empezó de cero." },
 };
 const bootText = () => BOOT_TEXT[splashLang(gameData || readWidget())];
 const safeJSON = (x) => JSON.stringify(x === undefined ? null : x).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
@@ -2879,7 +2902,7 @@ async function bootApp(isClosed) {
   startLog(`Reading Stars ${VERSION}: reading data`);
   await loadData();
   const players = gameData && Array.isArray(gameData.kids) ? gameData.kids.length : 0;
-  startLog(`data read in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${players} players${loadIssues.length ? "; missing: " + loadIssues.join(", ") : ""}`);
+  startLog(`data read in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${players} players${loadIssues.length ? "; missing: " + loadIssues.join(", ") : ""}${loadRepaired.length ? "; started fresh: " + loadRepaired.join(", ") : ""}`);
   if (isClosed()) return;
   if (dataLoaded) saveWidget(widgetSnapshot(gameData));   // the widget shows the players as loaded, before the first round
   const st = clientState(), list = Array.isArray(st.kids) ? st.kids : [];
@@ -2890,6 +2913,7 @@ async function bootApp(isClosed) {
   try { seen = await ev(`document.visibilityState + ", " + innerWidth + "x" + innerHeight`, 5000); } catch (e) { seen = String(e.message || e); }
   startLog(`screen ready in ${((Date.now() - t0) / 1000).toFixed(1)} s (page: ${seen})`);
   if (loadIssues.length) toast(bootText().late);
+  else if (loadRepaired.length) toast(bootText().fresh);
   // Deferred work, once the first screen is drawn: updates, then the widget's icon. Reading Stars has no refresh of its own.
   Timer.schedule(3500, false, () => {
     if (isClosed() || updateChecked) return;
