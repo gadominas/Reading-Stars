@@ -2,6 +2,18 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.7.0 (2026-10-31): Anonymous usage, if you agree
+
+- 📊 **Help shape Reading Stars**: If you agree, Reading Stars sends anonymous counts of the features you use. Nothing else.
+- 🔒 **Anonymous by design**: A random ID made on your phone, never your content, names or accounts.
+- 🎛️ **Your choice, any time**: Settings › Privacy turns it on or off, and Send test shows what happened.
+
+**Changes**
+
+- Anonymous usage analytics (app-blueprints · usage-analytics 1.1.0): opt-in, anonymous counts to PostHog's US cloud, with a one-time question and Settings › Privacy (switch and Send test)
+- Events: app_open (layout, theme, language, players), round_finished (level, correct on first try), payout_made, player_added, app_updated
+- Never sent: names, avatars, words, tokens, money or the PIN
+
 ## 1.6.0 (2026-10-31): Clearer Settings
 
 - 🗂️ **Sections you can see**: Each Settings section now sits in its own card, so you can tell where it starts and ends.

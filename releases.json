@@ -4,6 +4,62 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.7.0",
+      "date": "2026-10-31",
+      "title": {
+        "en": "Anonymous usage, if you agree",
+        "lt": "Anoniminė statistika, jei sutinkate",
+        "es": "Uso anónimo, si aceptas"
+      },
+      "highlights": [
+        {
+          "icon": "📊",
+          "title": {
+            "en": "Help shape Reading Stars",
+            "lt": "Padėkite tobulinti Reading Stars",
+            "es": "Ayuda a mejorar Reading Stars"
+          },
+          "text": {
+            "en": "If you agree, Reading Stars sends anonymous counts of the features you use. Nothing else.",
+            "lt": "Jei sutiksite, Reading Stars siųs anoniminius naudojamų funkcijų skaičius. Nieko daugiau.",
+            "es": "Si aceptas, Reading Stars envía recuentos anónimos de las funciones que usas. Nada más."
+          }
+        },
+        {
+          "icon": "🔒",
+          "title": {
+            "en": "Anonymous by design",
+            "lt": "Anonimiška iš principo",
+            "es": "Anónimo por diseño"
+          },
+          "text": {
+            "en": "A random ID made on your phone, never your content, names or accounts.",
+            "lt": "Atsitiktinis telefone sukurtas ID, niekada jūsų turinys, vardai ar paskyros.",
+            "es": "Un ID aleatorio creado en tu teléfono, nunca tu contenido, nombres ni cuentas."
+          }
+        },
+        {
+          "icon": "🎛️",
+          "title": {
+            "en": "Your choice, any time",
+            "lt": "Jūsų pasirinkimas bet kada",
+            "es": "Tu decisión, cuando quieras"
+          },
+          "text": {
+            "en": "Settings › Privacy turns it on or off, and Send test shows what happened.",
+            "lt": "Nustatymai › Privatumas įjungia arba išjungia, o „Siųsti bandymą“ parodo rezultatą.",
+            "es": "Ajustes › Privacidad lo activa o desactiva, y «Enviar prueba» muestra el resultado."
+          }
+        }
+      ],
+      "changes": [
+        "Anonymous usage analytics (app-blueprints · usage-analytics 1.1.0): opt-in, anonymous counts to PostHog's US cloud, with a one-time question and Settings › Privacy (switch and Send test)",
+        "Events: app_open (layout, theme, language, players), round_finished (level, correct on first try), payout_made, player_added, app_updated",
+        "Never sent: names, avatars, words, tokens, money or the PIN"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.6.0",
       "date": "2026-10-31",
       "title": {
