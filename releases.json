@@ -4,6 +4,70 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.5.0",
+      "date": "2026-10-30",
+      "title": {
+        "en": "Opens every time",
+        "lt": "Atsidaro kiekvieną kartą",
+        "es": "Se abre siempre"
+      },
+      "highlights": [
+        {
+          "icon": "🚀",
+          "title": {
+            "en": "No more blank screen",
+            "lt": "Jokio tuščio ekrano",
+            "es": "Adiós a la pantalla en blanco"
+          },
+          "text": {
+            "en": "Reading Stars opens straight to its star, even from the widget or after a few quick taps.",
+            "lt": "Reading Stars iš karto atsidaro su žvaigžde, net iš valdiklio ar po kelių greitų paspaudimų.",
+            "es": "Reading Stars se abre directamente con su estrella, incluso desde el widget o tras varios toques rápidos."
+          }
+        },
+        {
+          "icon": "🛡️",
+          "title": {
+            "en": "Stars stay safe",
+            "lt": "Žvaigždės saugios",
+            "es": "Las estrellas, a salvo"
+          },
+          "text": {
+            "en": "If iCloud is slow, the game waits for your players and never saves an empty game over them.",
+            "lt": "Jei iCloud lėtas, žaidimas palaukia žaidėjų ir niekada neįrašo tuščio žaidimo vietoj jų.",
+            "es": "Si iCloud va lento, el juego espera a tus jugadores y nunca guarda una partida vacía encima."
+          }
+        },
+        {
+          "icon": "📝",
+          "title": {
+            "en": "Start-up log for parents",
+            "lt": "Paleidimo žurnalas tėvams",
+            "es": "Registro de inicio para padres"
+          },
+          "text": {
+            "en": "Settings › Updates › Start-up log shows what happened the last times the game opened.",
+            "lt": "Nustatymai › Atnaujinimai › Paleidimo žurnalas rodo, kas vyko paskutinius kartus atidarant žaidimą.",
+            "es": "Ajustes › Actualizaciones › Registro de inicio muestra qué pasó las últimas veces que se abrió el juego."
+          }
+        }
+      ],
+      "changes": [
+        "Safe start-up (app-blueprints recipe safe-startup 1.0.0): an empty window in the launch screen colour comes up first, the launch screen is built inside it, and the players are read and handed over after that, with a \"Loading your players…\" placeholder until they arrive",
+        "Only settings.json is read before the window; data.json (and its backup) is read in loadData(), and every iCloud read gives up after 10 s instead of waiting forever",
+        "The players reach the page in pieces (window.__parts, then window.__boot) instead of inside the page itself, and every message to the page has a time limit",
+        "One window at a time: quick taps on the widget wait at most 1.5 s for an earlier window, then open anyway",
+        "The update check starts 3.5 s after the first screen and the widget icon download 6 s after it, so neither competes with opening",
+        "If opening stalls for 25 s or fails, the page says so in the game's language and shows the last lines of the start-up log",
+        "Settings › Updates › Start-up log (behind the parent PIN) shows the last 40 lines: timings, the number of players and late files only, never money, budgets or the PIN",
+        "The one-time move of letter style, currency and sounds from data.json into settings.json now happens after the data is read, and only if it was read"
+      ],
+      "fixes": [
+        "Opening Reading Stars from its widget, after several quick taps, or with slow or offline iCloud could leave a blank screen",
+        "If iCloud hadn't delivered data.json in time, closing the game could save an empty game over the players' tokens and points; now nothing is saved until the data has been read"
+      ]
+    },
+    {
       "version": "1.4.0",
       "date": "2026-10-29",
       "title": {

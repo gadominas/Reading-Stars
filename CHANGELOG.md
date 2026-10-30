@@ -2,6 +2,28 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.5.0 (2026-10-30): Opens every time
+
+- 🚀 **No more blank screen**: Reading Stars opens straight to its star, even from the widget or after a few quick taps.
+- 🛡️ **Stars stay safe**: If iCloud is slow, the game waits for your players and never saves an empty game over them.
+- 📝 **Start-up log for parents**: Settings › Updates › Start-up log shows what happened the last times the game opened.
+
+**Changes**
+
+- Safe start-up (app-blueprints recipe safe-startup 1.0.0): an empty window in the launch screen colour comes up first, the launch screen is built inside it, and the players are read and handed over after that, with a "Loading your players…" placeholder until they arrive
+- Only settings.json is read before the window; data.json (and its backup) is read in loadData(), and every iCloud read gives up after 10 s instead of waiting forever
+- The players reach the page in pieces (window.__parts, then window.__boot) instead of inside the page itself, and every message to the page has a time limit
+- One window at a time: quick taps on the widget wait at most 1.5 s for an earlier window, then open anyway
+- The update check starts 3.5 s after the first screen and the widget icon download 6 s after it, so neither competes with opening
+- If opening stalls for 25 s or fails, the page says so in the game's language and shows the last lines of the start-up log
+- Settings › Updates › Start-up log (behind the parent PIN) shows the last 40 lines: timings, the number of players and late files only, never money, budgets or the PIN
+- The one-time move of letter style, currency and sounds from data.json into settings.json now happens after the data is read, and only if it was read
+
+**Fixes**
+
+- Opening Reading Stars from its widget, after several quick taps, or with slow or offline iCloud could leave a blank screen
+- If iCloud hadn't delivered data.json in time, closing the game could save an empty game over the players' tokens and points; now nothing is saved until the data has been read
+
 ## 1.4.0 (2026-10-29): Stars on your Home Screen
 
 - 🏆 **Leaderboard widget**: See the top reader and everyone's stars on the Home Screen without opening the game.
