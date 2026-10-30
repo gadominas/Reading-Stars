@@ -1,57 +1,115 @@
-<p align="center"><img src="docs/logo.svg" width="112" alt="Reading Stars logo: a big yellow star with a white sparkle over a teal reading line"></p>
+<div align="center">
 
-<h1 align="center">Reading Stars</h1>
-<p align="center"><b>Read. Match. Shine.</b><br><sub>Skaitymo žvaigždės · Estrellas lectoras</sub></p>
+<img src="docs/logo.svg" width="96" alt="Reading Stars logo: a big yellow star with a white sparkle over a teal reading line">
 
-A picture-and-word reading game for kids, built as a single [Scriptable](https://scriptable.app) script for iPhone and iPad. Kids earn tokens for reading correctly, and parents can exchange those tokens for real pocket money from a budget the kids never see.
+# Reading Stars
 
-<table>
-<tr>
-<td><img src="docs/screenshots/launch.png" width="190" alt="Launch screen: the Reading Stars star pops in, then the tagline Read. Match. Shine."></td>
-<td><img src="docs/screenshots/01-home.png" width="190" alt="Home screen"></td>
-<td><img src="docs/screenshots/02-game-beginner.png" width="190" alt="Beginner round"></td>
-<td><img src="docs/screenshots/11-parent-zone.png" width="190" alt="Parent zone"></td>
-</tr>
-<tr>
-<td align="center"><sub>Opens on its star</sub></td>
-<td align="center"><sub>Pick a player</sub></td>
-<td align="center"><sub>Read the word, tap the picture</sub></td>
-<td align="center"><sub>Parent zone: value, budget, payout</sub></td>
-</tr>
-</table>
+**Read. Match. Shine.**
+
+A picture-and-word reading game for kids, where first-try answers earn tokens a parent can exchange for real pocket money.<br>An iPhone and iPad app for [Scriptable](https://scriptable.app). One file, no server, no sign-up.
+
+[![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgadominas%2FReading-Stars%2Fmain%2Freleases.json&query=%24.releases%5B0%5D.version&label=version&color=FACC15&labelColor=0E1116&style=flat-square)](CHANGELOG.md)
+[![Platform](https://img.shields.io/badge/iOS-Scriptable-171B22?style=flat-square&labelColor=0E1116)](https://apps.apple.com/app/scriptable/id1405459188)
+[![AI](https://img.shields.io/badge/AI-none-171B22?style=flat-square&labelColor=0E1116)](#ai)
+[![Blueprints](https://img.shields.io/badge/built%20with-app--blueprints-171B22?style=flat-square&labelColor=0E1116)](docs/BLUEPRINTS.md)
+[![Last commit](https://img.shields.io/github/last-commit/gadominas/Reading-Stars?style=flat-square&labelColor=0E1116&color=171B22&label=updated)](https://github.com/gadominas/Reading-Stars/commits)
+
+</div>
+
+<p align="center">
+  <img src="docs/screenshots/01-home.png" width="31%" alt="Home screen: four player cards with avatars, levels, tokens, stars and what the tokens are worth, under the language switch.">
+  <img src="docs/screenshots/02-beginner-round.png" width="31%" alt="Beginner round: the word Pen-guin in coloured syllables under three pictures that all start with P, with the wallet showing 23 tokens = €1.15.">
+  <img src="docs/screenshots/03-parent-zone.png" width="31%" alt="Parent zone: Ema's tokens, stars and payouts, her token value of €0.05, a hidden budget of €9.00 and the Top up, Pay out and Edit buttons.">
+</p>
+
+> [!NOTE]
+> Screenshots are rendered from the app's real interface with invented sample data. The players (Ema, Jonas, Ona, Leo), their money and the parent PIN are made up. They come from an emulator, so emoji and the rounded font look slightly different from an iPhone. The photos under [Tested at home](#tested-at-home) are real; kids' names are blurred in the photos.
+
+> [!IMPORTANT]
+> **Money and kids.** Tokens turn into money only when a parent pays out from a budget the kids never see; the app keeps the numbers, the parent hands over the money or treat. See [Disclaimer](#disclaimer).
+
+## Highlights
+
+- **Read the word, tap the picture.** One big word split into coloured syllables (**Na-mas**, **Kar-vė**, **He-li-cop-ter**), with pictures above it that all start with the same letter, so the kid has to read the whole word.
+- **Two levels.** 🐣 Beginner (ages 4–6, 1–2 syllables, 3 pictures) and 🦉 Expert (ages 9–11, 3–6 syllables, 5 pictures).
+- **Tokens for first tries.** A correct first try earns +1 🪙 with confetti and a cheer; each wrong tap costs −1 🪙 (never below 0). The big wallet counts up or down as it happens.
+- **Real pocket money, set per kid.** Each kid has their own token value and a hidden budget. When the budget can't cover the tokens, the kid is asked to get a top-up, and nothing earned is lost.
+- **Parent zone behind a PIN.** Top up budgets, pay out tokens, edit or delete players and see every payout and top-up with its date.
+- **Leaderboard.** All-time stars with a podium for the top three. Payouts never lower it.
+- **Three languages.** Lithuanian 🇱🇹, English 🇬🇧 and Spanish 🇪🇸, with about 190–200 picture words in each.
+- **Home Screen widget.** The top reader and everyone's stars and tokens, or one player's tokens. Never money, budgets or the PIN.
+- **Launch screen, Settings and updates** shared with the other apps: six colour palettes and three layouts, and new versions offered in the game.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/04-correct.png" width="31%" alt="Correct first try: confetti, the Awesome! banner and a +1 coin leaving the glowing cupcake picture for the wallet.">
+  <img src="docs/screenshots/05-wrong.png" width="31%" alt="Expert round for Straw-ber-ry with five S pictures: the sailboat is greyed out after a wrong tap, the wallet drops to 37 tokens and Oops! −1 Try again shows.">
+  <img src="docs/screenshots/06-top-up-needed.png" width="31%" alt="Ona's round opens with a message: Not enough money left to exchange your tokens. Ask your parents to top up!">
+</p>
+<p align="center">
+  <img src="docs/screenshots/07-leaderboard.png" width="31%" alt="Leaderboard: a podium with Jonas first on 112 stars, Ema second and Leo third, then every player's stars and token balance.">
+  <img src="docs/screenshots/08-payout.png" width="31%" alt="Payout confirmation for Ona: exchange 8 tokens for €0.40; the budget doesn't cover all tokens, so 6 stay.">
+  <img src="docs/screenshots/09-lithuanian.png" width="31%" alt="Beginner round in Lithuanian: the word Na-mas with a house, a night city and a nose, and the wallet showing 23 žetonai = 1,15 €.">
+</p>
+<p align="center">
+  <img src="docs/screenshots/10-launch.png" width="31%" alt="Launch screen: the yellow star with its sparkle and teal reading line, the name Reading Stars and the tagline Read. Match. Shine.">
+  <img src="docs/screenshots/11-settings.png" width="31%" alt="Settings sheet: Appearance with colour palettes, layout, text size and headline font, then Game and Money.">
+  <img src="docs/screenshots/12-update.png" width="31%" alt="Update sheet over the home screen: a new version with three highlights, Update now and Later, remind me in 2 days.">
+</p>
+<p align="center">
+  <img src="docs/screenshots/13-dark.png" width="31%" alt="Home screen in the Night palette: the player cards on a dark night sky.">
+  <img src="docs/screenshots/14-widget.png" width="31%" alt="Medium widget: Jonas as top reader with 112 points and 38 tokens to spend, then Ema, Leo and Ona with their stars and tokens.">
+</p>
+
+### Tested at home
+
+These are photos from the first evenings of play.
+
+<p align="center">
+  <img src="docs/photos/expert-es-broccoli-correct.jpg" width="48%" alt="Expert round in Spanish, correct answer">
+  <img src="docs/photos/expert-es-abeja-wrong.jpg" width="48%" alt="Expert round in Spanish, wrong tap">
+</p>
+
+- **Bró-co-li, Expert, Spanish.** Five pictures that all start with B: ballena, brócoli, bañera, bicicleta, búho. A correct first try sets off confetti and *¡Genial!*, and the coin flies into the wallet: 38 fichas = 1,90 €.
+- **A-be-ja, Expert, Spanish.** Every picture starts with A, so a quick guess goes wrong. The greyed-out picture was the wrong tap: *¡Uy! −1 🪙*, the wallet drops to 37 fichas = 1,85 € and a red *−0,05 €* floats away.
+
+<p align="center">
+  <img src="docs/photos/expert-es-mariquita.jpg" width="48%" alt="Expert round in Spanish, ladybug">
+  <img src="docs/photos/beginner-lt-cirkas.jpg" width="48%" alt="Beginner round in Lithuanian">
+</p>
+
+- **Ma-ri-qui-ta, Expert, Spanish.** Mariposa, maíz, mariquita, motocicleta, martillo: the ladybug glows gold as the correct answer. A streak of 🔥 6 first-try answers, worth 0,30 € so far.
+- **Cir-kas, Beginner, Lithuanian.** Three C-words: cilindras, citrina, cirkas. The lemon was tapped by mistake and greyed out. This was an earlier build with a small token badge; the big wallet came after this first test.
 
 ## Install
 
-1. Get **[Scriptable](https://apps.apple.com/app/scriptable/id1405459188)** (free) from the App Store.
+1. Get **[Scriptable](https://apps.apple.com/app/scriptable/id1405459188)** (free) on your iPhone or iPad.
 2. In Scriptable tap **+**, paste this line and tap **▶︎**:
    ```js
    const s = await new Request("https://raw.githubusercontent.com/gadominas/Reading-Stars/main/install.js").loadString(); await Function("module", "return (async () => {" + s + "\n})()")(module);
    ```
-3. Tap **Open now**. That's it: *Reading Stars* is in your scripts list.
+3. Tap **Open now**. That's it: *Reading Stars* is in your scripts list. On the first open, add a player, then open **🔒 Parents** to create the 4-digit parent PIN.
 
-- **Updates:** from v1.1.0 the game offers new versions itself (see below). On an older copy, run the install line once more.
-- **Home Screen icon:** in Scriptable tap *⋯* on *Reading Stars* → *Add to Home Screen*.
-- **Manual install:** create a new script and paste the whole [`Reading Stars.js`](Reading%20Stars.js) instead.
+From v1.1.0 the game offers new versions itself (see [Updates and what's new](#updates-and-whats-new)). On an older copy, run the install line once more. Players, tokens, budgets and the PIN are kept.
 
-## Updates and what's new
+<details>
+<summary><b>Install by hand</b></summary>
 
-When a new version is out, the home screen shows what it brings, with **Update now** and **Later** (asks again in 2 days). The offer never interrupts a round, and updating keeps all players, tokens, budgets and the PIN. Close and reopen the game afterwards.
+Create a new script in Scriptable, name it *Reading Stars* and paste the whole [`Reading Stars.js`](Reading%20Stars.js) into it.
 
-<img src="docs/screenshots/18-update-lt.png" width="240" alt="Update sheet in Lithuanian">
+</details>
 
-Every version is listed in [CHANGELOG.md](CHANGELOG.md). To publish one, follow [docs/RELEASING.md](docs/RELEASING.md). To turn the checks off, switch off **Parent zone › Settings › Updates › Offer new versions**; **Check for updates now** checks at once.
+- **Home Screen icon:** in Scriptable tap *⋯* on *Reading Stars* → *Add to Home Screen*. [docs/icon-1024.png](docs/icon-1024.png) is the 1024 px icon for it.
+- **iCloud Drive** is optional: without it, progress is saved in local Scriptable storage.
 
-## Launch screen
+## How to use it
 
-Reading Stars opens on its logo for 2.4 seconds: the star traces its outline and pops in, the sparkle and the reading line follow, then "Read. Match. Shine." (*Skaityk. Rask. Spindėk.*, *Lee. Elige. Brilla.* in the game's language). Tap to skip; with Reduce Motion it appears without movement. It is the shared [launch-screen](https://github.com/gadominas/app-blueprints/blob/main/blueprints/launch-screen.md) blueprint, so all the apps start the same way. The same star sits on top of the home screen, and [docs/icon-1024.png](docs/icon-1024.png) is the 1024 px icon for a Home Screen shortcut.
+### Players
 
-## Widget
+Tap **New player** on the home screen, type a name, pick a level (🐣 Beginner or 🦉 Expert) and an avatar. Tap a player's card to start a round. The language switch at the top of the home screen (LT, EN, ES) changes both the menus and the words.
 
-Add a Scriptable widget to the Home Screen or Lock Screen, long-press it, tap **Edit Widget** and choose *Reading Stars* as the script. It shows the top reader with their ⭐ points and 🪙 tokens to spend, and on medium and large the other players ranked as on the leaderboard. Type a player's name in **Parameter** to show only that player, with their tokens as the big number. It never shows money, budgets or the PIN, because kids see the Home Screen.
-
-The widget shows what the game saved last, so it works offline and updates after every round, payout and player change; if nobody has played for a while, its footer says when it was last updated. It is the shared [widgets](https://github.com/gadominas/app-blueprints/blob/main/blueprints/widgets.md) blueprint, in the same frame as the other apps' widgets. **Parent zone › Settings › Widget** sets how often iOS is asked to refresh it and when it counts as out of date.
-
-## How a round works
+### How a round works
 
 A word is shown big, split into syllables with dashes and a different colour per syllable: **Na-mas**, **Kar-vė**, **He-li-cop-ter**. Above it are pictures, and the kid taps the one that matches.
 
@@ -69,47 +127,11 @@ Every picture in a round **starts with the same letter as the word**. For *Na-ma
 | Correct after a mistake | 0 | 0 |
 | Skip | 0 | 0 |
 
-<table>
-<tr>
-<td><img src="docs/screenshots/02-game-beginner.png" width="190" alt="Beginner round"></td>
-<td><img src="docs/screenshots/03-correct.png" width="190" alt="Correct answer"></td>
-<td><img src="docs/screenshots/05-game-expert.png" width="190" alt="Expert round"></td>
-<td><img src="docs/screenshots/06-wrong.png" width="190" alt="Wrong answer"></td>
-</tr>
-<tr>
-<td align="center"><sub>Beginner: 3 pictures, all with N</sub></td>
-<td align="center"><sub>Correct: confetti, cheer, a coin flies to the wallet</sub></td>
-<td align="center"><sub>Expert: 5 pictures, all with D</sub></td>
-<td align="center"><sub>Wrong tap: −1 🪙 and −0,10 € drop away</sub></td>
-</tr>
-</table>
-
 The big wallet at the top always shows the kid's tokens and what they are worth. When it changes, the numbers count up or down, the panel pulses green or shakes red, and the difference floats over it (*+0,05 €*, *−1 🪙*).
 
-## Tested at home
+The number of pictures per round can be changed in **Settings › Rounds** (Beginner 2–4, Expert 3–5). If there aren't enough words with the same first letter for the chosen number, the round uses the original number instead.
 
-These are photos from the first evenings of play.
-
-<table>
-<tr>
-<td><img src="docs/photos/expert-es-broccoli-correct.jpg" width="380" alt="Expert round in Spanish, correct answer"></td>
-<td><img src="docs/photos/expert-es-abeja-wrong.jpg" width="380" alt="Expert round in Spanish, wrong tap"></td>
-</tr>
-<tr>
-<td><b>Bró-co-li, Expert, Spanish.</b> Five pictures that all start with B: ballena, brócoli, bañera, bicicleta, búho. A correct first try sets off confetti and <i>¡Genial!</i>, and the coin flies into the wallet: 38 fichas = 1,90 €.</td>
-<td><b>A-be-ja, Expert, Spanish.</b> Every picture starts with A, so a quick guess goes wrong. The greyed-out picture was the wrong tap: <i>¡Uy! −1 🪙</i>, the wallet drops to 37 fichas = 1,85 € and a red <i>−0,05 €</i> floats away.</td>
-</tr>
-<tr>
-<td><img src="docs/photos/expert-es-mariquita.jpg" width="380" alt="Expert round in Spanish, ladybug"></td>
-<td><img src="docs/photos/beginner-lt-cirkas.jpg" width="380" alt="Beginner round in Lithuanian"></td>
-</tr>
-<tr>
-<td><b>Ma-ri-qui-ta, Expert, Spanish.</b> Mariposa, maíz, mariquita, motocicleta, martillo: the ladybug glows gold as the correct answer. A streak of 🔥 6 first-try answers, worth 0,30 € so far.</td>
-<td><b>Cir-kas, Beginner, Lithuanian.</b> Three C-words: cilindras, citrina, cirkas. The lemon was tapped by mistake and greyed out. This was an earlier build with a small token badge; the big wallet came after this first test.</td>
-</tr>
-</table>
-
-## Tokens, money, budget and payouts
+### Tokens, money, budget and payouts
 
 The game separates three things: **tokens** the kid earns, **money** those tokens are worth, and a **budget** that only the parent sees.
 
@@ -132,7 +154,8 @@ flowchart LR
 
 **4. Payout.** When the kid asks to exchange, the parent opens the parent zone and taps *Pay out*. The tokens are converted into money, the money is taken from that kid's budget, and the payout is logged with the date. If the budget only covers part of the tokens, it pays what it can and the rest of the tokens stay. **Leaderboard points never go down on a payout**, so all-time progress is kept.
 
-### Worked example
+<details>
+<summary><b>Worked example</b></summary>
 
 | | Ema | Ona |
 |---|---|---|
@@ -144,79 +167,116 @@ flowchart LR
 | Payout | 23 🪙 → 1,15 € | 8 🪙 → 0,40 € (6 🪙 stay) |
 | Budget after | 7,85 € | 0,00 € |
 
-<table>
-<tr>
-<td><img src="docs/screenshots/04-wallet-up.png" width="190" alt="Wallet after a correct answer"></td>
-<td><img src="docs/screenshots/07-topup-needed.png" width="190" alt="Top-up message"></td>
-<td><img src="docs/screenshots/08-game-topup-banner.png" width="190" alt="Wallet with top-up warning"></td>
-<td><img src="docs/screenshots/01-home.png" width="190" alt="Home cards with money"></td>
-</tr>
-<tr>
-<td align="center"><sub>Wallet counts up: 24 🪙 = 1,20 €</sub></td>
-<td align="center"><sub>Budget too low: the kid is asked to get a top-up</sub></td>
-<td align="center"><sub>The reminder stays on the wallet</sub></td>
-<td align="center"><sub>Player cards show tokens, points and money</sub></td>
-</tr>
-</table>
+</details>
 
-## Parent zone
+### Parent zone
 
-Protected by a 4-digit PIN (5 wrong tries lock it for a minute). For each kid:
+Tap **🔒 Parents** on the home screen. It is protected by a 4-digit PIN (5 wrong tries lock it for a minute). For each kid:
 
 - token balance with its money value, all-time points, and total paid out
-- token value (*1 🪙 = …*) and the hidden budget, with a top-up button
+- token value (*1 🪙 = …*) and the hidden budget, with a top-up button (a minus sign takes money out)
 - *Pay out*, *Edit* (name, level, avatar) and *Delete*
 - a history of payouts and top-ups with dates
 
-**Settings** (sliders icon in the parent zone, so only parents can reach it), in the game's language:
+The sliders icon at the top right opens [Settings](#settings), so only parents can reach it.
 
-- **Appearance:** six colour palettes plus Auto (the bright look is the default; Night and Slate give a night sky), Comfortable, Compact or Tiny layout (one line per player on the leaderboard and in the parent zone), text size and headline font. The game screen looks the same in every layout.
-- **Game:** word letter style (*Na-mas*, *NA-MAS*, *na-mas*) and sounds. **Money:** currency (EUR, USD, GBP). **Parent:** change PIN.
-- **Updates:** offer new versions, and check now. **Rounds:** pictures per round for Beginner (2–4) and Expert (3–5), with Reset.
-- **Built with:** the [shared blueprints](https://github.com/gadominas/app-blueprints) the app follows (see [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md)).
-
-<table>
-<tr>
-<td><img src="docs/screenshots/10-pin.png" width="190" alt="PIN"></td>
-<td><img src="docs/screenshots/11-parent-zone.png" width="190" alt="Parent zone"></td>
-<td><img src="docs/screenshots/13-topup.png" width="190" alt="Top up"></td>
-<td><img src="docs/screenshots/14-payout.png" width="190" alt="Payout confirmation"></td>
-</tr>
-<tr>
-<td align="center"><sub>Parent PIN</sub></td>
-<td align="center"><sub>Value, budget, top-up, payout per kid</sub></td>
-<td align="center"><sub>Top up a kid's budget</sub></td>
-<td align="center"><sub>Confirm a payout: 23 🪙 → 1,15 €</sub></td>
-</tr>
-</table>
-
-## Leaderboard and languages
+### Leaderboard
 
 The leaderboard ranks kids by all-time points with a podium for the top three, and also shows each kid's current tokens. Payouts never lower it.
 
-The game speaks **Lithuanian 🇱🇹, English 🇬🇧 and Spanish 🇪🇸**, with about 190–200 picture words in each. The language switch on the home screen changes both the menus and the words.
+### Languages
 
-<table>
-<tr>
-<td><img src="docs/screenshots/09-leaderboard.png" width="190" alt="Leaderboard"></td>
-<td><img src="docs/screenshots/16-home-en.png" width="190" alt="Home in English"></td>
-<td><img src="docs/screenshots/17-game-en-expert.png" width="190" alt="Expert round in English"></td>
-</tr>
-<tr>
-<td align="center"><sub>Leaderboard</sub></td>
-<td align="center"><sub>English home screen</sub></td>
-<td align="center"><sub>Expert in English: five C-words</sub></td>
-</tr>
-</table>
+The game speaks **Lithuanian 🇱🇹, English 🇬🇧 and Spanish 🇪🇸** (*Skaitymo žvaigždės · Reading Stars · Estrellas lectoras*), with about 190–200 picture words in each. The language switch on the home screen changes both the menus and the words. Settings, the update sheet, the launch screen's tagline and the widget follow the same language.
 
-## Data
+## Widget
 
-Progress is saved to `iCloud Drive › Scriptable › ReadingStars › data.json`, with `data.backup.json` and the parent's choices (`settings.json`) next to it, or to local Scriptable storage if iCloud is off. Kids' names, tokens, budgets and the PIN hash live only in that file, never in this repository. The widget reads a small copy with only names, avatars, points and tokens, kept in Scriptable's local storage on this device (`reading-stars-widget.json`).
+Add a Scriptable widget to the Home Screen or Lock Screen and choose *Reading Stars* as the script. It shows the top reader with their ⭐ points and 🪙 tokens to spend, and on medium and large the other players ranked as on the leaderboard. Type a player's name in **Parameter** to show only that player, with their tokens as the big number. It never shows money, budgets or the PIN, because kids see the Home Screen. It is the shared [widgets](https://github.com/gadominas/app-blueprints/blob/main/blueprints/widgets.md) blueprint, so all the apps' widgets look alike.
 
-Forgot the parent PIN? Remove the `pinHash` value from `data.json` and set a new PIN on the next launch.
+1. Long-press the Home Screen, tap **Edit › Add Widget**, choose **Scriptable** and a size.
+2. Long-press the widget, tap **Edit Widget**, set **Script** to *Reading Stars* and **When Interacting** to *Run Script*.
 
-## Notes
+Lock Screen widgets are added the same way under **Customize › Lock Screen**: inline shows a line like *⭐ Ema leads with 120*, the circle shows the leader's points, and the rectangle shows the leaderboard line. With a player's name as Parameter, the Lock Screen shows 🪙 and that player's tokens.
 
-- Reading Stars follows four shared blueprints: in-app updates, settings, launch screen and widgets. **Settings › Built with** lists them with their versions; [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md) adds the deviations.
+The widget shows what the game saved last, so it works offline and updates after every round, payout and player change; if nobody has played for a while, its footer says when it was last updated. **Parent zone › Settings › Widget** sets how often iOS is asked to refresh it and when it counts as out of date.
 
-<sub>The screenshots use demo players (Ema, Leo, Ona). Kids' names are blurred in the photos.</sub>
+## AI
+
+Reading Stars uses no AI. It needs no API key and sends nothing to an AI provider.
+
+## Settings
+
+Open the parent zone (PIN) and tap the sliders icon at the top right. Changes apply at once and are saved in `settings.json` in iCloud Drive › Scriptable › ReadingStars, so updates never reset them. The sheet follows the game's language.
+
+| Section | What you can change |
+| --- | --- |
+| Appearance | Colours (Auto or six palettes: Ink, the game's bright look and the default, Sepia, Mint, Contrast, Slate, Night; Slate and Night give a night sky), layout (Comfortable, Compact, Tiny: one line per player on the leaderboard and in the parent zone), text size, headline font. The game screen looks the same in every layout |
+| Game | Word letters (*Ap-ple*, *AP-PLE*, *ap-ple*; *Na-mas*, *NA-MAS*, *na-mas* in Lithuanian), sounds |
+| Money | Currency (EUR, USD, GBP) |
+| Parent | Change PIN |
+| Updates | Offer new versions, check now |
+| Rounds | Pictures per round for Beginner (2–4, original 3) and Expert (3–5, original 5), each with Reset |
+| Widget | Ask iOS to refresh every 15–240 min (original 30), mark the widget as out of date after 60–2880 min (original 720), each with Reset |
+| Built with | The [shared blueprints](https://github.com/gadominas/app-blueprints) this app follows, with links (read-only) |
+
+## Updates and what's new
+
+Reading Stars checks this repository for a new version each time it opens. When one is out, a sheet shows its three best features with **Update now** and **Later**; Later hides the offer for two days. Your data and settings are kept. Every release is in [CHANGELOG.md](CHANGELOG.md).
+
+The sheet appears only on the home screen and never interrupts a round, in the game's language. Updating keeps all players, tokens, budgets and the PIN. Close and reopen the game afterwards. To turn the checks off, switch off **Parent zone › Settings › Updates › Offer new versions**; **Check for updates now** checks at once.
+
+## Privacy and security
+
+- Progress is saved to `iCloud Drive › Scriptable › ReadingStars › data.json`, with `data.backup.json` and the parent's choices (`settings.json`) next to it, or to local Scriptable storage if iCloud is off. Kids' names, tokens, budgets and the PIN hash live only in that file, never in this repository.
+- The widget reads a small copy with only names, avatars, points and tokens, kept in Scriptable's local storage on this device (`reading-stars-widget.json`).
+- Nothing about the players leaves the phone. Apart from the update check, the app downloads only from this repository: the new script when you tap **Update now**, and the app icon the widget caches once per version.
+- No AI, no accounts, no API keys.
+- The update check only downloads `releases.json` from this repository.
+
+## How it works
+
+- **One script, one page.** *Reading Stars.js* builds the game as an HTML page in a Scriptable `WebView`. The page talks to the script through `readingstars://` links: `save` writes the progress file after every change, and the other actions read and change settings and run the update.
+- **Launch screen.** Reading Stars opens on its logo for 2.4 seconds: the star traces its outline and pops in, the sparkle and the reading line follow, then "Read. Match. Shine." (*Skaityk. Rask. Spindėk.*, *Lee. Elige. Brilla.* in the game's language). Tap to skip; with Reduce Motion it appears without movement. It is the shared [launch-screen](https://github.com/gadominas/app-blueprints/blob/main/blueprints/launch-screen.md) blueprint, so all the apps start the same way. The same star sits on top of the home screen.
+- **Rounds** draw from a shuffled deck of the level's words, so a word doesn't come back until the deck runs out, and fill the other pictures with words that start with the same letter.
+- **The widget branch** runs without the page: it reads the saved snapshot and draws the widget natively.
+
+## Troubleshooting
+
+| Problem | Try this |
+| --- | --- |
+| Forgot the parent PIN | Remove the `pinHash` value from `data.json` and set a new PIN on the next launch. |
+| A kid sees "Ask your parents to top up" | Their tokens are worth more than their budget. Top up in the parent zone, or pay out what the budget covers. |
+| *Pay out* is greyed out | The budget is below one token's value: *Top up the budget to pay out*. |
+| No update offer | **Later** hides it for two days, and **Offer new versions** may be off. Use **Settings › Updates › Check for updates now**. |
+| "GitHub is still serving the old version" | GitHub can take a few minutes to serve a new release. Try again in a few minutes. |
+| The widget's footer shows "⟳ Updated …" in amber | Nobody has played for a while (12 hours by default). Open the game once; the widget follows. |
+
+## Built with
+
+- **[Scriptable](https://scriptable.app)** by Simon Støvring: one JavaScript file, a WebView for the interface.
+- **[app-blueprints](https://github.com/gadominas/app-blueprints)**: the shared in-app updates, settings, AI configuration, launch screen and widgets that every one of these apps uses, so they look and behave alike. **Settings › Built with** lists the versions; [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md) adds the deviations. Reading Stars follows four of them: in-app updates, settings, launch screen and widgets.
+- **Pictures** are the iPhone's own emoji, so the game needs no image files and works offline.
+
+Maintainers: release notes live in [`releases.json`](releases.json); see [docs/RELEASING.md](docs/RELEASING.md). Screenshots are regenerated with [repo-site](https://github.com/gadominas/app-blueprints/tree/main/repo-site) from [`docs/site/scenario.js`](docs/site/scenario.js).
+
+## Disclaimer
+
+**Money and kids.** The game separates three things: **tokens** the kid earns, **money** those tokens are worth, and a **budget** that only the parent sees. Kids never see the budget. The widget never shows money, budgets or the PIN, because kids see the Home Screen. **Leaderboard points never go down on a payout**, so all-time progress is kept. Progress is saved to `data.json` in iCloud Drive or local Scriptable storage. Kids' names, tokens, budgets and the PIN hash live only in that file, never in this repository. Reading Stars only keeps the numbers: it never moves real money, and the parent decides when to pay out and hands over the money or treat.
+
+A personal project, provided as is, without warranty. Not affiliated with Scriptable or Apple.
+
+## More apps like this
+
+<p>
+  <a href="https://github.com/gadominas/StravaFeed"><img src="https://raw.githubusercontent.com/gadominas/StravaFeed/main/docs/icon-1024.png" width="44" alt="Strava Daily Digest"></a>&nbsp;
+  <a href="https://github.com/gadominas/BlogPulse"><img src="https://raw.githubusercontent.com/gadominas/BlogPulse/main/docs/icon-1024.png" width="44" alt="BlogPulse"></a>&nbsp;
+  <a href="https://github.com/gadominas/VisionX"><img src="https://raw.githubusercontent.com/gadominas/VisionX/main/docs/icon-1024.png" width="44" alt="VisionX"></a>&nbsp;
+  <a href="https://github.com/gadominas/Go2FGym"><img src="https://raw.githubusercontent.com/gadominas/Go2FGym/main/docs/icon-1024.png" width="44" alt="Go2FGym"></a>&nbsp;
+  <a href="https://github.com/gadominas/Tamo-"><img src="https://raw.githubusercontent.com/gadominas/Tamo-/master/docs/icon-1024.png" width="44" alt="Dienynas+"></a>&nbsp;
+  <a href="https://github.com/gadominas/Reading-Stars"><img src="https://raw.githubusercontent.com/gadominas/Reading-Stars/main/docs/icon-1024.png" width="44" alt="Reading Stars"></a>
+</p>
+
+<sub>Strava Daily Digest · BlogPulse · VisionX · Go2FGym · Dienynas+ · Reading Stars, all single-file Scriptable apps built on the same blueprints.</sub>
+
+## License
+
+No license has been chosen yet, so default copyright applies: ask before reusing the code.
