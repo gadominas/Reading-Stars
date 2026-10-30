@@ -28,13 +28,17 @@
  *
  * Data is saved to: iCloud Drive › Scriptable › ReadingStars › data.json, and choices to settings.json
  * next to it (falls back to local Scriptable storage when iCloud is off).
+ *
+ * - Safe start-up (app-blueprints recipe safe-startup 1.0.0): an empty window first, then the page, then the data.
+ *   Only settings.json is read before the window; every iCloud read has a 10 s limit, and data.json is never saved
+ *   over unless it was read. Settings › Updates › Start-up log shows what happened the last times the app opened.
  */
 
 // ───────────────────────── Settings & version ─────────────────────────
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -69,29 +73,66 @@ function getFileManager() {
 const fm = getFileManager();
 const folder = fm.joinPath(fm.documentsDirectory(), APP_FOLDER);
 if (!fm.fileExists(folder)) fm.createDirectory(folder, true);
-const dataPath = fm.joinPath(folder, "data.json");
-const backupPath = fm.joinPath(folder, "data.backup.json");
+const P = (n) => fm.joinPath(folder, n + ".json");   // ReadingStars/<name>.json
+const dataPath = P("data");
+const backupPath = P("data.backup");
 
-async function ensureDownloaded(path) {
+// A short start-up log on the phone (local, not iCloud): Settings › Updates › Start-up log, and on screen if opening stalls.
+// Only counts, timings and file names go in it: never money, budgets, payouts or the PIN.
+const LOG_PATH = FileManager.local().joinPath(FileManager.local().documentsDirectory(), APP_ID + "-startup.log");
+function startLog(msg) {
   try {
-    if (fm.fileExists(path) && !fm.isFileDownloaded(path)) await fm.downloadFileFromiCloud(path);
+    const lfm = FileManager.local(), line = new Date().toISOString().slice(11, 19) + "  " + msg;
+    const old = lfm.fileExists(LOG_PATH) ? lfm.readString(LOG_PATH).split("\n").slice(-60) : [];
+    lfm.writeString(LOG_PATH, old.concat(line).join("\n"));
   } catch (e) {}
 }
 
+// Reads with a time limit (app-blueprints · safe-startup).
+const loadIssues = [];   // files iCloud didn't hand over in time
+async function load(n, def, waitMs = 10000) {
+  const p = P(n);
+  if (!fm.fileExists(p)) return def;
+  try {
+    if (fm.isFileStoredIniCloud(p) && !fm.isFileDownloaded(p)) {
+      // iCloud can take a long time (or forever, offline): never let start-up hang on it
+      await Promise.race([fm.downloadFileFromiCloud(p), new Promise(r => Timer.schedule(waitMs, false, r))]);
+      if (!fm.isFileDownloaded(p)) { loadIssues.push(n); startLog(`iCloud didn't deliver ${n}.json in ${waitMs / 1000} s`); return def; }
+    }
+    return JSON.parse(fm.readString(p));
+  } catch (e) { loadIssues.push(n); startLog(`Couldn't read ${n}.json: ${e}`); return def; }   // a broken file falls back to defaults, never crashes
+}
+
+// Data is read in loadData(): the app shows its first screen before reading it, because iCloud can be slow.
+// data.json holds players, tokens, budgets, the PIN hash and the language; null until read (and for a new family).
+let gameData = null;
+let dataLoaded = false;   // data.json is only written once it was read, so a slow start can never save an empty game over it
 async function loadData() {
-  await ensureDownloaded(dataPath);
-  await ensureDownloaded(backupPath);
-  for (const p of [dataPath, backupPath]) {
-    if (!fm.fileExists(p)) continue;
-    try {
-      return JSON.parse(fm.readString(p));
-    } catch (e) {}
+  loadIssues.length = 0;
+  gameData = await load("data", null);
+  // On the phone but missing or broken (not just late from iCloud): the backup takes its place, as before.
+  const late = loadIssues.includes("data") && fm.fileExists(dataPath) && !fm.isFileDownloaded(dataPath);
+  if (!gameData && !late && fm.fileExists(backupPath)) {
+    const b = await load("data.backup", null);
+    if (b && typeof b === "object") {
+      gameData = b;
+      if (loadIssues.includes("data")) { loadIssues.splice(loadIssues.indexOf("data"), 1); startLog("data.json was broken: using data.backup.json"); }
+    }
   }
-  return null;
+  if (gameData && typeof gameData !== "object") gameData = null;
+  // First run after 1.1: letter style, currency and sounds move over from data.json into settings.json, once.
+  if (settingsFresh && settingsOk && !loadIssues.includes("data")) {
+    const old = (gameData && gameData.settings) || {};
+    for (const k of ["wordCase", "currency", "sound"]) if (old[k] !== undefined) setSetting(k, old[k]);
+    settingsFresh = false;
+    saveSettings();
+  }
+  dataLoaded = loadIssues.length === 0;   // anything missing: show what we have, save nothing over it
 }
 
 let lastSaved = null;
 function saveData(json) {
+  if (!dataLoaded) return;   // never save data that was never read
   if (typeof json !== "string" || !json || json === lastSaved) return;
   const seen = json;
   let d;
@@ -113,7 +154,9 @@ function saveData(json) {
 // ───────────────────────── Settings (app-blueprints · settings) ─────────────────────────
 // settings.json sits next to data.json (iCloud Drive › Scriptable › ReadingStars). Players, tokens,
 // budgets and the PIN stay in data.json. Changed only from the Settings sheet in the parent zone.
-const settingsPath = fm.joinPath(folder, "settings.json");
+const settingsPath = P("settings");
+let settingsOk = false;      // settings that were never read are never saved over
+let settingsFresh = false;   // no settings.json yet: loadData() moves the 1.1 choices over from data.json
 // Defaults first, saved choices on top. The bright Ink look is the default (not Auto): it is the game's own look.
 const settings = {
   theme: "ink", density: "comfortable", font: "sans", textSize: 1,
@@ -121,7 +164,7 @@ const settings = {
   checkUpdates: true,   // offer new versions from GitHub (asks again 2 days after "Later")
   cfg: {},
 };
-const saveSettings = () => { try { fm.writeString(settingsPath, JSON.stringify(settings)); return true; } catch (e) { return false; } };
+const saveSettings = () => { if (!settingsOk) return false; try { fm.writeString(settingsPath, JSON.stringify(settings)); return true; } catch (e) { return false; } };
 const CURRENCY_CODES = ["EUR", "USD", "GBP"];
 // Every key the page may change, with its check (all apply at once on the page).
 const SET_KEYS = {
@@ -139,16 +182,11 @@ function setSetting(k, v) {
   settings[k] = v;
   return true;
 }
-async function loadSettings(data) {
-  await ensureDownloaded(settingsPath);
-  let saved = null;
-  try { if (fm.fileExists(settingsPath)) saved = JSON.parse(fm.readString(settingsPath)); } catch (e) {}
+// The only file read before every branch (app, widget), with the same iCloud time limit as the data.
+async function loadSettings() {
+  const saved = await load("settings", null);
   if (saved && typeof saved === "object") Object.assign(settings, saved);
-  else {   // first run of 1.2: letter style, currency and sounds move over from data.json
-    const old = (data && data.settings) || {};
-    for (const k of ["wordCase", "currency", "sound"]) if (old[k] !== undefined) settings[k] = old[k];
-    saveSettings();
-  }
+  else settingsFresh = true;   // first run of 1.2 or later: loadData() moves the old choices over from data.json and saves
   const d = { theme: "ink", density: "comfortable", font: "sans", textSize: 1, wordCase: "cap", currency: "EUR" };
   for (const k of Object.keys(d)) if (!setSetting(k, settings[k])) settings[k] = d[k];
   settings.sound = settings.sound !== false;
@@ -218,10 +256,6 @@ function settingsState() {
     palettes: PALETTES, currencies: CURRENCY_CODES, version: VERSION, appName: "Reading Stars",
     blueprints: BLUEPRINTS, blueprintsRepo: BLUEPRINTS_REPO,
   };
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => Timer.schedule(ms, false, resolve));
 }
 
 // ───────────────────────── In-app updates (native side) ─────────────────────────
@@ -341,6 +375,16 @@ body{
 }
 #err{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:999;background:var(--sheet);color:#C92A2A;border:3px solid #C92A2A;border-radius:14px;padding:12px;font:700 calc(14px * var(--ts))/1.35 -apple-system,system-ui,sans-serif;white-space:pre-wrap;word-break:break-word}
 #app{position:relative;max-width:760px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 28px)}
+/* Safe start-up (app-blueprints · safe-startup): the placeholder until the data is handed over, and the start-up log */
+.booting{display:flex;align-items:center;justify-content:center;gap:10px;padding:80px 20px;color:var(--muted);font-size:calc(14px * var(--ts))}
+.booting.note{flex-direction:column;text-align:center;color:var(--ink-2);padding:60px 24px}
+.booting.note b{font-size:calc(18px * var(--ts));color:var(--ink)}
+.booting.note pre,.startlog{max-width:100%;overflow:auto;text-align:left;font:12px/1.45 ui-monospace,Menlo,monospace;background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:10px;color:var(--ink-2);white-space:pre-wrap;-webkit-user-select:text;user-select:text}
+.startlog{margin:8px 0;max-height:260px}
+.busy-dot{width:15px;height:15px;flex:none;border-radius:50%;border:2px solid var(--rule);border-top-color:var(--signal);animation:bdspin .8s linear infinite}
+@keyframes bdspin{to{transform:rotate(360deg)}}
+/* The page's ground is the sky backdrop, so the placeholder sits on a sheet card to stay readable */
+#app>.booting{background:var(--sheet);border-radius:26px;margin-top:24px;box-shadow:0 6px 0 rgba(36,38,74,.12)}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
 button:disabled{opacity:.4}
 :focus-visible{outline:4px solid var(--sun);outline-offset:3px}
@@ -576,6 +620,7 @@ summary{font-weight:800;color:var(--muted)}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion: reduce){
   .brand-mark,.pod.p1 .ava{animation:none}
+  .busy-dot{animation-duration:2.4s}
 }
 
 /* Launch screen (app-blueprints · launch-screen 1.0.0) */
@@ -1193,6 +1238,7 @@ function webApp() {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 2200);
   }
+  window.__toast = toast;   // the Scriptable side's toast() (start-up notes)
   function ask(msg, okText, danger) {
     return new Promise((resolve) => {
       const m = document.createElement("div");
@@ -1943,6 +1989,7 @@ function webApp() {
       layouts: ["Comfortable", "Compact", "Tiny"], sizes: ["Small", "Default", "Large", "Larger"], fonts: ["Sans serif", "Serif"],
       game: "Game", money: "Money", parent: "Parent", pinHelp: "Opens the PIN pad to set a new PIN",
       updates: "Updates", offer: "Offer new versions", offerHelp: (v) => `You have Reading Stars ${v}. “Later” waits two days.`, check: "Check for updates now", checkBtn: "Check", checking: "Checking…",
+      startLog: "Start-up log", startLogHelp: (a) => `What happened the last times ${a} opened`, show: "Show", hide: "Hide", noLog: "Nothing logged yet.",
       latest: (v) => `You're on the latest version (${v})`, avail: (v) => `Version ${v} is available`,
       reset: "Reset", original: "original", changed: (n) => `${n} setting${n === 1 ? "" : "s"} changed`, none: "All settings are at their original values", resetAll: "Reset all", confirmReset: "Confirm reset",
       builtWith: "Built with", builtHint: (a) => `${a} is built from shared blueprints that the other apps use too. Tap one to read how that part works.`, bp: (v, a, s) => `Blueprint ${v} · since ${a} ${s}`, all: "All blueprints", dec: "Decrease", inc: "Increase" },
@@ -1951,6 +1998,7 @@ function webApp() {
       layouts: ["Erdvus", "Glaustas", "Mažytis"], sizes: ["Mažas", "Įprastas", "Didelis", "Didesnis"], fonts: ["Be serifų", "Su serifais"],
       game: "Žaidimas", money: "Pinigai", parent: "Tėvams", pinHelp: "Atidaro PIN klaviatūrą naujam PIN",
       updates: "Atnaujinimai", offer: "Siūlyti naujas versijas", offerHelp: (v) => `Jūsų versija: Reading Stars ${v}. „Vėliau“ palaukia dvi dienas.`, check: "Tikrinti atnaujinimus dabar", checkBtn: "Tikrinti", checking: "Tikrinama…",
+      startLog: "Paleidimo žurnalas", startLogHelp: (a) => `Kas vyko paskutinius kartus atidarant ${a}`, show: "Rodyti", hide: "Slėpti", noLog: "Kol kas nieko neužrašyta.",
       latest: (v) => `Naudojate naujausią versiją (${v})`, avail: (v) => `Yra versija ${v}`,
       reset: "Atstatyti", original: "pradinė", changed: (n) => `Pakeista nustatymų: ${n}`, none: "Visi nustatymai pradiniai", resetAll: "Atstatyti viską", confirmReset: "Patvirtinti",
       builtWith: "Sukurta pagal", builtHint: (a) => `${a} sukurta pagal bendrus šablonus, kuriuos naudoja ir kitos programos. Paspauskite, kad perskaitytumėte, kaip veikia ta dalis.`, bp: (v, a, s) => `Šablonas ${v} · nuo ${a} ${s}`, all: "Visi šablonai", dec: "Mažinti", inc: "Didinti" },
@@ -1959,6 +2007,7 @@ function webApp() {
       layouts: ["Amplio", "Compacto", "Mínimo"], sizes: ["Pequeño", "Normal", "Grande", "Más grande"], fonts: ["Sin serifa", "Con serifa"],
       game: "Juego", money: "Dinero", parent: "Padres", pinHelp: "Abre el teclado para poner un PIN nuevo",
       updates: "Actualizaciones", offer: "Ofrecer versiones nuevas", offerHelp: (v) => `Tienes Reading Stars ${v}. «Más tarde» espera dos días.`, check: "Buscar actualizaciones ahora", checkBtn: "Buscar", checking: "Buscando…",
+      startLog: "Registro de inicio", startLogHelp: (a) => `Qué pasó las últimas veces que se abrió ${a}`, show: "Mostrar", hide: "Ocultar", noLog: "Aún no hay nada registrado.",
       latest: (v) => `Tienes la última versión (${v})`, avail: (v) => `Hay una versión ${v}`,
       reset: "Restablecer", original: "original", changed: (n) => `${n} ajuste${n === 1 ? "" : "s"} cambiado${n === 1 ? "" : "s"}`, none: "Todos los ajustes están en sus valores originales", resetAll: "Restablecer todo", confirmReset: "Confirmar",
       builtWith: "Hecho con", builtHint: (a) => `${a} está hecho con plantillas compartidas que también usan las otras apps. Toca una para leer cómo funciona esa parte.`, bp: (v, a, s) => `Plantilla ${v} · desde ${a} ${s}`, all: "Todas las plantillas", dec: "Menos", inc: "Más" },
@@ -2039,6 +2088,8 @@ function webApp() {
       <h3 class="sec">${esc(CT.updates)}</h3>
       <div class="srow"><div class="grow"><b>${esc(CT.offer)}</b><small>${esc(CT.offerHelp(SET.version))}</small></div><button class="switch ${s.checkUpdates ? "on" : ""}" data-act="toggle" data-v="checkUpdates" aria-label="${esc(CT.offer)}"></button></div>
       <div class="srow"><div class="grow"><b>${esc(CT.check)}</b><small id="updmsg" class="muted" aria-live="polite"></small></div><button class="sm" data-act="updcheck">${esc(CT.checkBtn)}</button></div>
+      <div class="srow"><div class="grow"><b>${esc(CT.startLog)}</b><small class="muted">${esc(CT.startLogHelp(SET.appName))}</small></div><button class="sm" data-act="startlog">${esc(CT.show)}</button></div>
+      <pre id="startlog" class="startlog" hidden></pre>
       ${SET.cfgSchema.map((sec) => `<h3 class="sec">${esc(sec.title[state.lang] || sec.title.en)}</h3>${sec.items.map(fieldHTML).join("")}`).join("")}
       <div class="cfg-foot"><span class="note">${esc(changed ? CT.changed(changed) : CT.none)}</span>
         ${changed ? `<button class="sm danger ${cfgArmed ? "armed" : ""}" data-act="cfgall">${esc(cfgArmed ? CT.confirmReset : CT.resetAll)}</button>` : ""}</div>
@@ -2080,6 +2131,11 @@ function webApp() {
         if (um) um.textContent = !ok ? String(r) : r.available ? CT.avail(r.version) : CT.latest(r.version);
         if (ok && r.available) { closeSettings(); if (window.__showUpdate) window.__showUpdate(r.info); }
       });
+    }
+    if (act === "startlog") {   // Settings › Updates › Start-up log (app-blueprints · safe-startup)
+      const pre = document.getElementById("startlog");
+      if (!pre.hidden) { pre.hidden = true; el.textContent = CT.show; return; }
+      return send("startlog", {}, (ok, txt) => { pre.textContent = txt || CT.noLog; pre.hidden = false; el.textContent = CT.hide; });
     }
   }
   function cfgChange(e) {
@@ -2622,9 +2678,30 @@ function splashLang(data) {
   return SPLASH_TAG[l] ? l : "en";
 }
 
-function buildHTML(data) {
-  const spLang = splashLang(data), spTag = SPLASH_TAG[spLang];
-  const initJSON = JSON.stringify(data || null).replace(/</g, "\\u003c");
+// Words shown before the game's own text is running, in the game's language (from the widget snapshot until the data is read).
+const BOOT_TEXT = {
+  en: { loading: "Loading your players…", still: "Still loading…", cant: "Reading Stars couldn't open",
+    again: "Close Reading Stars and open it again. If it keeps happening, run the installer once more.",
+    late: "Some of your data is still coming from iCloud. Nothing will be saved until you reopen Reading Stars." },
+  lt: { loading: "Įkeliami žaidėjai…", still: "Vis dar įkeliama…", cant: "Reading Stars nepavyko atidaryti",
+    again: "Uždarykite Reading Stars ir atidarykite iš naujo. Jei tai kartojasi, dar kartą paleiskite diegimo programą.",
+    late: "Dalis duomenų dar keliauja iš iCloud. Kol iš naujo neatidarysite Reading Stars, niekas nebus išsaugota." },
+  es: { loading: "Cargando tus jugadores…", still: "Sigue cargando…", cant: "Reading Stars no se pudo abrir",
+    again: "Cierra Reading Stars y ábrelo de nuevo. Si sigue pasando, ejecuta el instalador otra vez.",
+    late: "Parte de tus datos aún está llegando desde iCloud. No se guardará nada hasta que vuelvas a abrir Reading Stars." },
+};
+const bootText = () => BOOT_TEXT[splashLang(gameData || readWidget())];
+const safeJSON = (x) => JSON.stringify(x === undefined ? null : x).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+
+// The state the page starts from, handed over by bootApp() (never inlined in buildHTML): the game's save plus the settings it reads.
+function clientState() {
+  return Object.assign({}, gameData || {}, { settings: gameSettings(), look: lookState(), cfg: cfgValues() });
+}
+
+// The page, without any data: the launch screen and a "Loading your players…" placeholder. Only settings are read here.
+// The language for the launch screen comes from the widget snapshot (local, fast), as data.json isn't read yet.
+function buildHTML() {
+  const spLang = splashLang(readWidget()), spTag = SPLASH_TAG[spLang], BT = BOOT_TEXT[spLang];
   const look = lookState(), sky = PALETTES[look.shown].sky;
   return `<!doctype html>
 <html data-theme="${look.shown}" data-font="${look.font}" style="--ts:${look.textSize}"><head>
@@ -2642,7 +2719,7 @@ function buildHTML(data) {
   <div class="spWord">Reading <span>Stars</span></div>
   <div class="spTag">${spTag}</div>
 </div>
-<div id="app"></div>
+<div id="app"><div class="booting" role="status"><span class="busy-dot"></span>${BT.loading}</div></div>
 <div id="fx"></div>
 <script>
 window.onerror = function (msg, src, line, col) {
@@ -2660,9 +2737,33 @@ window.onerror = function (msg, src, line, col) {
   sp.addEventListener("click", gone);   // tap to skip
   setTimeout(gone, 2900);               // out of the page once the CSS fade is done
 })();
-window.__INITIAL__ = ${initJSON};
 window.__APP_VERSION = ${JSON.stringify(VERSION)};
-(${webApp.toString()})();
+// The page goes on screen first; Scriptable hands over the data once it has read it (app-blueprints · safe-startup).
+window.__parts = [];
+window.__bootNote = function (title, detail) {
+  var b = document.querySelector(".booting"); if (!b) return;
+  b.className = "booting note";
+  b.innerHTML = "<b></b><span></span>" + (detail ? "<pre></pre>" : "");
+  b.querySelector("b").textContent = title;
+  b.querySelector("span").textContent = ${safeJSON(BT.again)};
+  if (detail) b.querySelector("pre").textContent = detail;
+};
+setTimeout(function () { if (!window.__booted) window.__bootNote(${safeJSON(BT.still)}); }, 25000);
+document.addEventListener("visibilitychange", function () {   // coming back into view: redraw
+  if (document.visibilityState !== "visible") return;
+  var d = document.documentElement; d.style.transform = "translateZ(0)"; void d.offsetHeight; d.style.transform = "";
+});
+window.__boot = function (st) {
+  if (window.__booted) return;
+  if (!st.kids || !st.kids.length) st.kids = [].concat.apply([], window.__parts);
+  window.__parts = [];
+  window.__booted = true; window.__INITIAL__ = st;
+  requestAnimationFrame(function () {   // make WebKit draw again once the data is in (helps if the window came up blank)
+    var d = document.documentElement; d.style.transform = "translateZ(0)"; void d.offsetHeight;
+    requestAnimationFrame(function () { d.style.transform = ""; });
+  });
+  (${webApp.toString()})();
+};
 </script>
 </body></html>`;
 }
@@ -2670,66 +2771,70 @@ window.__APP_VERSION = ${JSON.stringify(VERSION)};
 const SAVE_SCHEME = "readingstars://save?d=";
 
 // The app: everything that builds and presents the WebView. Only the app branch below runs it, never a widget.
-async function main() {
-  saveWidget(widgetSnapshot(initialData));   // the widget shows the players as loaded, before the first round
-  const webView = new WebView();
+let wv = null, pendingUpdate = null, updateChecked = false;
+const js = (code) => (wv ? ev(code + "; 'ok'") : Promise.reject(new Error("no page"))).catch(() => {});
+const toast = (msg) => js(`window.__toast && window.__toast(${safeJSON(msg)})`);
+const offerUpdate = () => {
+  if (pendingUpdate) js(`window.__showUpdate && window.__showUpdate(${JSON.stringify(pendingUpdate)})`);
+};
 
-  let pendingUpdate = null;
-  const js = (code) => webView.evaluateJavaScript(code + "; 'ok'").catch(() => {});
-  const offerUpdate = () => {
-    if (pendingUpdate) js(`window.__showUpdate && window.__showUpdate(${JSON.stringify(pendingUpdate)})`);
-  };
-
-  // Actions sent by the page with send(action, params): readingstars://<action>?p=<json>
-  async function handleAction(head, p) {
-    const answer = (ok, msg) => js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
-    // Settings (app-blueprints · settings): each change is applied and saved at once; the answer is the fresh state.
-    if (head === "settings-get") return answer(true, settingsState());
-    if (head === "set") {
-      if (!setSetting(p.k, p.v)) return answer(false, "That setting can't be changed here.");
-      saveSettings();
-      return answer(true, settingsState());
-    }
-    if (head === "cfg") {
-      if (p.k === "*") settings.cfg = {}; else setCfg(p.k, p.reset ? null : p.v);
-      saveSettings();
-      return answer(true, settingsState());
-    }
-    if (head === "update-check") {   // Settings › Check for updates now: clears "Later" and checks at once
-      clearUpdateSnooze();
-      const was = settings.checkUpdates; settings.checkUpdates = true;
-      const u = await checkForUpdate(); settings.checkUpdates = was;
-      if (u) pendingUpdate = u;
-      return answer(true, { available: !!u, info: u, version: u ? u.latest : VERSION });
-    }
-    if (head === "openurl") {   // Built with: only the blueprints repository opens from here
-      const v = String(p.v || "");
-      if (v === BLUEPRINTS_REPO || v.startsWith(BLUEPRINTS_REPO + "/")) await Safari.openInApp(v, false);
-      return;
-    }
-    if (head === "update-later") {
-      snoozeUpdate();
-      pendingUpdate = null;
-      return;
-    }
-    if (head === "update-now") {
-      let ok = false;
-      let msg = "";
-      try {
-        msg = await applyUpdate(pendingUpdate);
-        ok = true;
-        pendingUpdate = null;
-        clearUpdateSnooze();
-      } catch (e) {
-        msg = String((e && e.message) || e);
-      }
-      await js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
-    }
+// Actions sent by the page with send(action, params): readingstars://<action>?p=<json>
+async function handleAction(head, p) {
+  const answer = (ok, msg) => js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
+  // Settings (app-blueprints · settings): each change is applied and saved at once; the answer is the fresh state.
+  if (head === "settings-get") return answer(true, settingsState());
+  if (head === "set") {
+    if (!setSetting(p.k, p.v)) return answer(false, "That setting can't be changed here.");
+    saveSettings();
+    return answer(true, settingsState());
   }
+  if (head === "cfg") {
+    if (p.k === "*") settings.cfg = {}; else setCfg(p.k, p.reset ? null : p.v);
+    saveSettings();
+    return answer(true, settingsState());
+  }
+  if (head === "update-check") {   // Settings › Check for updates now: clears "Later" and checks at once
+    clearUpdateSnooze();
+    const was = settings.checkUpdates; settings.checkUpdates = true;
+    const u = await checkForUpdate(); settings.checkUpdates = was;
+    if (u) pendingUpdate = u;
+    return answer(true, { available: !!u, info: u, version: u ? u.latest : VERSION });
+  }
+  if (head === "startlog") {   // Settings › Updates › Start-up log: the last 40 lines
+    let txt = "";
+    try { txt = FileManager.local().readString(LOG_PATH).split("\n").slice(-40).join("\n"); } catch (e) {}
+    return answer(true, txt);
+  }
+  if (head === "openurl") {   // Built with: only the blueprints repository opens from here
+    const v = String(p.v || "");
+    if (v === BLUEPRINTS_REPO || v.startsWith(BLUEPRINTS_REPO + "/")) await Safari.openInApp(v, false);
+    return;
+  }
+  if (head === "update-later") {
+    snoozeUpdate();
+    pendingUpdate = null;
+    return;
+  }
+  if (head === "update-now") {
+    let ok = false;
+    let msg = "";
+    try {
+      msg = await applyUpdate(pendingUpdate);
+      ok = true;
+      pendingUpdate = null;
+      clearUpdateSnooze();
+    } catch (e) {
+      msg = String((e && e.message) || e);
+    }
+    await js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
+  }
+}
 
-  // The page "navigates" to readingstars://… to talk to this side. We catch the request,
-  // act on it and cancel the navigation. readingstars://save?d=<json> writes the progress file.
-  webView.shouldAllowRequest = (request) => {
+// The page "navigates" to readingstars://… to talk to this side. We catch the request,
+// act on it and cancel the navigation. readingstars://save?d=<json> writes the progress file.
+function buildWebView() {
+  wv = new WebView();
+  wv.shouldAllowRequest = (request) => {
     const url = String((request && request.url) || "");
     if (url.indexOf(SAVE_SCHEME) === 0) {
       const raw = url.slice(SAVE_SCHEME.length);
@@ -2747,36 +2852,93 @@ async function main() {
     }
     return true;
   };
+}
 
-  await webView.loadHTML(buildHTML(Object.assign({}, initialData || {}, { settings: gameSettings(), look: lookState(), cfg: cfgValues() })));
-  const presenting = webView.present(true);
+// ---------- run ----------
+// A run marks itself as open while its window is on screen. A new run waits at most 1.5 s for an older
+// window to close, then opens anyway: quick taps on the widget don't stack up copies.
+const lockFm = FileManager.local();
+const RUN_LOCK = lockFm.joinPath(lockFm.temporaryDirectory(), APP_ID + '-running');
+let lockTimer = null;
+const lockAge = () => { try { return lockFm.fileExists(RUN_LOCK) ? Date.now() - Number(lockFm.readString(RUN_LOCK)) : Infinity; } catch (e) { return Infinity; } };
+const pause = ms => new Promise(r => Timer.schedule(ms, false, r));
+async function waitForOtherWindow() { for (let waited = 0; lockAge() < 2500 && waited < 1500; waited += 300) await pause(300); }
+function holdLock() {
+  const beat = () => { try { lockFm.writeString(RUN_LOCK, String(Date.now())); } catch (e) {} };
+  beat(); lockTimer = Timer.schedule(1000, true, beat);
+}
+function releaseLock() {
+  if (lockTimer) { lockTimer.invalidate(); lockTimer = null; }
+  try { if (lockFm.fileExists(RUN_LOCK)) lockFm.remove(RUN_LOCK); } catch (e) {}
+}
+// Talks to the page with a time limit, so a stuck page can't stall the app.
+const ev = (js, ms = 20000) => Promise.race([wv.evaluateJavaScript(js, false), pause(ms).then(() => { throw new Error("the page didn't respond in " + ms / 1000 + " s"); })]);
 
-  // Once per run, after the first screen is on: never slows the start, never throws.
-  checkForUpdate().then((u) => {
-    pendingUpdate = u;
-    offerUpdate();
+async function bootApp(isClosed) {
+  const t0 = Date.now();
+  startLog(`Reading Stars ${VERSION}: reading data`);
+  await loadData();
+  const players = gameData && Array.isArray(gameData.kids) ? gameData.kids.length : 0;
+  startLog(`data read in ${((Date.now() - t0) / 1000).toFixed(1)} s: ${players} players${loadIssues.length ? "; missing: " + loadIssues.join(", ") : ""}`);
+  if (isClosed()) return;
+  if (dataLoaded) saveWidget(widgetSnapshot(gameData));   // the widget shows the players as loaded, before the first round
+  const st = clientState(), list = Array.isArray(st.kids) ? st.kids : [];
+  st.kids = [];
+  for (let i = 0; i < list.length; i += 6) await ev(`window.__parts.push(${safeJSON(list.slice(i, i + 6))})`);   // in pieces: one huge message can stall WebKit
+  await ev(`window.__boot(${safeJSON(st)})`);
+  let seen = "";
+  try { seen = await ev(`document.visibilityState + ", " + innerWidth + "x" + innerHeight`, 5000); } catch (e) { seen = String(e.message || e); }
+  startLog(`screen ready in ${((Date.now() - t0) / 1000).toFixed(1)} s (page: ${seen})`);
+  if (loadIssues.length) toast(bootText().late);
+  // Deferred work, once the first screen is drawn: updates, then the widget's icon. Reading Stars has no refresh of its own.
+  Timer.schedule(3500, false, () => {
+    if (isClosed() || updateChecked) return;
+    updateChecked = true;
+    checkForUpdate().then(u => { pendingUpdate = u; offerUpdate(); });
   });
+  Timer.schedule(6000, false, () => { widgetIcon(); });   // caches the logo tile for the widget, in the background
+}
 
-  await presenting;
-
-  // Final save after the game is closed.
+async function main() {
+  await waitForOtherWindow();
+  buildWebView();
+  // A page built before its window is on screen can stay blank on some iPhones (the page runs, nothing is drawn),
+  // most often when opened from the widget. So: an empty dark window first, then the real page built inside it.
+  await wv.loadHTML('<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#0E1116"></body></html>');
+  const presented = wv.present(true);
+  holdLock();
+  await pause(300);                          // let the window finish appearing
+  startLog("window on screen");
+  await Promise.race([wv.loadHTML(buildHTML()), pause(15000)]);   // the launch screen, drawn on screen
+  let closed = false;
+  presented.then(() => { closed = true; releaseLock(); });
+  bootApp(() => closed).catch(e => {         // runs beside the window: closing it never waits on this
+    startLog("start-up failed: " + (e.message || e));
+    let log = "";
+    try { log = FileManager.local().readString(LOG_PATH).split("\n").slice(-12).join("\n"); } catch (x) {}
+    if (!closed) wv.evaluateJavaScript(`window.__bootNote(${safeJSON(bootText().cant)}, ${safeJSON(log)})`, false).catch(() => {});
+  });
+  await presented;
+  closed = true;
+  releaseLock();
+  // Final save after the game is closed: saveData() skips data that was never read, and keeps the widget's snapshot in step.
   try {
     const finalState = await Promise.race([
-      webView.evaluateJavaScript("window.__flush ? window.__flush() : null", false),
-      sleep(1500).then(() => null),
+      wv.evaluateJavaScript("window.__flush ? window.__flush() : null", false),
+      pause(1500).then(() => null),
     ]);
     saveData(finalState);
   } catch (e) {}
 }
 
 // ───────────────────────── Start ─────────────────────────
-// Settings load before every branch; loadSettings reads data.json first for its one-time 1.2 migration.
-const initialData = await loadData();
-await loadSettings(initialData);
+// Settings are loaded before every branch (the only file read before the window); data is read in each branch.
+await loadSettings();
+settingsOk = !loadIssues.includes("settings");   // settings that were never read are never saved over
 if (config.runsInWidget || config.runsInAccessoryWidget) {
+  await loadData();
   await runWidget();             // never builds or presents a WebView, Alert or QuickLook
 } else {
-  widgetIcon();                  // caches the logo tile for the widget, in the background
   await main();
 }
 Script.complete();
