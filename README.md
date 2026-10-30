@@ -13,6 +13,7 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
 [![AI](https://img.shields.io/badge/AI-none-171B22?style=flat-square&labelColor=0E1116)](#ai)
 [![Blueprints](https://img.shields.io/badge/built%20with-app--blueprints-171B22?style=flat-square&labelColor=0E1116)](docs/BLUEPRINTS.md)
 [![Last commit](https://img.shields.io/github/last-commit/gadominas/Reading-Stars?style=flat-square&labelColor=0E1116&color=171B22&label=updated)](https://github.com/gadominas/Reading-Stars/commits)
+[![License](https://img.shields.io/badge/license-MIT-171B22?style=flat-square&labelColor=0E1116)](LICENSE)
 
 </div>
 
@@ -279,4 +280,4 @@ A personal project, provided as is, without warranty. Not affiliated with Script
 
 ## License
 
-No license has been chosen yet, so default copyright applies: ask before reusing the code.
+[MIT](LICENSE) © 2026 Gediminas Siutilas. Issues and pull requests are welcome: keep everything in a single Scriptable file, with no build step, and test on a real device. To release, follow [docs/RELEASING.md](docs/RELEASING.md).
