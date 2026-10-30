@@ -86,23 +86,26 @@ These are photos from the first evenings of play.
 ## Install
 
 1. Get **[Scriptable](https://apps.apple.com/app/scriptable/id1405459188)** (free) on your iPhone or iPad.
-2. In Scriptable tap **+**, paste this line and tap **▶︎**:
+2. In Scriptable, tap **+**, paste these two lines, name the script *Reading Stars Installer*, and tap **▶**:
    ```js
-   const s = await new Request("https://raw.githubusercontent.com/gadominas/Reading-Stars/main/install.js").loadString(); await Function("module", "return (async () => {" + s + "\n})()")(module);
+   const code = await new Request("https://raw.githubusercontent.com/gadominas/Reading-Stars/main/install.js").loadString();
+   await eval("(async () => {" + code + "\n})()");
    ```
-3. Tap **Open now**. That's it: *Reading Stars* is in your scripts list. On the first open, add a player, then open **🔒 Parents** to create the 4-digit parent PIN.
+3. Tap **Open Reading Stars**. On the first open, add a player, then open **🔒 Parents** to create the 4-digit parent PIN.
 
-From v1.1.0 the game offers new versions itself (see [Updates and what's new](#updates-and-whats-new)). On an older copy, run the install line once more. Players, tokens, budgets and the PIN are kept.
+To update, tap **Update now** when Reading Stars offers a new version, or run *Reading Stars Installer* again. Players, tokens, budgets and the PIN are kept.
 
 <details>
 <summary><b>Install by hand</b></summary>
 
-Create a new script in Scriptable, name it *Reading Stars* and paste the whole [`Reading Stars.js`](Reading%20Stars.js) into it.
+Rather not use the loader? Paste [`install.js`](install.js) or [`Reading Stars.js`](Reading%20Stars.js) into a new script in Scriptable yourself.
 
 </details>
 
-- **Home Screen icon:** in Scriptable tap *⋯* on *Reading Stars* → *Add to Home Screen*. [docs/icon-1024.png](docs/icon-1024.png) is the 1024 px icon for it.
-- **iCloud Drive** is optional: without it, progress is saved in local Scriptable storage.
+What else you need:
+
+- **Optional: a Home Screen icon.** In Scriptable, tap *⋯* on *Reading Stars*, then *Add to Home Screen*. [docs/icon-1024.png](docs/icon-1024.png) is the 1024 px icon for it.
+- **Optional: iCloud Drive.** Without it, progress is saved in local Scriptable storage.
 
 ## How to use it
 

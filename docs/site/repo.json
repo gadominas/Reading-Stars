@@ -1,5 +1,24 @@
 {
   "description": "Read. Match. Shine. A picture-and-word reading game for kids in Lithuanian, English and Spanish, where first-try answers earn tokens a parent can exchange for real pocket money from a hidden budget. A Scriptable app.",
   "homepage": "https://github.com/gadominas/Reading-Stars#readme",
-  "topics": ["scriptable", "scriptable-app", "ios", "iphone", "javascript", "app-blueprints", "reading", "kids", "education", "learning-game", "pocket-money", "lithuanian", "spanish", "syllables"]
+  "topics": [
+    "scriptable",
+    "scriptable-app",
+    "ios",
+    "iphone",
+    "javascript",
+    "app-blueprints",
+    "reading",
+    "kids",
+    "education",
+    "learning-game",
+    "pocket-money",
+    "lithuanian",
+    "spanish",
+    "syllables"
+  ],
+  "install": {
+    "kept": "Players, tokens, budgets and the PIN are kept.",
+    "firstRun": "Open it, add a player, then open 🔒 Parents to create the 4-digit parent PIN."
+  }
 }
