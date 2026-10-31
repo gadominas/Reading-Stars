@@ -4,6 +4,65 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.10.0",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Funny pictures and stickers",
+        "lt": "Linksmi paveikslėliai ir lipdukai",
+        "es": "Imágenes divertidas y pegatinas"
+      },
+      "highlights": [
+        {
+          "icon": "🎉",
+          "title": {
+            "en": "Pictures come alive",
+            "lt": "Paveikslėliai atgyja",
+            "es": "Las imágenes cobran vida"
+          },
+          "text": {
+            "en": "After each right answer the picture acts out its word: cars drive, fish swim.",
+            "lt": "Po teisingo atsakymo paveikslėlis suvaidina žodį: mašina nuvažiuoja, žuvis plaukia.",
+            "es": "Tras cada acierto la imagen representa su palabra: el coche arranca, el pez nada."
+          }
+        },
+        {
+          "icon": "🎁",
+          "title": {
+            "en": "Collect stickers",
+            "lt": "Rink lipdukus",
+            "es": "Colecciona pegatinas"
+          },
+          "text": {
+            "en": "Every 5 words right on the first try earn a new sticker.",
+            "lt": "Kas 5 iš pirmo karto atspėti žodžiai – naujas lipdukas.",
+            "es": "Cada 5 palabras acertadas a la primera dan una pegatina nueva."
+          }
+        },
+        {
+          "icon": "📒",
+          "title": {
+            "en": "Always on the shelf",
+            "lt": "Visada lentynoje",
+            "es": "Siempre en la repisa"
+          },
+          "text": {
+            "en": "Each kid's stickers stay at the bottom of the game. Tap for the album.",
+            "lt": "Vaiko lipdukai visada žaidimo apačioje. Bakstelėk – atsivers albumas.",
+            "es": "Las pegatinas de cada niño están abajo. Toca para ver el álbum."
+          }
+        }
+      ],
+      "changes": [
+        "Funny animations: the right picture leaves its tile and acts out its word (drive, fly, swim, chomp, hop, bloom; dance or spin otherwise) with a speech bubble in the game language; Web Animations, cleaned up after each round; a gentle pop with Reduce Motion",
+        "Settings › Game › Funny animations (on by default; settings.fun)",
+        "Stickers per player (kid.stickers = { have, shiny, pts }): every N first-try words earn a new sticker from 60; a full album gives shiny ones",
+        "Sticker shelf fixed at the bottom of the game with a progress ring; album with the missing stickers as silhouettes; the latest four on each home-screen card",
+        "Settings › Rounds › Words for a sticker (2–20, default 5; cfg.stickerEvery)",
+        "A new sticker bursts out, flies to the shelf with its own sound, and the next word waits until it has landed"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.9.1",
       "date": "2026-11-01",
       "title": {
