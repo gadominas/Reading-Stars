@@ -71,6 +71,7 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
   <img src="docs/screenshots/15-learning-settings.png" width="31%" alt="Settings › Learning: the AI settings row, smart word order switch, book words Mixed in, First or Off, and the voice status.">
 </p>
 <p align="center">
+  <img src="docs/screenshots/19-books-on-top.png" width="31%" alt="Parent zone: the Words from books card first, with a purple border and a ✦ AI badge, Take a photo and From photos buttons, then Ema's card.">
   <img src="docs/screenshots/16-ai-settings.png" width="31%" alt="AI settings: the Claude card in use with a masked key, Change key, Test connection, Remove and the model menu, then OpenAI and What AI does.">
 </p>
 
@@ -218,7 +219,7 @@ The widget shows what the game saved last, so it works offline and updates after
 
 AI is optional. Without a key Reading Stars works exactly as before, and the AI parts are hidden. With your own **Claude** or **OpenAI** key (**Parent zone › Settings › Learning › AI settings**) you get:
 
-- **📷 Words from books.** In the parent zone, tap **Take a photo** (or **From photos**). The page goes to the AI provider you chose, which reads it and suggests concrete nouns a child can recognise in a picture: in dictionary form (*lapė* even if the page says *lapės*), split into syllables by that language's rules, each with an emoji. Tap away any you don't want, name the source and add them. Book words follow the game's rules (same-letter pictures, Beginner 1–2 syllables, Expert 3–6) and are listed in the parent zone, where you can delete a source (two taps). **Settings › Learning › Book words in the game** mixes them in, puts them first, or turns them off.
+- **📷 Words from books.** The first card in the parent zone, highlighted once an AI key is set. Tap **Take a photo** (the camera opens) or **From photos** (pick any photo of a page). The page goes to the AI provider you chose, which reads it and suggests concrete nouns a child can recognise in a picture: in dictionary form (*lapė* even if the page says *lapės*), split into syllables by that language's rules, each with an emoji. Tap away any you don't want, name the source and add them. Book words follow the game's rules (same-letter pictures, Beginner 1–2 syllables, Expert 3–6) and are listed in the parent zone, where you can delete a source (two taps). **Settings › Learning › Book words in the game** mixes them in, puts them first, or turns them off.
 - **✦ AI coach.** For each kid, from their word progress (never their name): a short tip for you, up to 8 words to practise next, and up to 12 new words that start with the letters they find hard, sized for their level. It runs by itself after every 40 answered words (switch: **AI settings › What AI does**), or when you tap **Ask the AI coach** on a kid in the parent zone.
 
 The AI settings are the shared [ai-configuration](https://github.com/gadominas/app-blueprints/blob/main/blueprints/ai-configuration.md) blueprint: the key is typed into an iOS prompt and stored only in the iPhone's Keychain (the page sees `sk-ant-…9f2c`), you can pick any model your key can use, test the connection, and see the tokens used per feature, model and day. Everything AI wrote is labelled ✦ with the provider.
@@ -278,6 +279,7 @@ The sheet appears only on the home screen and never interrupts a round, in the g
 | No update offer | **Later** hides it for two days, and **Offer new versions** may be off. Use **Settings › Updates › Check for updates now**. |
 | "GitHub is still serving the old version" | GitHub can take a few minutes to serve a new release. Try again in a few minutes. |
 | No voice when a word should be read aloud | Add a voice for the game's language in iOS Settings › Accessibility › Spoken Content › Voices (Settings › Learning shows whether one is found), and check the silent switch. |
+| **Take a photo** or **From photos** doesn't open | Update to 1.8.1 or later. If iOS asks, allow Scriptable to use the Camera and Photos (iOS Settings › Scriptable). |
 | No **Take a photo** or **Ask the AI coach** | They appear once an AI key is saved in **Settings › Learning › AI settings**. |
 | The AI coach button is greyed out | The kid needs about 10 answered words in the game's language first. |
 | The widget's footer shows "⟳ Updated …" in amber | Nobody has played for a while (12 hours by default). Open the game once; the widget follows. |

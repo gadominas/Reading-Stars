@@ -2,6 +2,22 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.8.1 (2026-11-01): Book photos, fixed
+
+- 📷 **Photos open again**: Take a photo and From photos open the iPhone's picker on top of the game.
+- ⭐ **Books on top**: Words from books is the first card in the parent zone, highlighted with AI on.
+- 🧠 **Fairer word order**: Skipped words no longer count as hard, so new words keep coming.
+
+**Changes**
+
+- Words from books is the first card in the parent zone; with an AI key it has an accent border and a ✦ AI badge
+- The book photo is now picked by the game page with the iPhone's own picker (camera for Take a photo, library for From photos), shrunk on the phone to 1568 px and handed to the Scriptable side directly instead of through Scriptable's photo picker
+
+**Fixes**
+
+- Take a photo and From photos did nothing: Scriptable's photo picker opened behind the full-screen game, out of reach
+- Smart word order: a word that was only skipped counts as a new word, not a hard one, so skipping doesn't crowd out new words or the really hard ones
+
 ## 1.8.0 (2026-10-31): Learns with your kid
 
 - 📷 **Words from your books**: Snap a page and AI turns its words into new picture rounds.

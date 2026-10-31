@@ -42,7 +42,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.8.0';
+const VERSION = '1.8.1';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -498,26 +498,10 @@ function aiState() {
 
 const LANG_NAMES = { lt: "Lithuanian", en: "English", es: "Spanish" };
 
-// Camera or photo library → JPEG (long edge ≤ 1568 px, what vision models read best) as base64.
-async function takeBookPhoto(source) {
-  let img = null;
-  try {
-    img = source === "library" ? await Photo.fromLibrary() : await Photo.fromCamera();
-  } catch (e) {
-    throw new Error("cancelled");
-  }
-  if (!img) throw new Error("cancelled");
-  const s = img.size, k = Math.min(1, 1568 / Math.max(s.width, s.height));
-  if (k < 1) {
-    const dc = new DrawContext();
-    dc.size = new Size(Math.round(s.width * k), Math.round(s.height * k));
-    dc.opaque = true;
-    dc.respectScreenScale = false;
-    dc.drawImageInRect(img, new Rect(0, 0, dc.size.width, dc.size.height));
-    img = dc.getImage();
-  }
-  return Data.fromJPEG(img).toBase64String();
-}
+// The book photo is picked by the page itself (<input type=file>, the iPhone's own picker on top of the game) and
+// shrunk there to ≤ 1568 px. Scriptable's Photo.fromCamera/fromLibrary can't be used while the game is on screen:
+// they open behind a full-screen WebView, out of reach. The page hands the JPEG over through ev(), not the URL.
+const BOOK_IMAGE_MAX = 6 * 1024 * 1024;   // base64 characters; a 1568 px JPEG is far below this
 
 const BOOK_SYSTEM = "You build vocabulary for a children's picture reading game. Reply with JSON only, no other text.";
 function bookPrompt(gameLang) {
@@ -1131,6 +1115,9 @@ body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 .bksrc small{color:var(--muted);font-weight:700}
 .hear{position:absolute;right:10px;bottom:8px;width:46px;height:46px;border-radius:50%;background:var(--sun);font-size:22px;box-shadow:0 3px 0 var(--sunDeep)}
 .hear:active{transform:translateY(2px);box-shadow:none}
+.bkpanel.ai{background:linear-gradient(160deg,var(--signal-wash) 0%,var(--sheet) 70%);border:2px solid var(--signal);box-shadow:0 6px 0 rgba(36,38,74,.12),0 0 0 4px color-mix(in srgb,var(--signal) 18%,transparent)}
+.bkpanel.ai h3{display:flex;align-items:center;gap:8px}
+.bkpanel.ai .badge-ai{font-size:calc(13px * var(--ts))}
 #booksheet{position:fixed;inset:0;z-index:52;background:rgba(36,38,74,.55);display:none;align-items:flex-end}
 #booksheet.open{display:flex;animation:fade .2s}
 .bkp{width:100%;max-width:760px;max-height:92%;overflow-y:auto;margin:0 auto;background:var(--sheet);color:var(--ink);border-radius:26px 26px 0 0;padding:20px 18px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;animation:updUp .35s cubic-bezier(.2,.8,.3,1)}
@@ -1251,7 +1238,9 @@ function webApp() {
       aiSettings: "AI settings",
       tokensUsed: (n) => `${n} tokens used`,
       bookWords: "Words from books",
+      photoUnreadable: "Couldn\u2019t open that photo. Try another one.",
       bookHint: "Take a photo of a page. AI reads it and picks words a child can recognise in a picture.",
+      aiBadge: "✦ AI",
       takePhoto: "Take a photo",
       fromPhotos: "From photos",
       readingPage: "Reading the page…",
@@ -1385,7 +1374,9 @@ function webApp() {
       aiSettings: "Ajustes de IA",
       tokensUsed: (n) => `${n} tokens usados`,
       bookWords: "Palabras de libros",
+      photoUnreadable: "No se pudo abrir la foto. Prueba con otra.",
       bookHint: "Haz una foto de una página. La IA la lee y elige palabras que un niño reconoce en un dibujo.",
+      aiBadge: "✦ IA",
       takePhoto: "Hacer foto",
       fromPhotos: "De fotos",
       readingPage: "Leyendo la página…",
@@ -1519,7 +1510,9 @@ function webApp() {
       aiSettings: "DI nustatymai",
       tokensUsed: (n) => `panaudota ${n} žetonų`,
       bookWords: "Žodžiai iš knygų",
+      photoUnreadable: "Nepavyko atidaryti nuotraukos. Pabandykite kitą.",
       bookHint: "Nufotografuokite puslapį. DI jį perskaitys ir atrinks žodžius, kuriuos vaikas atpažins paveikslėlyje.",
+      aiBadge: "✦ DI",
       takePhoto: "Fotografuoti",
       fromPhotos: "Iš nuotraukų",
       readingPage: "Skaitomas puslapis…",
@@ -1884,7 +1877,9 @@ function webApp() {
     const ws = pool.map((x) => {
       if (recent.indexOf(x.w) >= 0) return 0;
       const st = peekStat(kid, x.w);
-      let wt = !st || !st.s ? (hardCount >= 6 ? 1 : 3) : BOX_W[st.b];
+      // hard (box 0 with real mistakes) weighs most; a word only skipped so far weighs like a new word
+      const fresh = hardCount >= 6 ? 1 : 3;
+      let wt = !st || !st.s || (st.b === 0 && !st.w) ? fresh : BOX_W[st.b];
       if (st && st.s && st.b >= 1 && Date.now() - st.t > day) wt *= 1.5;
       if (focus.has(x.w)) wt *= 2.5;
       if (x.src && !x.coachKid && state.settings.bookMode === "first") wt *= 3;
@@ -2124,10 +2119,65 @@ function webApp() {
         <button class="btn go" data-action="bookAdd" ${on ? "" : "disabled"}>✅ ${esc(t("addWords", on))}</button>
       </div></div>`;
   }
+  // The iPhone's own picker, opened by the page: Take a photo opens the camera, From photos the library.
+  // (Scriptable's picker would open behind the full-screen game.) The photo is shrunk here to ≤ 1568 px.
+  let bookImage = "";
+  window.__takeBookImage = function () {
+    const img = bookImage;
+    bookImage = "";
+    return img;
+  };
   function bookPhoto(source) {
-    book = { busy: "camera" };
+    const old = document.getElementById("bookfile");
+    if (old) old.remove();
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = "image/*";
+    inp.id = "bookfile";
+    inp.style.cssText = "position:fixed;left:-9999px;width:1px;height:1px;opacity:0";
+    if (source === "camera") inp.setAttribute("capture", "environment");
+    inp.addEventListener("change", () => {
+      const f = inp.files && inp.files[0];
+      inp.remove();
+      if (f) readBookFile(f);
+    });
+    document.body.appendChild(inp);
+    inp.click(); // inside the tap, so iOS opens the picker
+  }
+  function readBookFile(f) {
+    book = { busy: "reading" };
     renderBook();
-    send("bookphoto", { source, lang: state.lang }, (ok, res) => {
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const k = Math.min(1, 1568 / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(img.naturalWidth * k));
+        c.height = Math.max(1, Math.round(img.naturalHeight * k));
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        bookImage = c.toDataURL("image/jpeg", 0.85).split(",")[1] || "";
+      } catch (e) {
+        bookImage = "";
+      }
+      URL.revokeObjectURL(url);
+      if (!bookImage) return bookFailed(t("photoUnreadable"));
+      sendBook();
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      bookFailed(t("photoUnreadable"));
+    };
+    img.src = url;
+  }
+  function bookFailed(msg) {
+    book = null;
+    bookImage = "";
+    renderBook();
+    toast(msg);
+  }
+  function sendBook() {
+    send("bookphoto", { source: "page", lang: state.lang }, (ok, res) => {
       if (!ok) {
         book = null;
         renderBook();
@@ -2953,8 +3003,8 @@ function webApp() {
     const srcs = state.books.slice().sort((a, b) => b.at - a.at).map((b) => `<div class="hist bksrc">
         <span>${LANGS[b.lang].flag} <b>${esc(b.title || "—")}</b><br><small>${esc(t("sourceWords", b.words.length))} · ${esc(fmtDate(b.at))}${b.by ? " · ✦ " + esc(b.by) : ""}</small></span>
         <button class="btn small ${bookArmed === b.id ? "danger" : "ghost"}" data-action="bookDel" data-id="${b.id}">${bookArmed === b.id ? esc(t("confirm")) : "🗑️"}</button></div>`).join("");
-    return `<div class="panel">
-      <h3>📷 ${esc(t("bookWords"))}</h3>
+    return `<div class="panel bkpanel ${AIX.hasKey ? "ai" : ""}">
+      <h3>📷 ${esc(t("bookWords"))}${AIX.hasKey ? ` <span class="badge-ai">${esc(t("aiBadge"))}</span>` : ""}</h3>
       ${AIX.hasKey ? `<p class="note">${esc(t("bookHint"))}</p>
         <div class="row"><button class="btn go" data-action="bookCamera">📷 ${esc(t("takePhoto"))}</button><button class="btn ghost" data-action="bookLibrary">🖼️ ${esc(t("fromPhotos"))}</button></div>` : ""}
       ${srcs || `<p class="note">${esc(t("noBooks"))}</p>`}
@@ -2980,8 +3030,8 @@ function webApp() {
       <div class="bar"><button class="icon" data-action="lockParent" aria-label="${esc(t("parents"))}">⬅</button><h2>👨‍👩‍👧 ${esc(t("parentArea"))}</h2><button class="icon" data-action="openSettings" aria-label="${esc(CT.title)}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button></div>
       ${usageAsk ? `<section id="usageask" class="panel" aria-label="${esc(CT.uaTitle)}"><b>${esc(CT.uaTitle)}</b><p>${esc(CT.uaText)}</p><div class="uabtns"><button class="btn" data-action="usageAnswer" data-v="1">${esc(CT.uaYes)}</button><button class="btn ghost" data-action="usageAnswer" data-v="0">${esc(CT.uaNo)}</button></div></section>` : ""}
       ${state.kids.length ? "" : `<p class="empty">${esc(t("noKids"))}</p>`}
-      ${state.kids.map(parentKid).join("")}
-      ${booksPanelHTML()}`;
+      ${booksPanelHTML()}
+      ${state.kids.map(parentKid).join("")}`;
 
   // ── PIN handling ──
   function openPin(mode, from) {
@@ -3992,8 +4042,8 @@ async function handleAction(head, p) {
     case "bookphoto": {
       try {
         if (!aiKey()) throw new Error("Add a key in Settings › AI settings");
-        const img = await takeBookPhoto(m.source);
-        js("window.__bookReading && window.__bookReading()");
+        const img = String((await ev("window.__takeBookImage ? window.__takeBookImage() : ''", 20000)) || "");
+        if (img.length < 1000 || img.length > BOOK_IMAGE_MAX || !/^[A-Za-z0-9+/=]+$/.test(img.slice(0, 200))) throw new Error("The photo didn't arrive. Try again.");
         const pr = settings.aiProvider;
         const out = parseJSON(await aiCall(BOOK_SYSTEM, bookPrompt(m.lang), 3000, "books", pr, [img]));
         return answer(true, Object.assign({ by: PROVIDERS[pr] }, out));
