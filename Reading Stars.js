@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.10.0';
+const VERSION = '1.10.1';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -854,7 +854,35 @@ h1{margin:2px 0 14px;font-family:var(--display);font-size:calc(36px * var(--ts))
 .stk.wiggle{animation:stkWig .6s ease}
 @keyframes stkLand{0%{transform:scale(.3) rotate(var(--rot))}60%{transform:scale(1.35) rotate(var(--rot))}100%{transform:scale(1) rotate(var(--rot))}}
 @keyframes stkWig{0%,100%{transform:rotate(var(--rot)) scale(1)}25%{transform:rotate(-14deg) scale(1.2)}50%{transform:rotate(12deg) scale(1.2)}75%{transform:rotate(-6deg) scale(1.1)}}
-body.shelf-on #app{padding-bottom:calc(env(safe-area-inset-bottom) + 104px)}
+body.shelf-on #app{padding-bottom:calc(var(--shelfH, 96px) + 8px)}
+/* 1.10.1: the game screen is fixed to the screen; fitGame() sizes the pictures so nothing scrolls */
+body.game-fixed{position:fixed;inset:0;overflow:hidden;overscroll-behavior:none}
+body.game-fixed #app{height:100%;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column}
+body.game-fixed #app>*{flex:none}
+.pics.sized .pic{width:var(--tile)}
+.pics.sized .emo{font-size:calc(var(--tile) * .62)}
+#app.tight .hint{display:none}
+#app.tight .wallet{margin-bottom:6px}
+#app.tight .wordcard{margin-top:10px;padding-top:16px;padding-bottom:12px}
+#app.tight .hearrow{margin-top:6px}
+#app.tight .hear{width:48px;height:48px;font-size:24px}
+#app.tight .feedback{min-height:44px;margin-top:4px}
+#app.tight .pics{margin-top:4px}
+.wcol{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;overflow:hidden}
+.wcol .wn{max-width:100%}
+.wcol .badge{font-size:calc(12px * var(--ts));padding:2px 8px;text-shadow:none;max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis}
+.gamebar .pill{flex:none}
+.skipbtn{flex:none;padding:10px 12px;white-space:nowrap}
+.gamebar{gap:6px}
+.gamebar .icon{width:44px;height:44px;flex:none}
+.gamebar .ava.sm{width:36px;height:36px;font-size:calc(21px * var(--ts))}
+.gamebar .who{gap:6px}
+.gamebar .pill{padding:7px 10px;font-size:calc(16px * var(--ts))}
+@media (max-width:413px){.skipbtn{width:44px;height:44px;padding:0;border-radius:16px;font-size:22px}.skipbtn .sk-t{display:none}}
+body.tight-shelf .shelf{padding-top:6px;padding-bottom:calc(env(safe-area-inset-bottom) + 6px)}
+body.tight-shelf .sh-prog{width:48px;height:48px}
+body.tight-shelf .sh-gift{font-size:22px}
+body.tight-shelf .shelf .sh-strip .stk{font-size:28px}
 .shelf{position:fixed;z-index:40;left:50%;bottom:0;transform:translateX(-50%);width:min(760px,100%);box-sizing:border-box;display:flex;align-items:center;gap:12px;
   padding:10px 14px calc(env(safe-area-inset-bottom) + 10px);background:var(--sheet);border-radius:26px 26px 0 0;
   box-shadow:0 -5px 0 rgba(36,38,74,.08),0 -12px 30px rgba(36,38,74,.14);cursor:pointer}
@@ -3026,6 +3054,37 @@ function webApp() {
       .map((s, i) => `<span class="seg" style="color:${SEG_COLORS[i % SEG_COLORS.length]};animation-delay:${i * 90}ms">${esc(s)}</span>`)
       .join('<span class="dash">-</span>');
   }
+  // The game screen is fixed to the phone's screen (no scrolling): the picture tiles shrink until everything fits
+  // above the sticker shelf; on very small screens the hint line goes and the spacing tightens first.
+  function fitGame() {
+    const app = document.getElementById("app"), pics = app && app.querySelector(".pics");
+    if (!pics || !pics.firstElementChild) return;
+    const shelf = document.getElementById("shelf"), rows = Math.ceil(pics.children.length / 3), MIN = 52;
+    const reset = (tight) => {
+      app.classList.toggle("tight", tight);
+      document.body.classList.toggle("tight-shelf", tight);
+      document.documentElement.style.setProperty("--shelfH", (shelf ? shelf.offsetHeight : 0) + "px");
+      pics.classList.remove("sized");
+      pics.style.removeProperty("--tile");
+    };
+    const squeeze = () => {   // shrink the tiles until nothing scrolls; returns the tile size, 0 if even the smallest doesn't fit
+      for (let i = 0; i < 5; i++) {
+        const over = app.scrollHeight - app.clientHeight;
+        if (over <= 0) return pics.firstElementChild.offsetWidth;
+        const cur = pics.firstElementChild.offsetWidth;
+        if (cur <= MIN) return 0;
+        pics.classList.add("sized");
+        pics.style.setProperty("--tile", Math.max(MIN, cur - Math.ceil(over / rows) - 1) + "px");
+      }
+      return app.scrollHeight <= app.clientHeight ? pics.firstElementChild.offsetWidth : 0;
+    };
+    reset(false);
+    const roomy = squeeze();
+    if (roomy >= 96) return;   // the normal layout fits with good-sized pictures
+    reset(true);
+    const tight = squeeze();
+    if (roomy > tight) { reset(false); squeeze(); }   // the normal layout gave bigger pictures after all
+  }
   function fitWord() {
     const el = document.getElementById("word");
     if (!el) return;
@@ -3423,9 +3482,11 @@ function webApp() {
     try {
       app.innerHTML = VIEWS[view.name]();
       document.body.classList.toggle("shelf-on", view.name === "game");   // room for the sticker shelf
-      if (view.name !== "game") closeAlbum();
+      document.body.classList.toggle("game-fixed", view.name === "game");   // the game screen never scrolls (1.10.1)
+      if (view.name !== "game") { closeAlbum(); document.body.classList.remove("tight-shelf"); }
       if (view.name === "game") {
         fitWord();
+        fitGame();
         const kid = getKid(game.kidId);
         if (kid && kid.speak === "shown" && game.spoken !== game.round) {
           game.spoken = game.round;
@@ -3630,8 +3691,9 @@ function webApp() {
     return `
       <div class="gamebar">
         <button class="icon" data-action="home">⬅</button>
-        <div class="who"><span class="ava sm" style="background:${avaBg(kid)}">${kid.avatar}</span><span class="wn">${esc(kid.name)}</span></div>
+        <div class="who"><span class="ava sm" style="background:${avaBg(kid)}">${kid.avatar}</span><span class="wcol"><span class="wn">${esc(kid.name)}</span>${levelBadge(kid.level)}</span></div>
         <div class="pill" id="streak">🔥 ${game.streak}</div>
+        <button class="btn small skipbtn" data-action="skip" aria-label="${esc(t("skip"))}"><span class="sk-t">${esc(t("skip"))}</span> ⏭</button>
       </div>
       ${walletHTML(kid)}
       <div class="hint">${esc(t("hint"))}</div>
@@ -3641,7 +3703,6 @@ function webApp() {
       <div class="wordcard"><div class="word" id="word">${wordHTML(game.cur.w)}</div></div>
       ${kid.speak !== "off" ? `<div class="hearrow"><button class="hear" data-action="hear" aria-label="${esc(t("hearWord"))}">🔊</button></div>` : ""}
       <div class="feedback" id="fb"></div>
-      <div class="gamefoot">${levelBadge(kid.level)}<button class="btn small ghost" data-action="skip">${esc(t("skip"))} ⏭</button></div>
       ${shelfHTML(kid)}`;
   };
 
@@ -4382,7 +4443,7 @@ function webApp() {
     if (e.key === "Enter" && e.target && e.target.id === "nameInput") e.target.blur();
   });
   window.addEventListener("resize", () => {
-    if (view.name === "game") fitWord();
+    if (view.name === "game") { fitWord(); fitGame(); }
   });
 
   render();

@@ -157,6 +157,8 @@ Every right answer, first try or not, ends with a short **funny animation**: the
 
 **🎁 Stickers.** Each word right on the first try fills the gift ring on the sticker shelf at the bottom of the game (*3/5*). The 5th one earns a new sticker: it bursts out in the middle of the screen with *New sticker!* and flies onto the shelf, and the next word waits until it has landed. The shelf always shows the kid's stickers, newest first; a tap opens the album with all 60 (animals, space, fair rides, treats, music and toys), the missing ones as dark shapes, and a tap on a sticker wiggles it. When the album is full, stickers come again as shiny gold ones. Mistakes and skips never take stickers away, payouts don't touch them, and the home screen shows each kid's latest four. How many words a sticker takes is in **Settings › Rounds** (2–20, 5 by default).
 
+The game screen stays put while playing: no scrolling, and everything fits on any iPhone from the SE up, because the pictures shrink a little on smaller screens. The top bar holds the player's name and level, the 🔥 streak and **Skip** ⏭.
+
 The big wallet at the top always shows the kid's tokens and what they are worth. When it changes, the numbers count up or down, the panel pulses green or shakes red, and the difference floats over it (*+0,05 €*, *−1 🪙*).
 
 The number of pictures per round can be changed in **Settings › Rounds** (Beginner 2–4, Expert 3–5). If there aren't enough words with the same first letter for the chosen number, the round uses the original number instead.

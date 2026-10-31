@@ -2,6 +2,21 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.10.1 (2026-11-01): Everything on one screen
+
+- ⏭ **Skip and level on top**: The level and Skip moved to the top bar, so stickers never cover them.
+- 📱 **No scrolling**: The game screen stays put and fits every iPhone, the pictures adjust.
+
+**Changes**
+
+- The level badge sits under the player's name and Skip is in the top bar; the footer row under the pictures is gone
+- The game screen is fixed to the screen (no scrolling, no bounce); fitGame() shrinks the picture tiles until everything fits above the sticker shelf, and on small screens hides the hint line and tightens spacing when that gives bigger pictures
+- Compact top bar: long names end with …; Skip is a round ⏭ button on phones narrower than 414 px
+
+**Fixes**
+
+- The sticker shelf covered the level badge and the Skip button, and the game screen could scroll
+
 ## 1.10.0 (2026-11-01): Funny pictures and stickers
 
 - 🎉 **Pictures come alive**: After each right answer the picture acts out its word: cars drive, fish swim.
