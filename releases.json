@@ -4,6 +4,38 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.11.1",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Nothing under the stickers",
+        "lt": "Niekas po lipdukais",
+        "es": "Nada bajo las pegatinas"
+      },
+      "highlights": [
+        {
+          "icon": "📐",
+          "title": {
+            "en": "Tips always visible",
+            "lt": "Patarimai visada matomi",
+            "es": "Consejos siempre visibles"
+          },
+          "text": {
+            "en": "Tips and cheers no longer slip under the sticker shelf.",
+            "lt": "Patarimai ir pagyrimai nebelenda po lipdukų lentyna.",
+            "es": "Los consejos y ánimos ya no quedan bajo las pegatinas."
+          }
+        }
+      ],
+      "changes": [
+        "The sticker shelf is now the last row of the game screen instead of floating over it, so nothing can sit under it",
+        "The game screen takes the phone's visible height, and fits again whenever the screen or the shelf changes size (safe areas that arrive late, rotation)",
+        "Nothing pokes out of the shelf any more, so the fitting no longer shrinks the pictures for nothing (iPhone SE: Expert pictures back to 100 px)"
+      ],
+      "fixes": [
+        "On iPhone, the coach line under the word could slip under the sticker shelf"
+      ]
+    },
+    {
       "version": "1.11.0",
       "date": "2026-11-01",
       "title": {
