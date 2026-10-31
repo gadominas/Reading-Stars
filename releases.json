@@ -4,6 +4,51 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.12.0",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Stickers say hello",
+        "lt": "Lipdukai sveikinasi",
+        "es": "Las pegatinas saludan"
+      },
+      "highlights": [
+        {
+          "icon": "🐸",
+          "title": {
+            "en": "Tap a sticker",
+            "lt": "Paliesk lipduką",
+            "es": "Toca una pegatina"
+          },
+          "text": {
+            "en": "It greets the kid by name and makes its sound: Hi, Ema! Ribbit ribbit!",
+            "lt": "Jis pasisveikina vardu ir sukvaksi: Labas, Gediminai! Kva kva!",
+            "es": "Saluda por su nombre y hace su sonido: ¡Hola, Ema! ¡Croac croac!"
+          }
+        },
+        {
+          "icon": "🌈",
+          "title": {
+            "en": "Funny lines too",
+            "lt": "Ir linksmi sakiniai",
+            "es": "Y frases divertidas"
+          },
+          "text": {
+            "en": "Stickers without a sound say something funny: I'm every color at once!",
+            "lt": "Begarsiai lipdukai pajuokauja: Aš visų spalvų iškart!",
+            "es": "Las que no suenan dicen algo gracioso: ¡Soy de todos los colores!"
+          }
+        }
+      ],
+      "changes": [
+        "Every sticker on the shelf and in the album can be tapped: it bounces, shows a speech bubble and says it out loud (sounds on) in the game's voice",
+        "60 sticker lines in EN, LT and ES: animal and object sounds (Kva kva!, RAWR!, Ba-dum-tss!) or a short funny line (🌈, 🏰, 🧩); the parrot repeats the kid's name",
+        "Lithuanian greetings use the vocative: Gediminas → Gediminai, Paulius → Pauliau, Gytis → Gyti, Eglė → Egle",
+        "AI voice: sticker lines get a cheerful character voice (ttsaudio kind \"sticker\"), each line fetched once and cached",
+        "The gift ring and the rest of the shelf still open the album; the album says that stickers talk"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.11.1",
       "date": "2026-11-01",
       "title": {
