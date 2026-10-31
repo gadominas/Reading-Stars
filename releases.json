@@ -4,6 +4,66 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.9.0",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Choose the voice",
+        "lt": "Pasirinkite balsą",
+        "es": "Elige la voz"
+      },
+      "highlights": [
+        {
+          "icon": "🗣️",
+          "title": {
+            "en": "Choose the voice",
+            "lt": "Pasirinkite balsą",
+            "es": "Elige la voz"
+          },
+          "text": {
+            "en": "Any iPhone voice, or an ✦ OpenAI voice that also reads Lithuanian, with model and style.",
+            "lt": "Bet kuris iPhone balsas arba ✦ OpenAI balsas, skaitantis ir lietuviškai.",
+            "es": "Cualquier voz del iPhone o una ✦ voz de OpenAI que también lee lituano."
+          }
+        },
+        {
+          "icon": "🔤",
+          "title": {
+            "en": "Words as long as you like",
+            "lt": "Žodžių ilgis – jūsų",
+            "es": "Palabras a tu medida"
+          },
+          "text": {
+            "en": "Set the shortest and longest word for each level, in syllables.",
+            "lt": "Nustatykite trumpiausią ir ilgiausią žodį kiekvienam lygiui skiemenimis.",
+            "es": "Elige la palabra más corta y la más larga de cada nivel, en sílabas."
+          }
+        },
+        {
+          "icon": "🔊",
+          "title": {
+            "en": "The word stays clear",
+            "lt": "Žodis visada matomas",
+            "es": "La palabra siempre clara"
+          },
+          "text": {
+            "en": "The listen button now sits under the word, never on top of a letter.",
+            "lt": "Klausymo mygtukas dabar po žodžiu ir niekada neuždengia raidžių.",
+            "es": "El botón de escuchar está bajo la palabra y nunca tapa una letra."
+          }
+        }
+      ],
+      "changes": [
+        "Settings › Listening (app-blueprints · read-aloud 1.0.1): iPhone voice or ✦ AI voice. iPhone: a voice per game language (Automatic picks the best one), the game language's voices first, Female/Male filter, speed and pitch. AI (OpenAI key): speech model (gpt-4o-mini-tts, tts-1-hd, tts-1 or any your key can use), voice with Female/Male filter, How it should sound, speed; Test the voice",
+        "The AI voice names the word's language in its instructions, so Lithuanian and Spanish words are pronounced as such; each word's audio is kept on the phone and paid for once per voice, model, speed and style; usage counted as Read aloud",
+        "If the AI voice fails, the word is read by the iPhone voice",
+        "Settings › Rounds: shortest and longest word for Beginner (1–2) and Expert (3–6), 1–6 syllables; level cards, book-word status and the AI coach follow the ranges",
+        "The 🔊 button is in its own row under the word card, larger"
+      ],
+      "fixes": [
+        "The 🔊 button covered the last letters of the word"
+      ]
+    },
+    {
       "version": "1.8.2",
       "date": "2026-11-01",
       "title": {
