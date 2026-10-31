@@ -4,6 +4,64 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.8.2",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Every book word gets played",
+        "lt": "Kiekvienas knygos žodis žaidžiamas",
+        "es": "Cada palabra del libro se juega"
+      },
+      "highlights": [
+        {
+          "icon": "🔤",
+          "title": {
+            "en": "No word left out",
+            "lt": "Nė vienas žodis nepamirštas",
+            "es": "Ninguna palabra fuera"
+          },
+          "text": {
+            "en": "Book words with a rare first letter play too, with pictures from nearby letters.",
+            "lt": "Ir retos raidės žodžiai žaidžiami, su paveikslėliais iš gretimų raidžių.",
+            "es": "Las palabras con una letra rara también se juegan, con dibujos de letras cercanas."
+          }
+        },
+        {
+          "icon": "🔍",
+          "title": {
+            "en": "See why",
+            "lt": "Matote, kodėl",
+            "es": "Mira por qué"
+          },
+          "text": {
+            "en": "Before adding, each word says if it will play, and if not, why.",
+            "lt": "Prieš pridedant kiekvienas žodis parodo, ar bus žaidžiamas, ir kodėl ne.",
+            "es": "Antes de añadir, cada palabra dice si se jugará y, si no, por qué."
+          }
+        },
+        {
+          "icon": "📚",
+          "title": {
+            "en": "Words in rounds",
+            "lt": "Žodžiai žaidime",
+            "es": "Palabras en juego"
+          },
+          "text": {
+            "en": "Each book shows how many of its words are in rounds; tap to see every word.",
+            "lt": "Prie kiekvienos knygos matyti, kiek žodžių žaidžiama; paspaudus – visi žodžiai.",
+            "es": "Cada libro muestra cuántas palabras están en juego; toca para verlas todas."
+          }
+        }
+      ],
+      "changes": [
+        "Words from books and the AI coach always play: when few words share their first letter, the other pictures come from the nearest letters (Z → Ž…), same letter first. Built-in words keep the strict same-letter rule",
+        "Review sheet: each word shows its level (🐣/🦉) and, under the list, \"3 of 4 words in rounds\" with the reason for every word that won't play yet (book words Off, another language, no player at that level) or gets nearby-letter pictures",
+        "Parent zone › Words from books: \"12 of 15 words in rounds\" per book, and Show the words lists every word with its status"
+      ],
+      "fixes": [
+        "Book words starting with a letter that has few game words (Lithuanian Z, I, H, Ū…) were saved but never shown in a round"
+      ]
+    },
+    {
       "version": "1.8.1",
       "date": "2026-11-01",
       "title": {
