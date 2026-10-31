@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.10.1';
+const VERSION = '1.11.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -275,7 +275,7 @@ const SET_KEYS = {
   theme: (v) => v === "auto" || !!PALETTES[v], density: (v) => ["comfortable", "compact", "tiny"].includes(v),
   font: (v) => ["sans", "serif"].includes(v), textSize: (v) => [0.92, 1, 1.12, 1.25].includes(+v),
   wordCase: (v) => ["cap", "upper", "lower"].includes(v), currency: (v) => CURRENCY_CODES.includes(v),
-  sound: "bool", fun: "bool", checkUpdates: "bool", shareUsage: "bool",
+  sound: "bool", fun: "bool", tips: "bool", checkUpdates: "bool", shareUsage: "bool",
   smart: "bool", bookMode: (v) => ["mix", "first", "off"].includes(v), ai: "bool",
   speechEngine: (v) => ["device", "ai"].includes(v), voiceGender: (v) => ["all", "f", "m"].includes(v),
   voiceRate: (v) => [0.85, 1, 1.15, 1.3].includes(+v), voicePitch: (v) => [0.85, 1, 1.15].includes(+v),
@@ -300,6 +300,7 @@ async function loadSettings() {
   for (const k of Object.keys(d)) if (!setSetting(k, settings[k])) settings[k] = d[k];
   settings.sound = settings.sound !== false;
   settings.fun = settings.fun !== false;   // funny animations after a right answer (1.10.0)
+  settings.tips = settings.tips !== false;   // short tips and cheers while playing (1.11.0)
   settings.smart = settings.smart !== false;
   settings.ai = settings.ai !== false;
   if (!["mix", "first", "off"].includes(settings.bookMode)) settings.bookMode = "mix";
@@ -376,7 +377,7 @@ function lookState() {
            shown: settings.theme === "auto" ? (Device.isUsingDarkAppearance() ? "night" : "ink") : settings.theme };
 }
 // What the game reads from settings, and what the Settings sheet shows.
-const gameSettings = () => ({ wordCase: settings.wordCase, sound: settings.sound, fun: settings.fun, currency: settings.currency, smart: settings.smart, bookMode: settings.bookMode,
+const gameSettings = () => ({ wordCase: settings.wordCase, sound: settings.sound, fun: settings.fun, tips: settings.tips, currency: settings.currency, smart: settings.smart, bookMode: settings.bookMode,
   speechEngine: settings.speechEngine, voiceURIs: settings.voiceURIs, voiceRate: settings.voiceRate, voicePitch: settings.voicePitch,
   ttsModel: settings.ttsModel, ttsVoice: settings.ttsVoice, ttsInstructions: settings.ttsInstructions });
 function settingsState() {
@@ -831,7 +832,7 @@ h1{margin:2px 0 14px;font-family:var(--display);font-size:calc(36px * var(--ts))
 .dash{color:#A3A8C3;margin:0 .05em}
 .seg{display:inline-block}
 .word.cheer .seg{animation:hop .62s ease both}
-.feedback{min-height:56px;display:grid;place-items:center;text-align:center;font-weight:900;font-size:calc(20px * var(--ts));margin-top:14px;color:#fff;text-shadow:0 2px 0 rgba(36,38,74,.18);line-height:1.25}
+.feedback{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;font-weight:900;font-size:calc(20px * var(--ts));margin-top:14px;color:#fff;text-shadow:0 2px 0 rgba(36,38,74,.18);line-height:1.25}
 .feedback.bad{animation:shake .4s}
 .gamefoot{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
 
@@ -866,13 +867,23 @@ body.game-fixed #app>*{flex:none}
 #app.tight .wordcard{margin-top:10px;padding-top:16px;padding-bottom:12px}
 #app.tight .hearrow{margin-top:6px}
 #app.tight .hear{width:48px;height:48px;font-size:24px}
-#app.tight .feedback{min-height:44px;margin-top:4px}
+#app.tight .feedback{min-height:44px;margin-top:4px;gap:2px}
+body.game-fixed #app.tight .feedback{height:56px}
+#app.tight .fb-main{font-size:calc(16px * var(--ts))}
+#app.tight .fb-tip{font-size:calc(14px * var(--ts));padding:3px 10px}
 #app.tight .pics{margin-top:4px}
 .wcol{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;overflow:hidden}
 .wcol .wn{max-width:100%}
 .wcol .badge{font-size:calc(12px * var(--ts));padding:2px 8px;text-shadow:none;max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis}
 .gamebar .pill{flex:none}
 .skipbtn{flex:none;padding:10px 12px;white-space:nowrap}
+body.game-fixed .feedback{height:68px;min-height:0;overflow:visible}
+.fb-main{display:block;line-height:1.2}
+.fb-tip{display:inline-block;max-width:100%;box-sizing:border-box;background:#fff;color:#24264A;text-shadow:none;font-size:calc(16px * var(--ts));font-weight:800;line-height:1.25;
+  padding:5px 14px;border-radius:16px;box-shadow:0 4px 0 rgba(36,38,74,.16);animation:tipIn .35s cubic-bezier(.3,1.6,.5,1)}
+.feedback.cheer .fb-tip{background:#FFF3C4;color:#5C3B00}
+@keyframes tipIn{from{transform:scale(.6);opacity:0}}
+@media (prefers-reduced-motion: reduce){.fb-tip{animation:none}}
 .gamebar{gap:6px}
 .gamebar .icon{width:44px;height:44px;flex:none}
 .gamebar .ava.sm{width:36px;height:36px;font-size:calc(21px * var(--ts))}
@@ -1377,6 +1388,23 @@ function webApp() {
       wordStyle: "Word letters",
       sound: "Sounds",
       funny: "Funny animations",
+      tipsSet: "Tips and cheers",
+      tipsSetHelp: "Short sentences while playing: how to read better, and praise",
+      coachHello: "Let's read! 📖",
+      tipGuess: ["Read the whole word first 👀", "Read first, then tap 👀", "No rush, read it all 👀"],
+      tipSyl: (s) => `Read slowly: ${s}`,
+      tipEnd: (l) => `All start with ${l}. Read to the end!`,
+      tipLoud: "Say the word out loud 🗣️",
+      tipHear: "Stuck? Tap 🔊 to hear it",
+      tipLetters: "Point at each letter ☝️",
+      tipBrave: "Have a go! Mistakes are OK 🙂",
+      cheerStreak: (n) => `${n} in a row! 🔥`,
+      cheerBack: "Great comeback! 💪",
+      cheerTricky: "You beat a tricky word! 🧠",
+      cheerLong: "A long word, well read! 📏",
+      cheerCareful: "Careful reading pays off 🐢",
+      cheerFast: "Speedy reader! ⚡",
+      cheerGeneral: ["Great reading! 📖", "Sharp eyes! 👀", "Keep going, star! ⭐", "Better and better! 📈", "Reading is your superpower! 🦸"],
       funnyHelp: "The right picture acts out its word",
       stickers: "Stickers",
       newSticker: "New sticker!",
@@ -1557,6 +1585,23 @@ function webApp() {
       wordStyle: "Letras de la palabra",
       sound: "Sonidos",
       funny: "Animaciones divertidas",
+      tipsSet: "Consejos y ánimos",
+      tipsSetHelp: "Frases cortas al jugar: cómo leer mejor y elogios",
+      coachHello: "¡A leer! 📖",
+      tipGuess: ["Lee toda la palabra primero 👀", "Lee y luego toca 👀", "Sin prisa, léela entera 👀"],
+      tipSyl: (s) => `Lee despacio: ${s}`,
+      tipEnd: (l) => `Todas con ${l}. ¡Lee hasta el final!`,
+      tipLoud: "Di la palabra en voz alta 🗣️",
+      tipHear: "¿Te cuesta? Toca 🔊 para oírla",
+      tipLetters: "Señala cada letra con el dedo ☝️",
+      tipBrave: "¡Inténtalo sin miedo! 🙂",
+      cheerStreak: (n) => `¡${n} seguidas! 🔥`,
+      cheerBack: "¡Gran remontada! 💪",
+      cheerTricky: "¡Venciste una palabra difícil! 🧠",
+      cheerLong: "¡Palabra larga, bien leída! 📏",
+      cheerCareful: "¡Leer con calma funciona! 🐢",
+      cheerFast: "¡Lector veloz! ⚡",
+      cheerGeneral: ["¡Qué bien lees! 📖", "¡Qué ojos tan atentos! 👀", "¡Sigue así, estrella! ⭐", "¡Cada vez mejor! 📈", "¡Leer es tu superpoder! 🦸"],
       funnyHelp: "La imagen correcta representa su palabra",
       stickers: "Pegatinas",
       newSticker: "¡Pegatina nueva!",
@@ -1737,6 +1782,23 @@ function webApp() {
       wordStyle: "Žodžio raidės",
       sound: "Garsai",
       funny: "Linksmos animacijos",
+      tipsSet: "Patarimai ir padrąsinimai",
+      tipsSetHelp: "Trumpi sakiniai žaidžiant: kaip skaityti geriau, ir pagyrimai",
+      coachHello: "Pirmyn, skaitom! 📖",
+      tipGuess: ["Pirma perskaityk visą žodį 👀", "Perskaityk, tada spausk 👀", "Neskubėk, skaityk iki galo 👀"],
+      tipSyl: (s) => `Skaityk lėtai: ${s}`,
+      tipEnd: (l) => `Visi iš raidės ${l}. Skaityk iki galo!`,
+      tipLoud: "Pasakyk žodį garsiai 🗣️",
+      tipHear: "Nesiseka? Paspausk 🔊 ir išgirsk",
+      tipLetters: "Rodyk pirštu kiekvieną raidę ☝️",
+      tipBrave: "Drąsiai bandyk! Klaidos moko 🙂",
+      cheerStreak: (n) => `${n} iš eilės! 🔥`,
+      cheerBack: "Šaunus sugrįžimas! 💪",
+      cheerTricky: "Įveikei sunkų žodį! 🧠",
+      cheerLong: "Ilgą žodį perskaitei! 📏",
+      cheerCareful: "Neskubėjai – ir pavyko! 🐢",
+      cheerFast: "Žaibiškai perskaitei! ⚡",
+      cheerGeneral: ["Puikiai skaitai! 📖", "Akylos akys! 👀", "Taip ir toliau, žvaigžde! ⭐", "Vis geriau ir geriau! 📈", "Skaitymas – tavo supergalia! 🦸"],
       funnyHelp: "Teisingas paveikslėlis suvaidina savo žodį",
       stickers: "Lipdukai",
       newSticker: "Naujas lipdukas!",
@@ -1983,7 +2045,7 @@ function webApp() {
     version: 1,
     lang: LANGS[init.lang] ? init.lang : detectLang(),
     pinHash: init.pinHash || null,
-    settings: Object.assign({ wordCase: "cap", sound: true, fun: true, currency: "EUR", smart: true, bookMode: "mix" }, init.settings || {}),
+    settings: Object.assign({ wordCase: "cap", sound: true, fun: true, tips: true, currency: "EUR", smart: true, bookMode: "mix" }, init.settings || {}),
     kids: (Array.isArray(init.kids) ? init.kids : []).filter((k) => k && typeof k === "object").map(normalizeKid),
     // Words added from book photos and by the AI coach: [{ id, lang, title, at, by, coachKid?, words: [{ w, e }] }]
     books: (Array.isArray(init.books) ? init.books : []).filter((b) => b && LANGS[b.lang] && Array.isArray(b.words)),
@@ -3210,13 +3272,58 @@ function webApp() {
       updateWallet(kid, "up");
     }, 850);
   }
-  function feedback(text, kind) {
+  // The feedback line under the word: an optional main message and an optional coach line (tip or cheer, 1.11.0)
+  function feedback(text, kind, tip) {
     const fb = document.getElementById("fb");
     if (!fb) return;
+    if (tip && state.settings.tips === false) tip = "";
     fb.className = "feedback";
     void fb.offsetWidth;
     fb.className = "feedback " + (kind || "");
-    fb.textContent = text;
+    fb.innerHTML = (text ? `<span class="fb-main">${esc(text)}</span>` : "") + (tip ? `<span class="fb-tip">${esc(tip)}</span>` : "");
+    if (tip && game) game.lastTip = tip;
+  }
+  // ── Coach (1.11.0): one short sentence, chosen from how the kid is playing ──
+  const pickTip = (arr) => {
+    const all = Array.isArray(arr) ? arr : [arr];
+    const a = all.filter((x) => !game || x !== game.lastTip);
+    return pickRand(a.length ? a : all);
+  };
+  const sylSpaced = (w) => caseWord(w).split("-").join(" – ");
+  const letterOf = (o) => o.k || firstLetter(state.lang, o.w);   // the round's own first-letter rule
+  // After a wrong tap: why it might have gone wrong, and what to do next
+  function tipForWrong() {
+    const quick = game.wrong.size === 1 && Date.now() - (game.shownAt || 0) < 1500;
+    if (quick) game.guessed = true;
+    if (game.wrong.size >= 2) return t("tipSyl", sylSpaced(game.cur.w));
+    if (quick) return pickTip(t("tipGuess"));
+    const l = letterOf(game.cur);
+    if (l && game.options.length > 2 && game.options.every((o) => letterOf(o) === l)) return t("tipEnd", String(l).toLocaleUpperCase(LANGS[state.lang].locale));
+    return t("tipLoud");
+  }
+  // After a right first try: the most fitting cheer, or now and then a general one
+  function cheerForRight(info) {
+    const n = game.streak, syl = caseWord(game.cur.w).split("-").length;
+    if (n === 3 || n === 5 || (n >= 10 && n % 5 === 0)) return t("cheerStreak", n);
+    if (info.afterMiss) return t("cheerBack");
+    if (info.tricky) return t("cheerTricky");
+    if (syl >= 4) return t("cheerLong");
+    if (info.ms > 6000) return t("cheerCareful");
+    if (info.ms < 2500 && syl >= 2) return t("cheerFast");
+    return Math.random() < 0.6 ? pickTip(t("cheerGeneral")) : "";
+  }
+  // Nothing tapped for a while: a gentle nudge, then another
+  function armIdle() {
+    if (!game || game.idleRound === game.round) return;
+    game.idleRound = game.round;
+    clearTimeout(game.idleT);
+    const r = game.round, still = () => view.name === "game" && game && game.round === r && !game.locked && !game.wrong.size && !document.getElementById("album");
+    game.idleT = setTimeout(() => {
+      if (!still()) return;
+      const kid = getKid(game.kidId);
+      feedback("", "", kid && kid.speak !== "off" ? t("tipHear") : t("tipSyl", sylSpaced(game.cur.w)));
+      game.idleT = setTimeout(() => { if (still()) feedback("", "", t("tipLetters")); }, 9000);
+    }, 9000);
   }
 
   // ── Funny animations (1.10.0): the right picture jumps out of its tile and acts out its word ──
@@ -3487,6 +3594,8 @@ function webApp() {
       if (view.name === "game") {
         fitWord();
         fitGame();
+        if (game.pendingTip) { feedback("", "", game.pendingTip); game.pendingTip = ""; }
+        armIdle();
         const kid = getKid(game.kidId);
         if (kid && kid.speak === "shown" && game.spoken !== game.round) {
           game.spoken = game.round;
@@ -3508,13 +3617,16 @@ function webApp() {
   // ── Game logic ──
   function startGame(kid) {
     if (kid.speak !== "off") unlockAudio();
-    game = { kidId: kid.id, deck: [], cur: null, options: [], missed: false, locked: false, streak: 0, last: null, wrong: new Set(), round: 0, recent: [], spoken: 0 };
+    game = { kidId: kid.id, deck: [], cur: null, options: [], missed: false, locked: false, streak: 0, last: null, wrong: new Set(), round: 0, recent: [], spoken: 0,
+             skips: 0, pendingTip: t("coachHello"), lastTip: "", idleT: 0, idleRound: 0 };
     nextRound();
     go({ name: "game" });
     if (isShort(kid)) setTimeout(() => notice(t("needTopUp")), 400);
   }
   function nextRound() {
     const kid = getKid(game.kidId);
+    game.lastMissed = !!(game.cur && game.missed);   // for "Great comeback!"
+    game.guessed = false;
     let word;
     if (state.settings.smart !== false) {
       word = smartPick(kid, poolFor(kid));
@@ -3541,6 +3653,7 @@ function webApp() {
     game.locked = false;
     game.wrong = new Set();
     game.round++;
+    game.shownAt = Date.now();   // how long the kid looked before tapping (tips and cheers)
   }
   function pick(btn) {
     if (!game || game.locked) return;
@@ -3549,6 +3662,8 @@ function webApp() {
     if (!kid) return go({ name: "home" });
     const i = Number(btn.dataset.i);
     const opt = game.options[i];
+    game.skips = 0;
+    clearTimeout(game.idleT);
 
     if (opt.w === game.cur.w) {
       game.locked = true;
@@ -3556,6 +3671,8 @@ function webApp() {
       const wasShort = isShort(kid);
       kid.correct++;
       kid.answered++;
+      const before = peekStat(kid, game.cur.w);
+      const coachInfo = { ms: Date.now() - (game.shownAt || 0), afterMiss: game.lastMissed, tricky: !!(before && before.w) };
       learnDone(kid, game.cur.w, earned);
       const saidWord = game.cur.w;
       maybeAutoCoach(kid);
@@ -3585,6 +3702,8 @@ function webApp() {
         flyCoin(cx, cy, kid);
         const st = document.getElementById("streak");
         if (st) st.textContent = "🔥 " + game.streak;
+        const cheer = cheerForRight(coachInfo);
+        if (cheer) feedback("", "cheer", cheer);
         if (!wasShort && isShort(kid)) setTimeout(() => notice(t("needTopUp")), 1000);
       } else {
         chime = sndSoft();
@@ -3617,7 +3736,7 @@ function webApp() {
       btn.classList.remove("shake");
       void btn.offsetWidth;
       btn.classList.add("wrong", "shake");
-      feedback(lost ? t("tryAgainMinus") : t("tryAgain"), "bad");
+      feedback(lost ? t("tryAgainMinus") : t("tryAgain"), "bad", tipForWrong());
       if (lost) {
         floatText(document.getElementById("coins"), "−1 🪙", "minus");
         updateWallet(kid, "down");
@@ -4031,6 +4150,7 @@ function webApp() {
       <div class="lk-row"><span class="lk-l">${esc(t("wordStyle"))}</span>${segRow("wordCase", [["cap", caseLabel("cap")], ["upper", caseLabel("upper")], ["lower", caseLabel("lower")]], s.wordCase, "set")}</div>
       <div class="srow"><div class="grow"><b>${esc(t("sound"))}</b></div><button class="switch ${s.sound ? "on" : ""}" data-act="toggle" data-v="sound" aria-label="${esc(t("sound"))}"></button></div>
       <div class="srow"><div class="grow"><b>${esc(t("funny"))}</b><small>${esc(t("funnyHelp"))}</small></div><button class="switch ${s.fun !== false ? "on" : ""}" data-act="toggle" data-v="fun" aria-label="${esc(t("funny"))}"></button></div>
+      <div class="srow"><div class="grow"><b>${esc(t("tipsSet"))}</b><small>${esc(t("tipsSetHelp"))}</small></div><button class="switch ${s.tips !== false ? "on" : ""}" data-act="toggle" data-v="tips" aria-label="${esc(t("tipsSet"))}"></button></div>
       <h3 class="sec">${esc(CT.money)}</h3>
       <div class="lk-row"><span class="lk-l">${esc(t("currency"))}</span>${segRow("currency", SET.currencies.map((c) => [c, c]), s.currency, "set")}</div>
       ${learningSecHTML()}
@@ -4059,7 +4179,7 @@ function webApp() {
     const hadKey = AIX.hasKey, prevMode = state.settings.bookMode;
     AIX.hasKey = !!st.hasKey;
     AIX.on = st.settings.ai !== false;
-    Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, fun: st.settings.fun !== false, currency: st.settings.currency, smart: st.settings.smart !== false, bookMode: st.settings.bookMode || "mix" });
+    Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, fun: st.settings.fun !== false, tips: st.settings.tips !== false, currency: st.settings.currency, smart: st.settings.smart !== false, bookMode: st.settings.bookMode || "mix" });
     const vk = ["speechEngine", "voiceRate", "voicePitch", "ttsModel", "ttsVoice", "ttsInstructions"];
     const before = JSON.stringify(vk.map((x) => state.settings[x]));
     vk.forEach((x) => { if (st.settings[x] !== undefined) state.settings[x] = st.settings[x]; });
@@ -4093,7 +4213,7 @@ function webApp() {
     }
     if (act === "look") { const val = k === "textSize" ? +v : v; LOOK[k] = val; applyLook(); renderCfg(); return sendCfg("set", { k, v: val }); }
     if (act === "set") { SET.settings[k] = v; renderCfg(); return sendCfg("set", { k, v }); }
-    if (act === "toggle") { SET.settings[v] = v === "fun" ? SET.settings[v] === false : !SET.settings[v]; renderCfg(); return sendCfg("set", { k: v, v: SET.settings[v] }); }
+    if (act === "toggle") { SET.settings[v] = v === "fun" || v === "tips" ? SET.settings[v] === false : !SET.settings[v]; renderCfg(); return sendCfg("set", { k: v, v: SET.settings[v] }); }
     if (act === "cfgreset") return sendCfg("cfg", { k, reset: 1 });
     if (act === "cfgstep") { const d = cfgItem(k), step = d.step || 1; SET.cfg[k] = Math.min(d.max, Math.max(d.min, Number(SET.cfg[k]) + step * +v)); renderCfg(); return sendCfg("cfg", { k, v: SET.cfg[k] }); }
     if (act === "cfgall") {
@@ -4216,6 +4336,9 @@ function webApp() {
       const kid = getKid(game.kidId);
       if (kid && game.cur) learnSkip(kid, game.cur.w);
       game.streak = 0;
+      game.skips = (game.skips || 0) + 1;
+      clearTimeout(game.idleT);
+      if (game.skips >= 2) { game.skips = 0; game.pendingTip = t("tipBrave"); }   // skipping a lot: courage to try
       persist();
       nextRound();
       render();

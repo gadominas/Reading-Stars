@@ -35,6 +35,7 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
 - **Two levels.** 🐣 Beginner (ages 4–6, 1–2 syllables, 3 pictures) and 🦉 Expert (ages 9–11, 3–6 syllables, 5 pictures); word length and pictures per round are adjustable in Settings › Rounds.
 - **Tokens for first tries.** A correct first try earns +1 🪙 with confetti and a cheer; each wrong tap costs −1 🪙 (never below 0). The big wallet counts up or down as it happens.
 - **🎉 Pictures that act out their word.** After every right answer the picture jumps out of its tile: cars drive off, birds fly away, fish swim, food gets eaten, animals hop, flowers bloom, everything else dances or spins, each with a speech bubble (*Vroom vroom!*, *Nom nom!*, *Boing!*).
+- **👀 A little reading coach.** One short sentence under the word while playing: *Read the whole word first 👀* after a hasty wrong tap, *Read slowly: Na – mas* after two, *All start with N. Read to the end!*, and cheers like *3 in a row! 🔥* or *Great comeback! 💪*.
 - **🎁 Stickers to collect.** Every 5 words right on the first try earn a new sticker. Each kid's stickers are always on a shelf at the bottom of the game, and a tap opens their album: 60 stickers, the missing ones as dark shapes to guess. A full album starts again with shiny gold ones.
 - **Real pocket money, set per kid.** Each kid has their own token value and a hidden budget. When the budget can't cover the tokens, the kid is asked to get a top-up, and nothing earned is lost.
 - **Parent zone behind a PIN.** Top up budgets, pay out tokens, edit or delete players and see every payout and top-up with its date.
@@ -83,6 +84,9 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
   <img src="docs/screenshots/23-funny.png" width="31%" alt="A right answer for Fox: the fox jumps out of its tile and hops with a Boing! bubble, under the Hooray! banner, with the sticker shelf at the bottom.">
   <img src="docs/screenshots/24-new-sticker.png" width="31%" alt="A new sticker: a strawberry with a white die-cut edge bursts out in golden rays under a purple New sticker! label.">
   <img src="docs/screenshots/25-sticker-album.png" width="31%" alt="Ema's sticker album: 15 of 60 stickers, a progress bar, 5 more words for a sticker, collected stickers in colour and the rest as dark shapes.">
+</p>
+<p align="center">
+  <img src="docs/screenshots/26-reading-tip.png" width="31%" alt="A wrong tap on the noodle bowl for Meš-ka: Oi! −1 Bandyk dar kartą, and the coach line Visi iš raidės M. Skaityk iki galo!">
 </p>
 
 ### Tested at home
@@ -154,6 +158,19 @@ Every picture in a round **starts with the same letter as the word**. For *Na-ma
 | Skip | 0 | 0 |
 
 Every right answer, first try or not, ends with a short **funny animation**: the picture leaps out of its tile and acts out its word (cars and trains drive off, birds, bees and planes fly away, fish swim with bubbles, food gets eaten bite by bite until a 😋 pops up, animals and balls hop, flowers bloom; any other picture dances or spins). The success sound plays first and the word is read after it, as before. **Settings › Game › Funny animations** switches them off; iPhone's *Reduce Motion* gets a gentle pop instead.
+
+**👀 Tips and cheers.** A short line under the word coaches the kid as they play, in the game's language:
+
+| When | What the kid sees (EN) |
+|---|---|
+| A wrong tap within 1.5 s of the word | *Read the whole word first 👀* (or *Read first, then tap*, *No rush, read it all*) |
+| A second wrong tap on the same word | *Read slowly: Pen – guin* |
+| Another wrong tap | *All start with P. Read to the end!*, or *Say the word out loud 🗣️* |
+| Nothing tapped for 9 s, then 18 s | *Stuck? Tap 🔊 to hear it* (the word in parts when read-aloud is off), then *Point at each letter ☝️* |
+| Two skips in a row | *Have a go! Mistakes are OK 🙂* |
+| Right first try | *3 in a row! 🔥*, *Great comeback! 💪* after a missed word, *You beat a tricky word! 🧠*, *A long word, well read! 📏*, *Careful reading pays off 🐢*, *Speedy reader! ⚡*, or now and then *Great reading! 📖* |
+
+Cheers have a yellow bubble, tips a white one. **Settings › Game › Tips and cheers** switches them off.
 
 **🎁 Stickers.** Each word right on the first try fills the gift ring on the sticker shelf at the bottom of the game (*3/5*). The 5th one earns a new sticker: it bursts out in the middle of the screen with *New sticker!* and flies onto the shelf, and the next word waits until it has landed. The shelf always shows the kid's stickers, newest first; a tap opens the album with all 60 (animals, space, fair rides, treats, music and toys), the missing ones as dark shapes, and a tap on a sticker wiggles it. When the album is full, stickers come again as shiny gold ones. Mistakes and skips never take stickers away, payouts don't touch them, and the home screen shows each kid's latest four. How many words a sticker takes is in **Settings › Rounds** (2–20, 5 by default).
 
@@ -252,7 +269,7 @@ Open the parent zone (PIN) and tap the sliders icon at the top right. Changes ap
 | Section | What you can change |
 | --- | --- |
 | Appearance | Colours (Auto or six palettes: Ink, the game's bright look and the default, Sepia, Mint, Contrast, Slate, Night; Slate and Night give a night sky), layout (Comfortable, Compact, Tiny: one line per player on the leaderboard and in the parent zone), text size, headline font. The game screen looks the same in every layout |
-| Game | Word letters (*Ap-ple*, *AP-PLE*, *ap-ple*; *Na-mas*, *NA-MAS*, *na-mas* in Lithuanian), sounds, funny animations |
+| Game | Word letters (*Ap-ple*, *AP-PLE*, *ap-ple*; *Na-mas*, *NA-MAS*, *na-mas* in Lithuanian), sounds, funny animations, tips and cheers |
 | Money | Currency (EUR, USD, GBP) |
 | Learning | **AI settings** (Claude or OpenAI key, model, token usage, the AI coach switch), smart word order, book words in the game (Mixed in, First, Off) |
 | Listening | iPhone voice (per game language, Automatic or any installed voice; speed, pitch) or ✦ AI voice (OpenAI: speech model, voice, how it should sound, speed); **Test the voice** |

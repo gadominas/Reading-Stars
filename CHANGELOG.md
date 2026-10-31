@@ -2,6 +2,21 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.11.0 (2026-11-01): A little reading coach
+
+- 👀 **Read, don't guess**: A quick wrong tap gets a tip: read the whole word first.
+- 💪 **Cheers that fit**: Praise for streaks, comebacks, long words and tricky ones.
+- 🧩 **Help when stuck**: Two misses or a long pause show the word in parts: Na – mas.
+
+**Changes**
+
+- Coach line under the word, one short sentence at a time (EN, LT, ES), never repeating the last one
+- Wrong tap: within 1.5 s of the word → read the whole word first; second wrong tap → the word in parts (Na – mas); otherwise → all pictures start with the same letter, read to the end (or say it out loud)
+- Right first try: 3, 5, 10, 15… in a row; Great comeback after a missed word; a word missed before; a long word (4+ syllables); careful (6 s+) or speedy reading; otherwise sometimes a general cheer
+- Nothing tapped for 9 s: tap 🔊 to hear it (or the word in parts when read-aloud is off); after 18 s: point at each letter
+- Two skips in a row: have a go, mistakes are OK; Let's read! at the start
+- Settings › Game › Tips and cheers (on by default; settings.tips)
+
 ## 1.10.1 (2026-11-01): Everything on one screen
 
 - ⏭ **Skip and level on top**: The level and Skip moved to the top bar, so stickers never cover them.
