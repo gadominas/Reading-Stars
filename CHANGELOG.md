@@ -2,6 +2,23 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.9.1 (2026-11-01): Cheer first, then the word
+
+- 🎉 **The cheer always plays**: The success sound now plays every time, even with the silent switch on.
+- 🔊 **Then the word**: After a right answer the word is read once the success sound has finished.
+- 👂 **On by default**: Every player hears the word after answering, unless you choose Off.
+
+**Changes**
+
+- Sound effects (success, right after a miss, wrong, PIN keys) are rendered once as WAV and played through an <audio> element instead of Web Audio, which iOS mutes with the silent switch and can suspend
+- After answer: the word is spoken 150 ms after the success sound ends (with sounds off, straight away); the AI voice is requested only then too
+- Read aloud is After answer by default for new players; players still on Off are switched to After answer once (a parent's later choice of Off is kept)
+- Speech is primed silently inside the Play tap, so words spoken after the success sound aren't blocked by iOS
+
+**Fixes**
+
+- The success sound sometimes didn't play, and speech starting at the same moment could cut it off
+
 ## 1.9.0 (2026-11-01): Choose the voice
 
 - 🗣️ **Choose the voice**: Any iPhone voice, or an ✦ OpenAI voice that also reads Lithuanian, with model and style.

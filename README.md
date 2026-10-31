@@ -39,7 +39,7 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
 - **Leaderboard.** All-time stars with a podium for the top three. Payouts never lower it.
 - **📷 Words from your books.** Photograph a page and AI suggests the words a child can recognise in a picture, ready to play: dictionary form, syllables and an emoji. You review them first.
 - **🧠 Learns what to practise.** Smart word order brings hard words back more often and mastered ones rarely (no AI). An optional ✦ AI coach picks the next words for each kid and gives you a short tip.
-- **🔊 Hear the word.** Per kid: off, when the word appears, or after answering, with a replay button. Any iPhone voice, or an ✦ OpenAI voice that also reads Lithuanian.
+- **🔊 Hear the word.** Per kid: after answering (the default, right after the success sound), when the word appears, or off, with a replay button. Any iPhone voice, or an ✦ OpenAI voice that also reads Lithuanian.
 - **Three languages.** Lithuanian 🇱🇹, English 🇬🇧 and Spanish 🇪🇸, with about 190–200 picture words in each.
 - **Home Screen widget.** The top reader and everyone's stars and tokens, or one player's tokens. Never money, budgets or the PIN.
 - **Launch screen, Settings and updates** shared with the other apps: six colour palettes and three layouts, and new versions offered in the game.
@@ -230,7 +230,7 @@ The AI settings are the shared [ai-configuration](https://github.com/gadominas/a
 Two learning features need no AI and no key:
 
 - **🧠 Smart word order** (**Settings › Learning**, on by default) tracks each kid's progress per word. Words they got wrong come back often, new words are introduced steadily, mastered words appear rarely.
-- **🔊 Read words aloud** is set per kid in the parent zone: **Off**, **When shown** (good for the youngest) or **After answer** (read first, then hear it). A 🔊 button under the word card repeats it. **Settings › Listening** picks the voice: an **iPhone voice** (one per game language, with speed and pitch) or, with an OpenAI key, an **✦ AI voice** with its speech model, voice and *How it should sound*. iOS has no Lithuanian voice, but OpenAI's speech models read Lithuanian; each word is fetched once and kept on the phone. It is the shared [read-aloud](https://github.com/gadominas/app-blueprints/blob/main/blueprints/read-aloud.md) blueprint's voices and Listening settings.
+- **🔊 Read words aloud** is set per kid in the parent zone: **After answer** (the default: read first, hear the success sound, then the word), **When shown** (good for the youngest) or **Off**. A 🔊 button under the word card repeats it. **Settings › Listening** picks the voice: an **iPhone voice** (one per game language, with speed and pitch) or, with an OpenAI key, an **✦ AI voice** with its speech model, voice and *How it should sound*. iOS has no Lithuanian voice, but OpenAI's speech models read Lithuanian; each word is fetched once and kept on the phone. It is the shared [read-aloud](https://github.com/gadominas/app-blueprints/blob/main/blueprints/read-aloud.md) blueprint's voices and Listening settings.
 
 ## Settings
 

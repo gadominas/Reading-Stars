@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.9.0';
+const VERSION = '1.9.1';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -1865,7 +1865,9 @@ function webApp() {
     kids: (Array.isArray(init.kids) ? init.kids : []).filter((k) => k && typeof k === "object").map(normalizeKid),
     // Words added from book photos and by the AI coach: [{ id, lang, title, at, by, coachKid?, words: [{ w, e }] }]
     books: (Array.isArray(init.books) ? init.books : []).filter((b) => b && LANGS[b.lang] && Array.isArray(b.words)),
+    speakAfterDefault: true,   // 1.9.1: "After answer" became the default; switched on once for players still on Off
   };
+  if (!init.speakAfterDefault) state.kids.forEach((k) => { if (k.speak === "off") k.speak = "after"; });
   // AI flags (ai-configuration): is there a key, and is the background job (AI coach) on. Kept fresh by useState().
   const AIX = { hasKey: !!(init.ai && init.ai.hasKey), on: !(init.ai && init.ai.on === false), hasOpenAI: !!(init.ai && init.ai.hasOpenAI) };
   function normalizeKid(k) {
@@ -1886,7 +1888,7 @@ function webApp() {
       payouts: arr(k.payouts),
       topups: arr(k.topups),
       learn: k.learn && typeof k.learn === "object" ? k.learn : {}, // { lang: { word: { s, c, w, b, t } } }
-      speak: ["off", "shown", "after"].indexOf(k.speak) >= 0 ? k.speak : "off",
+      speak: ["off", "shown", "after"].indexOf(k.speak) >= 0 ? k.speak : "after",   // new players hear the word after answering
       coach: k.coach && typeof k.coach === "object" ? k.coach : null,
       answered: num(k.answered),
     };
@@ -2157,6 +2159,8 @@ function webApp() {
   function unlockAudio() {   // iOS lets audio start only inside a tap: play silence once, then the same element plays later
     if (audioUnlocked) return;
     try { au.src = SILENT; const pr = au.play(); if (pr && pr.catch) pr.catch(() => {}); audioUnlocked = true; } catch (e) {}
+    // and speech: one silent utterance inside the tap lets later words (after the success sound) be spoken
+    try { if (SYN && window.SpeechSynthesisUtterance) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; SYN.speak(u); } } catch (e) {}
   }
   const aiAudio = {};   // word → MP3 for this session (the Scriptable side also keeps them on the phone)
   let sayToken = 0;
@@ -2939,33 +2943,67 @@ function webApp() {
     }
   }
 
-  // ── Sound (tiny Web Audio chimes, no files needed) ──
+  // ── Sound effects: the same little chimes, rendered once as WAV and played through an <audio> element.
+  // Web Audio was unreliable on iPhone: the silent switch mutes it, it can be suspended between taps, and speech
+  // starting at the same moment swallowed it. Each sound returns how long it lasts, so speech can wait for it.
+  const sfxCache = {};
+  function makeWav(freqs, dur, type) {
+    const rate = 22050, step = dur * 0.8, total = (freqs.length - 1) * step + dur + 0.05;
+    const n = Math.ceil(total * rate), pcm = new Float32Array(n);
+    freqs.forEach((f, i) => {
+      const s0 = Math.floor(i * step * rate), len = Math.floor(dur * rate);
+      for (let j = 0; j < len && s0 + j < n; j++) {
+        const tt = j / rate, ph = (f * tt) % 1;
+        const wave = type === "sine" ? Math.sin(2 * Math.PI * ph) : 1 - 4 * Math.abs(ph - 0.5);   // triangle
+        const env = tt < 0.02 ? tt / 0.02 : Math.pow(0.0004, (tt - 0.02) / Math.max(0.01, dur - 0.02));   // quick attack, exponential fade
+        pcm[s0 + j] += wave * env * 0.32;
+      }
+    });
+    const buf = new Uint8Array(44 + n * 2), dv = new DataView(buf.buffer);
+    const w = (o, t0) => { for (let i = 0; i < t0.length; i++) buf[o + i] = t0.charCodeAt(i); };
+    w(0, "RIFF"); dv.setUint32(4, 36 + n * 2, true); w(8, "WAVE"); w(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, rate, true); dv.setUint32(28, rate * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, "data"); dv.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) dv.setInt16(44 + i * 2, Math.max(-1, Math.min(1, pcm[i])) * 32767, true);
+    let str = "";
+    for (let i = 0; i < buf.length; i += 8192) str += String.fromCharCode.apply(null, buf.subarray(i, i + 8192));
+    return { src: "data:audio/wav;base64," + btoa(str), ms: Math.round(total * 1000) };
+  }
+  const SFX = { win: [[523, 659, 784, 1047, 1319], 0.15, "triangle"], soft: [[523, 784], 0.15, "triangle"], bad: [[260, 196], 0.2, "sine"], key: [[880], 0.06, "sine"] };
+  const sfxAu = new Audio(); sfxAu.preload = "auto"; sfxAu.setAttribute("playsinline", "");
   let actx = null;
-  function tone(freqs, dur, type) {
-    if (!state.settings.sound) return;
+  function webAudioTone(freqs, dur, type) {   // fallback only, if the <audio> element can't play
     try {
-      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      if (actx.state === "suspended") actx.resume();
+      actx = actx && actx.state !== "closed" ? actx : new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state !== "running") actx.resume();
       freqs.forEach((f, i) => {
-        const o = actx.createOscillator();
-        const g = actx.createGain();
-        o.type = type || "triangle";
-        o.frequency.value = f;
-        const st = actx.currentTime + i * dur * 0.8;
-        g.gain.setValueAtTime(0.0001, st);
-        g.gain.exponentialRampToValueAtTime(0.25, st + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, st + dur);
-        o.connect(g);
-        g.connect(actx.destination);
-        o.start(st);
-        o.stop(st + dur + 0.05);
+        const o = actx.createOscillator(), g = actx.createGain();
+        o.type = type || "triangle"; o.frequency.value = f;
+        const st = actx.currentTime + 0.02 + i * dur * 0.8;
+        g.gain.setValueAtTime(0.0001, st); g.gain.exponentialRampToValueAtTime(0.25, st + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, st + dur);
+        o.connect(g); g.connect(actx.destination); o.start(st); o.stop(st + dur + 0.05);
       });
     } catch (e) {}
   }
-  const sndWin = () => tone([523, 659, 784, 1047, 1319], 0.15, "triangle");
-  const sndSoft = () => tone([523, 784], 0.15, "triangle");
-  const sndBad = () => tone([260, 196], 0.2, "sine");
-  const sndKey = () => tone([880], 0.06, "sine");
+  // Plays a sound effect inside the tap and returns its length in ms (0 when sounds are off).
+  function sfx(name) {
+    if (!state.settings.sound) return 0;
+    const def = SFX[name];
+    const snd = sfxCache[name] || (sfxCache[name] = makeWav(def[0], def[1], def[2]));
+    try {
+      sfxAu.pause();
+      sfxAu.src = snd.src;
+      sfxAu.currentTime = 0;
+      const pr = sfxAu.play();
+      if (pr && pr.catch) pr.catch(() => webAudioTone(def[0], def[1], def[2]));
+    } catch (e) {
+      webAudioTone(def[0], def[1], def[2]);
+    }
+    return snd.ms;
+  }
+  const sndWin = () => sfx("win");
+  const sndSoft = () => sfx("soft");
+  const sndBad = () => sfx("bad");
+  const sndKey = () => sfx("key");
 
   // ── Effects ──
   const fx = document.getElementById("fx");
@@ -3127,7 +3165,7 @@ function webApp() {
       kid.correct++;
       kid.answered++;
       learnDone(kid, game.cur.w, earned);
-      if (kid.speak === "after") speakWord(game.cur.w);
+      const saidWord = game.cur.w;
       maybeAutoCoach(kid);
       if (earned) {
         kid.tokens++;
@@ -3142,8 +3180,9 @@ function webApp() {
       const cy = r.top + r.height / 2;
       const w = document.getElementById("word");
       if (w) w.classList.add("cheer");
+      let chime = 0;
       if (earned) {
-        sndWin();
+        chime = sndWin();
         confetti(cx, cy, 90);
         banner("🎉 " + pickRand(t("praise")));
         flyCoin(cx, cy, kid);
@@ -3151,10 +3190,12 @@ function webApp() {
         if (st) st.textContent = "🔥 " + game.streak;
         if (!wasShort && isShort(kid)) setTimeout(() => notice(t("needTopUp")), 1000);
       } else {
-        sndSoft();
+        chime = sndSoft();
         confetti(cx, cy, 30);
         feedback(t("correctNoToken"));
       }
+      // After answer: the success sound first, then the word, once the sound has finished
+      if (kid.speak === "after") setTimeout(() => speakWord(saidWord), chime ? chime + 150 : 0);
       const round = game.round;
       setTimeout(() => {
         if (view.name === "game" && game && game.round === round) {
