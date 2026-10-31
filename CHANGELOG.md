@@ -2,6 +2,24 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.9.0 (2026-11-01): Choose the voice
+
+- 🗣️ **Choose the voice**: Any iPhone voice, or an ✦ OpenAI voice that also reads Lithuanian, with model and style.
+- 🔤 **Words as long as you like**: Set the shortest and longest word for each level, in syllables.
+- 🔊 **The word stays clear**: The listen button now sits under the word, never on top of a letter.
+
+**Changes**
+
+- Settings › Listening (app-blueprints · read-aloud 1.0.1): iPhone voice or ✦ AI voice. iPhone: a voice per game language (Automatic picks the best one), the game language's voices first, Female/Male filter, speed and pitch. AI (OpenAI key): speech model (gpt-4o-mini-tts, tts-1-hd, tts-1 or any your key can use), voice with Female/Male filter, How it should sound, speed; Test the voice
+- The AI voice names the word's language in its instructions, so Lithuanian and Spanish words are pronounced as such; each word's audio is kept on the phone and paid for once per voice, model, speed and style; usage counted as Read aloud
+- If the AI voice fails, the word is read by the iPhone voice
+- Settings › Rounds: shortest and longest word for Beginner (1–2) and Expert (3–6), 1–6 syllables; level cards, book-word status and the AI coach follow the ranges
+- The 🔊 button is in its own row under the word card, larger
+
+**Fixes**
+
+- The 🔊 button covered the last letters of the word
+
 ## 1.8.2 (2026-11-01): Every book word gets played
 
 - 🔤 **No word left out**: Book words with a rare first letter play too, with pictures from nearby letters.

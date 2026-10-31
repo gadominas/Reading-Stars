@@ -32,14 +32,14 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
 ## Highlights
 
 - **Read the word, tap the picture.** One big word split into coloured syllables (**Na-mas**, **Kar-vė**, **He-li-cop-ter**), with pictures above it that all start with the same letter, so the kid has to read the whole word.
-- **Two levels.** 🐣 Beginner (ages 4–6, 1–2 syllables, 3 pictures) and 🦉 Expert (ages 9–11, 3–6 syllables, 5 pictures).
+- **Two levels.** 🐣 Beginner (ages 4–6, 1–2 syllables, 3 pictures) and 🦉 Expert (ages 9–11, 3–6 syllables, 5 pictures); word length and pictures per round are adjustable in Settings › Rounds.
 - **Tokens for first tries.** A correct first try earns +1 🪙 with confetti and a cheer; each wrong tap costs −1 🪙 (never below 0). The big wallet counts up or down as it happens.
 - **Real pocket money, set per kid.** Each kid has their own token value and a hidden budget. When the budget can't cover the tokens, the kid is asked to get a top-up, and nothing earned is lost.
 - **Parent zone behind a PIN.** Top up budgets, pay out tokens, edit or delete players and see every payout and top-up with its date.
 - **Leaderboard.** All-time stars with a podium for the top three. Payouts never lower it.
 - **📷 Words from your books.** Photograph a page and AI suggests the words a child can recognise in a picture, ready to play: dictionary form, syllables and an emoji. You review them first.
 - **🧠 Learns what to practise.** Smart word order brings hard words back more often and mastered ones rarely (no AI). An optional ✦ AI coach picks the next words for each kid and gives you a short tip.
-- **🔊 Hear the word.** Per kid: off, when the word appears, or after answering, with a replay button.
+- **🔊 Hear the word.** Per kid: off, when the word appears, or after answering, with a replay button. Any iPhone voice, or an ✦ OpenAI voice that also reads Lithuanian.
 - **Three languages.** Lithuanian 🇱🇹, English 🇬🇧 and Spanish 🇪🇸, with about 190–200 picture words in each.
 - **Home Screen widget.** The top reader and everyone's stars and tokens, or one player's tokens. Never money, budgets or the PIN.
 - **Launch screen, Settings and updates** shared with the other apps: six colour palettes and three layouts, and new versions offered in the game.
@@ -73,6 +73,8 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
 <p align="center">
   <img src="docs/screenshots/19-books-on-top.png" width="31%" alt="Parent zone: the Words from books card first, with a purple border and a ✦ AI badge, Take a photo and From photos buttons, then Ema's card.">
   <img src="docs/screenshots/20-word-status.png" width="31%" alt="Words from books: the book Miško draugai with 3 of 4 words in rounds; zuikis and zebras get pictures from nearby letters, karaliukas is Expert only with no Expert player, lūpa is in rounds.">
+  <img src="docs/screenshots/21-listening.png" width="31%" alt="Settings › Listening: the ✦ AI voice selected, female voices, Nova, the gpt-4o-mini-tts speech model and How it should sound.">
+  <img src="docs/screenshots/22-hear-button.png" width="31%" alt="A round with the word Gi-raffe and the yellow listen button in its own row under the word card.">
   <img src="docs/screenshots/16-ai-settings.png" width="31%" alt="AI settings: the Claude card in use with a masked key, Change key, Test connection, Remove and the model menu, then OpenAI and What AI does.">
 </p>
 
@@ -228,7 +230,7 @@ The AI settings are the shared [ai-configuration](https://github.com/gadominas/a
 Two learning features need no AI and no key:
 
 - **🧠 Smart word order** (**Settings › Learning**, on by default) tracks each kid's progress per word. Words they got wrong come back often, new words are introduced steadily, mastered words appear rarely.
-- **🔊 Read words aloud** is set per kid in the parent zone: **Off**, **When shown** (good for the youngest) or **After answer** (read first, then hear it). A 🔊 button on the word card repeats it. It uses the iPhone's voices; **Settings › Learning** says whether one is installed for the game's language and where to add it.
+- **🔊 Read words aloud** is set per kid in the parent zone: **Off**, **When shown** (good for the youngest) or **After answer** (read first, then hear it). A 🔊 button under the word card repeats it. **Settings › Listening** picks the voice: an **iPhone voice** (one per game language, with speed and pitch) or, with an OpenAI key, an **✦ AI voice** with its speech model, voice and *How it should sound*. iOS has no Lithuanian voice, but OpenAI's speech models read Lithuanian; each word is fetched once and kept on the phone. It is the shared [read-aloud](https://github.com/gadominas/app-blueprints/blob/main/blueprints/read-aloud.md) blueprint's voices and Listening settings.
 
 ## Settings
 
@@ -239,10 +241,11 @@ Open the parent zone (PIN) and tap the sliders icon at the top right. Changes ap
 | Appearance | Colours (Auto or six palettes: Ink, the game's bright look and the default, Sepia, Mint, Contrast, Slate, Night; Slate and Night give a night sky), layout (Comfortable, Compact, Tiny: one line per player on the leaderboard and in the parent zone), text size, headline font. The game screen looks the same in every layout |
 | Game | Word letters (*Ap-ple*, *AP-PLE*, *ap-ple*; *Na-mas*, *NA-MAS*, *na-mas* in Lithuanian), sounds |
 | Money | Currency (EUR, USD, GBP) |
-| Learning | **AI settings** (Claude or OpenAI key, model, token usage, the AI coach switch), smart word order, book words in the game (Mixed in, First, Off), which voice reads the words |
+| Learning | **AI settings** (Claude or OpenAI key, model, token usage, the AI coach switch), smart word order, book words in the game (Mixed in, First, Off) |
+| Listening | iPhone voice (per game language, Automatic or any installed voice; speed, pitch) or ✦ AI voice (OpenAI: speech model, voice, how it should sound, speed); **Test the voice** |
 | Parent | Change PIN |
 | Updates | Offer new versions, check now |
-| Rounds | Pictures per round for Beginner (2–4, original 3) and Expert (3–5, original 5), each with Reset |
+| Rounds | Pictures per round for Beginner (2–4, original 3) and Expert (3–5, original 5); shortest and longest word in syllables for Beginner (original 1–2) and Expert (original 3–6), 1–6; each with Reset |
 | Widget | Ask iOS to refresh every 15–240 min (original 30), mark the widget as out of date after 60–2880 min (original 720), each with Reset |
 | Built with | The [shared blueprints](https://github.com/gadominas/app-blueprints) this app follows, with links (read-only) |
 
@@ -279,7 +282,7 @@ The sheet appears only on the home screen and never interrupts a round, in the g
 | *Pay out* is greyed out | The budget is below one token's value: *Top up the budget to pay out*. |
 | No update offer | **Later** hides it for two days, and **Offer new versions** may be off. Use **Settings › Updates › Check for updates now**. |
 | "GitHub is still serving the old version" | GitHub can take a few minutes to serve a new release. Try again in a few minutes. |
-| No voice when a word should be read aloud | Add a voice for the game's language in iOS Settings › Accessibility › Spoken Content › Voices (Settings › Learning shows whether one is found), and check the silent switch. |
+| No voice when a word should be read aloud | Check the silent switch. **Settings › Listening** says whether the iPhone has a voice for the game's language; add one in iOS Settings › Accessibility › Spoken Content › Voices, or switch to the ✦ AI voice (needs an OpenAI key; it reads Lithuanian). |
 | A book word never comes up | Open **Words from books › Show the words**: each word says why. Usually it's in another language than the game, it's for the other level (Beginner 1–2 syllables, Expert 3–6) and nobody plays that level, or book words are Off in Settings › Learning. |
 | **Take a photo** or **From photos** doesn't open | Update to 1.8.1 or later. If iOS asks, allow Scriptable to use the Camera and Photos (iOS Settings › Scriptable). |
 | No **Take a photo** or **Ask the AI coach** | They appear once an AI key is saved in **Settings › Learning › AI settings**. |
@@ -289,7 +292,7 @@ The sheet appears only on the home screen and never interrupts a round, in the g
 ## Built with
 
 - **[Scriptable](https://scriptable.app)** by Simon Støvring: one JavaScript file, a WebView for the interface.
-- **[app-blueprints](https://github.com/gadominas/app-blueprints)**: the shared in-app updates, settings, AI configuration, launch screen and widgets that every one of these apps uses, so they look and behave alike. **Settings › Built with** lists the versions; [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md) adds the deviations. Reading Stars follows six of them: in-app updates, settings, AI configuration, launch screen, widgets and anonymous usage analytics.
+- **[app-blueprints](https://github.com/gadominas/app-blueprints)**: the shared in-app updates, settings, AI configuration, launch screen and widgets that every one of these apps uses, so they look and behave alike. **Settings › Built with** lists the versions; [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md) adds the deviations. Reading Stars follows seven of them: in-app updates, settings, AI configuration, launch screen, widgets, read aloud and anonymous usage analytics.
 - **Pictures** are the iPhone's own emoji, so the game needs no image files and works offline.
 
 Maintainers: release notes live in [`releases.json`](releases.json); see [docs/RELEASING.md](docs/RELEASING.md). Screenshots are regenerated with [repo-site](https://github.com/gadominas/app-blueprints/tree/main/repo-site) from [`docs/site/scenario.js`](docs/site/scenario.js).

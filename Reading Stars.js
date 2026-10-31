@@ -8,7 +8,9 @@
  * - Three pictures on top, one big word below split into syllables (na-mas, kar-vė).
  * - Words from books: photograph a page, AI reads it and adds picture words (parent zone).
  * - Learning: smart word order (spaced repetition, no AI) and an AI coach that picks practice words.
- * - Read aloud: each kid can hear the word when it's shown or after answering.
+ * - Read aloud: each kid can hear the word when it's shown or after answering; iPhone voices or ✦ OpenAI voices
+ *   (Settings › Listening: voice, speech model, speed, pitch, how it should sound).
+ * - Word length per level (Settings › Rounds): shortest and longest word in syllables.
  * - AI settings (Claude or OpenAI): keys in the iOS Keychain only, models, token usage.
  * - In-app updates: checks releases.json on GitHub at start and offers new versions
  *   (Update now / Later = 2 days). See docs/RELEASING.md.
@@ -42,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.8.2';
+const VERSION = '1.9.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -68,6 +70,7 @@ const BLUEPRINTS = [
   { id: 'ai-configuration', name: 'AI configuration', version: '1.0.0', since: '1.8.0' },
   { id: 'launch-screen', name: 'Launch screen', version: '1.0.0', since: '1.3.0' },
   { id: 'widgets', name: 'Widgets', version: '1.0.0', since: '1.4.0' },
+  { id: 'read-aloud', name: 'Read aloud', version: '1.0.1', since: '1.9.0' },
   { id: 'usage-analytics', name: 'Anonymous usage analytics', version: '1.1.0', since: '1.7.0' },
 ];
 
@@ -207,6 +210,8 @@ const settings = {
   checkUpdates: true,   // offer new versions from GitHub (asks again 2 days after "Later")
   shareUsage: false, usageAsked: false,  // anonymous usage counts: off until a parent agrees
   smart: true, bookMode: "mix",   // Learning: smart word order; book words Mixed in / First / Off
+  speechEngine: "device", ttsModel: "gpt-4o-mini-tts", ttsVoice: "coral", ttsInstructions: "",   // read aloud: iPhone voices or OpenAI
+  voiceURIs: {}, voiceRate: 0.85, voicePitch: 1, voiceGender: "all",   // the iPhone voice per game language; kids hear words a little slower
   aiProvider: "anthropic",   // the provider marked "In use" (ai-configuration)
   ai: true,                  // background AI jobs on/off ("What AI does"): the AI coach
   // model:  { anthropic: "…", openai: "…" }   set when the user picks a model
@@ -272,13 +277,17 @@ const SET_KEYS = {
   wordCase: (v) => ["cap", "upper", "lower"].includes(v), currency: (v) => CURRENCY_CODES.includes(v),
   sound: "bool", checkUpdates: "bool", shareUsage: "bool",
   smart: "bool", bookMode: (v) => ["mix", "first", "off"].includes(v), ai: "bool",
+  speechEngine: (v) => ["device", "ai"].includes(v), voiceGender: (v) => ["all", "f", "m"].includes(v),
+  voiceRate: (v) => [0.85, 1, 1.15, 1.3].includes(+v), voicePitch: (v) => [0.85, 1, 1.15].includes(+v),
+  ttsModel: (v) => typeof v === "string" && /^[a-z0-9][a-z0-9.\-]{1,60}$/i.test(v), ttsVoice: (v) => typeof v === "string" && /^[a-z]{2,20}$/.test(v),
+  ttsInstructions: (v) => typeof v === "string" && v.length <= 500,
 };
 function setSetting(k, v) {
   const s = SET_KEYS[k];
   if (!s) return false;
   if (s === "bool") v = v === true || v === "true";
   else if (!s(v)) return false;
-  if (k === "textSize") v = +v;
+  if (k === "textSize" || k === "voiceRate" || k === "voicePitch") v = +v;
   settings[k] = v;
   return true;
 }
@@ -294,6 +303,9 @@ async function loadSettings() {
   settings.ai = settings.ai !== false;
   if (!["mix", "first", "off"].includes(settings.bookMode)) settings.bookMode = "mix";
   if (!PROVIDERS[settings.aiProvider]) settings.aiProvider = "anthropic";
+  const rd = { speechEngine: "device", voiceGender: "all", voiceRate: 0.85, voicePitch: 1, ttsModel: "gpt-4o-mini-tts", ttsVoice: "coral", ttsInstructions: "" };
+  for (const k of Object.keys(rd)) if (!setSetting(k, settings[k])) settings[k] = rd[k];
+  settings.voiceURIs = settings.voiceURIs && typeof settings.voiceURIs === "object" ? settings.voiceURIs : {};
   settings.cfg = settings.cfg && typeof settings.cfg === "object" ? settings.cfg : {};
 }
 // Everything tunable lives here; the Settings screen edits these (stored in settings.cfg, defaults below).
@@ -304,6 +316,14 @@ const CONFIG = [
       en: { label: "Pictures per round, Beginner", unit: "pictures" }, lt: { label: "Paveikslėlių raunde, pradedantiesiems", unit: "pav." }, es: { label: "Imágenes por ronda, Principiante", unit: "imágenes" } },
     { k: "expertPics", def: 5, min: 3, max: 5, step: 1,
       en: { label: "Pictures per round, Expert", unit: "pictures" }, lt: { label: "Paveikslėlių raunde, ekspertams", unit: "pav." }, es: { label: "Imágenes por ronda, Experto", unit: "imágenes" } },
+    { k: "beginnerMinSyl", def: 1, min: 1, max: 6, step: 1,
+      en: { label: "Shortest word, Beginner", unit: "syllables" }, lt: { label: "Trumpiausias žodis, pradedantiesiems", unit: "skiem." }, es: { label: "Palabra más corta, Principiante", unit: "sílabas" } },
+    { k: "beginnerMaxSyl", def: 2, min: 1, max: 6, step: 1,
+      en: { label: "Longest word, Beginner", unit: "syllables" }, lt: { label: "Ilgiausias žodis, pradedantiesiems", unit: "skiem." }, es: { label: "Palabra más larga, Principiante", unit: "sílabas" } },
+    { k: "expertMinSyl", def: 3, min: 1, max: 6, step: 1,
+      en: { label: "Shortest word, Expert", unit: "syllables" }, lt: { label: "Trumpiausias žodis, ekspertams", unit: "skiem." }, es: { label: "Palabra más corta, Experto", unit: "sílabas" } },
+    { k: "expertMaxSyl", def: 6, min: 1, max: 6, step: 1,
+      en: { label: "Longest word, Expert", unit: "syllables" }, lt: { label: "Ilgiausias žodis, ekspertams", unit: "skiem." }, es: { label: "Palabra más larga, Experto", unit: "sílabas" } },
   ]],
   [{ en: "Widget", lt: "Valdiklis", es: "Widget" }, [
     { k: "widgetRefreshMin", def: 30, min: 15, max: 240, step: 15,
@@ -351,7 +371,9 @@ function lookState() {
            shown: settings.theme === "auto" ? (Device.isUsingDarkAppearance() ? "night" : "ink") : settings.theme };
 }
 // What the game reads from settings, and what the Settings sheet shows.
-const gameSettings = () => ({ wordCase: settings.wordCase, sound: settings.sound, currency: settings.currency, smart: settings.smart, bookMode: settings.bookMode });
+const gameSettings = () => ({ wordCase: settings.wordCase, sound: settings.sound, currency: settings.currency, smart: settings.smart, bookMode: settings.bookMode,
+  speechEngine: settings.speechEngine, voiceURIs: settings.voiceURIs, voiceRate: settings.voiceRate, voicePitch: settings.voicePitch,
+  ttsModel: settings.ttsModel, ttsVoice: settings.ttsVoice, ttsInstructions: settings.ttsInstructions });
 function settingsState() {
   return {
     settings: Object.fromEntries(Object.keys(SET_KEYS).map((k) => [k, settings[k]])),
@@ -363,6 +385,7 @@ function settingsState() {
     // ai-configuration Step 6: keys only masked
     ai: aiState(),
     hasKey: !!aiKey(), aiProvider: settings.aiProvider,
+    hasOpenAI: !!keyFor("openai"), ttsModels: settings.ttsModels || null, voiceURIs: settings.voiceURIs,   // read-aloud Step 1
   };
 }
 
@@ -450,11 +473,11 @@ function parseJSON(txt) {
 const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-function recordUsage(provider, model, feature, tin, tout) {
+function recordUsage(provider, model, feature, tin, tout, chars = 0) {   // chars: text sent for speech (read-aloud)
   const P = usage.p[provider] = usage.p[provider] || { calls: 0, in: 0, out: 0, models: {}, features: {}, days: {} };
   const b = (o, k) => o[k] = o[k] || { calls: 0, in: 0, out: 0 };
   for (const x of [P, b(P.models, model), b(P.features, feature), b(P.days, dayKey())]) {
-    x.calls++; x.in += tin; x.out += tout;
+    x.calls++; x.in += tin; x.out += tout; if (chars) x.chars = (x.chars || 0) + chars;
   }
   const days = Object.keys(P.days).sort();
   while (days.length > 400) delete P.days[days.shift()];   // keep about 13 months of days
@@ -475,6 +498,8 @@ async function fetchModels(p) {
     id: m.id, name: m.display_name || m.id,
     t: m.created_at ? Date.parse(m.created_at) : (m.created || 0) * 1000,
   }));
+  // Read aloud: keep OpenAI's speech models for Settings › Listening, before filtering to the ones that write text.
+  if (p === "openai") settings.ttsModels = { at: Date.now(), list: list.filter((m) => /tts/.test(m.id)).sort((a, b) => b.t - a.t).map((m) => ({ id: m.id, name: m.id })) };
   // OpenAI lists every model the key can reach; keep only the ones that write text.
   if (p === "openai") list = list.filter((m) => /^(gpt-|o\d|chatgpt-)/.test(m.id)
     && !/(audio|realtime|tts|transcribe|image|search|embedding|instruct|moderation)/.test(m.id));
@@ -502,6 +527,49 @@ const LANG_NAMES = { lt: "Lithuanian", en: "English", es: "Spanish" };
 // shrunk there to ≤ 1568 px. Scriptable's Photo.fromCamera/fromLibrary can't be used while the game is on screen:
 // they open behind a full-screen WebView, out of reach. The page hands the JPEG over through ev(), not the URL.
 const BOOK_IMAGE_MAX = 6 * 1024 * 1024;   // base64 characters; a 1568 px JPEG is far below this
+
+// ───────────────────────── Read aloud: the AI voice (app-blueprints · read-aloud 1.0.1, aiSpeech) ─────────────────────────
+// One word at a time. The word's language is always named in the instructions (a single Lithuanian word would otherwise
+// be read with English sounds), followed by the parent's "How it should sound" or a kid-friendly default.
+// Each word's MP3 is kept in Scriptable's local cache, so a word is paid for once per voice, model, speed and style.
+const TTS_LEGACY_VOICES = ["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"];   // all tts-1 and tts-1-hd can use
+const TTS_DEFAULT_STYLE = "Warm, slow and very clear, like a teacher reading one word to a young child. Say the word once, nothing else.";
+const ttsFm = FileManager.local();
+function ttsCachePath(key) {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const dir = ttsFm.joinPath(ttsFm.cacheDirectory(), APP_ID + "-voice");
+  if (!ttsFm.fileExists(dir)) ttsFm.createDirectory(dir, true);
+  return ttsFm.joinPath(dir, (h >>> 0).toString(16) + "-" + key.length + ".b64");
+}
+async function aiSpeech(text, lang) {
+  const key = keyFor("openai");
+  if (!key) throw new Error("AI voices need an OpenAI key");
+  const model = settings.ttsModel || "gpt-4o-mini-tts", legacy = /^tts-1/.test(model);
+  let voice = settings.ttsVoice || "coral";
+  if (legacy && !TTS_LEGACY_VOICES.includes(voice)) voice = "coral";
+  const body = { model, voice, input: String(text).slice(0, 400), response_format: "mp3" };
+  if (!legacy) body.instructions = `${LANG_NAMES[lang] || "Lithuanian"} word. ` + String(settings.ttsInstructions || TTS_DEFAULT_STYLE).slice(0, 500);
+  const speed = Number(settings.voiceRate) || 1;
+  if (speed !== 1) body.speed = speed;
+  const cachePath = ttsCachePath(JSON.stringify([body.model, body.voice, body.instructions || "", body.speed || 1, body.input]));
+  try { if (ttsFm.fileExists(cachePath)) return ttsFm.readString(cachePath); } catch (e) {}
+  const r = new Request("https://api.openai.com/v1/audio/speech");
+  r.method = "POST"; r.timeoutInterval = 60;
+  r.headers = { "Authorization": "Bearer " + key, "Content-Type": "application/json" };
+  r.body = JSON.stringify(body);
+  const data = await r.load();
+  const code = r.response && r.response.statusCode;
+  if (code !== 200) {
+    let msg = `HTTP ${code}`;
+    try { msg = JSON.parse(data.toRawString()).error.message || msg; } catch (e) {}
+    throw new Error(msg);
+  }
+  recordUsage("openai", model, "speech", 0, 0, body.input.length);
+  const b64 = data.toBase64String();
+  try { ttsFm.writeString(cachePath, b64); } catch (e) {}
+  return b64;
+}
 
 const BOOK_SYSTEM = "You build vocabulary for a children's picture reading game. Reply with JSON only, no other text.";
 function bookPrompt(gameLang) {
@@ -1102,6 +1170,9 @@ body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 #aisheet .utab th:not(:first-child),#aisheet .utab td:not(:first-child){text-align:right;white-space:nowrap}
 #aisheet .pad{padding:8px 0}
 #aisheet .small{font-size:13px}
+#cfgsheet .voicesel{display:block;width:100%;margin-top:8px;font:16px var(--sans);color:var(--ink);background:var(--sheet);border:1px solid var(--rule);border-radius:9px;padding:9px 10px}
+#cfgsheet .aic-btns{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
+#cfgsheet .warnhint{color:var(--danger)}
 #cfgsheet .sm.primary{background:var(--signal);color:#fff;border-color:var(--signal)}
 /* Learning, read aloud, AI coach, words from books */
 .learnbox .setrow{margin-bottom:8px}
@@ -1113,7 +1184,8 @@ body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 .topgap{margin-top:16px}
 .bksrc{align-items:center;gap:8px}
 .bksrc small{color:var(--muted);font-weight:700}
-.hear{position:absolute;right:10px;bottom:8px;width:46px;height:46px;border-radius:50%;background:var(--sun);font-size:22px;box-shadow:0 3px 0 var(--sunDeep)}
+.hearrow{display:flex;justify-content:center;margin-top:12px}   /* under the word card: never on top of a letter */
+.hear{width:58px;height:58px;border-radius:50%;background:var(--sun);font-size:28px;box-shadow:0 4px 0 var(--sunDeep);display:grid;place-items:center}
 .hear:active{transform:translateY(2px);box-shadow:none}
 .bkw .bklvl{font-size:13px;margin-left:2px}
 .bkw.blocked{border-style:dashed}
@@ -1262,6 +1334,32 @@ function webApp() {
       stOnlyExpert: "Expert only, and there is no Expert player",
       stOnlyBeginner: "Beginner only, and there is no Beginner player",
       stNear: (L, m) => `few words start with ${L}, so ${m === 1 ? "1 picture comes" : m + " pictures come"} from nearby letters`,
+      sylRange: (a, b) => (a === b ? `${a} syllable${a === 1 ? "" : "s"}` : `${a}–${b} syllables`),
+      stNoLevel: "too long or short for both levels (Settings › Rounds)",
+      listening: "Listening",
+      autoVoice: "Automatic (the best voice for the language)",
+      voiceEngine: "Voice engine",
+      engDevice: "iPhone voice",
+      engAI: "✦ AI voice",
+      voice: "Voice",
+      voiceFor: (l) => `Voice for ${l} words`,
+      gAll: "All", gFemale: "Female", gMale: "Male", gF: " (female)", gM: " (male)", gN: " (neutral)",
+      speechModel: "Speech model",
+      howSound: "How it should sound",
+      howSoundPh: "e.g. Warm, slow and very clear, like a teacher reading to a 5-year-old.",
+      legacyNote: "tts-1 models can't take a speaking style, and may read words with English sounds. gpt-4o-mini-tts reads Lithuanian and Spanish best.",
+      speed: "Speed", slow: "Slow", normal: "Normal", fast: "Fast", faster: "Faster",
+      pitch: "Pitch", lower: "Lower", higher: "Higher",
+      testVoice: "Test the voice",
+      voicesCount: (n) => `${n} voices on this iPhone`,
+      noVoices: "This iPhone reads aloud with its system voice. Choose it in iOS Settings › Accessibility › Spoken Content.",
+      moreVoices: "More natural voices: iOS Settings › Accessibility › Spoken Content › Voices. Download an Enhanced or Premium voice and it appears here.",
+      aiVoiceTip: "No voice for your language? The ✦ AI voice (OpenAI) can read it.",
+      aiVoiceNeedsKey: "AI voices come from OpenAI, so they need an OpenAI key, even when Claude runs the other AI features (Claude's API doesn't offer speech).",
+      addOpenAI: "Add an OpenAI key",
+      aiVoiceNote: "✦ Spoken by OpenAI with your key, one word at a time; the first time a word is said takes a second. Each word is kept on this iPhone, so it's paid for once. Counted under AI settings › Token usage as “Read aloud”.",
+      loadModelsNote: "Load your OpenAI models in AI settings to see every speech model your key can use.",
+      aiVoiceFailed: (m) => `AI voice failed (${m}). Used the iPhone voice.`,
       bookWords: "Words from books",
       photoUnreadable: "Couldn\u2019t open that photo. Try another one.",
       bookHint: "Take a photo of a page. AI reads it and picks words a child can recognise in a picture.",
@@ -1407,6 +1505,32 @@ function webApp() {
       stOnlyExpert: "solo Experto, y no hay ningún jugador Experto",
       stOnlyBeginner: "solo Principiante, y no hay ningún jugador Principiante",
       stNear: (L, m) => `pocas palabras empiezan por ${L}, así que ${m === 1 ? "1 dibujo viene" : m + " dibujos vienen"} de letras cercanas`,
+      sylRange: (a, b) => (a === b ? `${a} sílaba${a === 1 ? "" : "s"}` : `${a}–${b} sílabas`),
+      stNoLevel: "demasiado larga o corta para ambos niveles (Ajustes › Rondas)",
+      listening: "Escuchar",
+      autoVoice: "Automática (la mejor voz para el idioma)",
+      voiceEngine: "Motor de voz",
+      engDevice: "Voz del iPhone",
+      engAI: "✦ Voz IA",
+      voice: "Voz",
+      voiceFor: (l) => `Voz para palabras en ${l}`,
+      gAll: "Todas", gFemale: "Femeninas", gMale: "Masculinas", gF: " (femenina)", gM: " (masculina)", gN: " (neutra)",
+      speechModel: "Modelo de voz",
+      howSound: "Cómo debe sonar",
+      howSoundPh: "p. ej. Cálida, lenta y muy clara, como una maestra leyendo a un niño de 5 años.",
+      legacyNote: "Los modelos tts-1 no aceptan estilo y pueden leer con sonidos en inglés. gpt-4o-mini-tts lee mejor el lituano y el español.",
+      speed: "Velocidad", slow: "Lenta", normal: "Normal", fast: "Rápida", faster: "Más rápida",
+      pitch: "Tono", lower: "Más grave", higher: "Más agudo",
+      testVoice: "Probar la voz",
+      voicesCount: (n) => `${n} voces en este iPhone`,
+      noVoices: "Este iPhone lee con su voz del sistema. Elígela en Ajustes de iOS › Accesibilidad › Contenido leído.",
+      moreVoices: "Voces más naturales: Ajustes de iOS › Accesibilidad › Contenido leído › Voces. Descarga una voz Mejorada o Premium y aparecerá aquí.",
+      aiVoiceTip: "¿No hay voz para tu idioma? La ✦ voz IA (OpenAI) puede leerlo.",
+      aiVoiceNeedsKey: "Las voces IA vienen de OpenAI, así que necesitan una clave de OpenAI, aunque Claude haga lo demás (la API de Claude no ofrece voz).",
+      addOpenAI: "Añadir una clave de OpenAI",
+      aiVoiceNote: "✦ Lo dice OpenAI con tu clave, palabra a palabra; la primera vez tarda un segundo. Cada palabra se guarda en este iPhone, así que se paga una vez. Se cuenta en Ajustes de IA › Uso de tokens como “Read aloud”.",
+      loadModelsNote: "Carga tus modelos de OpenAI en Ajustes de IA para ver todos los modelos de voz.",
+      aiVoiceFailed: (m) => `La voz IA falló (${m}). Se usó la voz del iPhone.`,
       bookWords: "Palabras de libros",
       photoUnreadable: "No se pudo abrir la foto. Prueba con otra.",
       bookHint: "Haz una foto de una página. La IA la lee y elige palabras que un niño reconoce en un dibujo.",
@@ -1552,6 +1676,32 @@ function webApp() {
       stOnlyExpert: "tik ekspertams, o eksperto žaidėjo nėra",
       stOnlyBeginner: "tik pradedantiesiems, o pradedančiojo žaidėjo nėra",
       stNear: (L, m) => `mažai žodžių iš ${L}, todėl paveikslėlių iš gretimų raidžių: ${m}`,
+      sylRange: (a, b) => (a === b ? `${a} skiem.` : `${a}–${b} skiemenys`),
+      stNoLevel: "per ilgas ar per trumpas abiem lygiams (Nustatymai › Raundai)",
+      listening: "Klausymas",
+      autoVoice: "Automatiškai (geriausias kalbai balsas)",
+      voiceEngine: "Balso variklis",
+      engDevice: "iPhone balsas",
+      engAI: "✦ DI balsas",
+      voice: "Balsas",
+      voiceFor: (l) => `Balsas ${l} žodžiams`,
+      gAll: "Visi", gFemale: "Moteriški", gMale: "Vyriški", gF: " (moteriškas)", gM: " (vyriškas)", gN: " (neutralus)",
+      speechModel: "Kalbos modelis",
+      howSound: "Kaip turi skambėti",
+      howSoundPh: "pvz., Šiltai, lėtai ir labai aiškiai, kaip mokytoja skaito 5 metų vaikui.",
+      legacyNote: "tts-1 modeliai nepriima stiliaus nurodymų ir gali tarti žodžius angliškai. Lietuviškai ir ispaniškai geriausiai skaito gpt-4o-mini-tts.",
+      speed: "Greitis", slow: "Lėtai", normal: "Įprastai", fast: "Greitai", faster: "Greičiau",
+      pitch: "Aukštis", lower: "Žemiau", higher: "Aukščiau",
+      testVoice: "Išbandyti balsą",
+      voicesCount: (n) => `Šiame iPhone balsų: ${n}`,
+      noVoices: "Šis iPhone skaito sistemos balsu. Jį galite pasirinkti iOS Nustatymai › Prieinamumas › Ištariamas turinys.",
+      moreVoices: "Natūralesni balsai: iOS Nustatymai › Prieinamumas › Ištariamas turinys › Balsai. Atsisiųskite patobulintą (Enhanced) ar Premium balsą ir jis atsiras čia.",
+      aiVoiceTip: "Nėra balso jūsų kalbai? ✦ DI balsas (OpenAI) gali ją skaityti.",
+      aiVoiceNeedsKey: "DI balsai yra iš OpenAI, todėl reikia OpenAI rakto, net jei kitoms DI funkcijoms naudojate Claude (Claude API neturi kalbos sintezės).",
+      addOpenAI: "Pridėti OpenAI raktą",
+      aiVoiceNote: "✦ Ištaria OpenAI su jūsų raktu, po vieną žodį; pirmą kartą žodis ištariamas per sekundę. Kiekvienas žodis išsaugomas šiame iPhone, todėl mokama tik kartą. Skaičiuojama DI nustatymuose › žetonų naudojimas kaip „Read aloud“.",
+      loadModelsNote: "DI nustatymuose įkelkite OpenAI modelius, kad matytumėte visus kalbos modelius.",
+      aiVoiceFailed: (m) => `DI balsas nepavyko (${m}). Naudotas iPhone balsas.`,
       bookWords: "Žodžiai iš knygų",
       photoUnreadable: "Nepavyko atidaryti nuotraukos. Pabandykite kitą.",
       bookHint: "Nufotografuokite puslapį. DI jį perskaitys ir atrinks žodžius, kuriuos vaikas atpažins paveikslėlyje.",
@@ -1706,7 +1856,7 @@ function webApp() {
   const LOOK = Object.assign({ theme: "ink", density: "comfortable", font: "sans", textSize: 1 }, init.look || {});
   let usageAsk = !!init.usageAsk;   // the one-time usage question, for a parent only (usage-analytics)
   const usageEvent = (params) => send("usage-event", params);
-  const CFG = Object.assign({ beginnerPics: 3, expertPics: 5 }, init.cfg || {});
+  const CFG = Object.assign({ beginnerPics: 3, expertPics: 5, beginnerMinSyl: 1, beginnerMaxSyl: 2, expertMinSyl: 3, expertMaxSyl: 6 }, init.cfg || {});
   const state = {
     version: 1,
     lang: LANGS[init.lang] ? init.lang : detectLang(),
@@ -1717,7 +1867,7 @@ function webApp() {
     books: (Array.isArray(init.books) ? init.books : []).filter((b) => b && LANGS[b.lang] && Array.isArray(b.words)),
   };
   // AI flags (ai-configuration): is there a key, and is the background job (AI coach) on. Kept fresh by useState().
-  const AIX = { hasKey: !!(init.ai && init.ai.hasKey), on: !(init.ai && init.ai.on === false) };
+  const AIX = { hasKey: !!(init.ai && init.ai.hasKey), on: !(init.ai && init.ai.on === false), hasOpenAI: !!(init.ai && init.ai.hasOpenAI) };
   function normalizeKid(k) {
     const num = (v) => (typeof v === "number" && isFinite(v) ? v : 0);
     const arr = (v) => (Array.isArray(v) ? v.filter((x) => x && typeof x === "object") : []);
@@ -1951,42 +2101,156 @@ function webApp() {
     return { m, l, h, seen: m + l + h };
   }
 
-  // ── Read words aloud: the iPhone's voices (Web Speech), Scriptable's Speech as a fallback ──
+  // ── Read words aloud (app-blueprints · read-aloud 1.0.1: voices, AI voice, Settings › Listening) ──
+  // iPhone voices through Web Speech (the chosen voice per game language, else the best one for it), or ✦ OpenAI
+  // voices through the Scriptable side (ttsaudio). Scriptable's Speech is the last fallback.
+  const SYN = window.speechSynthesis;
+  const NOVELTY = /^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Pipe Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Deranged|Hysterical)\b/i;
+  const GENDER = {};
+  ("Samantha Karen Moira Tessa Fiona Veena Victoria Allison Ava Susan Zoe Nicky Kate Serena Martha Catherine Isha Agnes Kathy Princess Vicki Joelle Flo Sandy Shelley Grandma " +
+   "Amélie Audrey Aurélie Marie Anna Petra Helena Alice Federica Paulina Mónica Monica Marisol Luciana Joana Milena Katya Yuna Kyoko Ting-Ting Tingting Sin-ji Mei-Jia Meijia " +
+   "Lekha Sara Nora Ellen Laura Zuzana Ioana Mariska Melina Yelda Damayanti Kanya Lesya Carmit Laila Amira Tünde Linh Montse Ewa Zosia Iveta Lana Satu Klara Alva Kristina Ellen Soumya Vani")
+    .split(" ").forEach((n) => (GENDER[n] = "f"));
+  ("Daniel Alex Fred Aaron Arthur Rishi Oliver Tom Gordon Lee Evan Nathan Rocko Eddy Reed Ralph Grandpa Thomas Jacques Markus Yannick Luca Diego Jorge Juan Carlos Felipe Xander " +
+   "Maged Majed Tarik Otoya Hattori Li-mu Yu-shu Aman Neel Dariush Rodrigo Martin Henrik Magnus Oskar Viktor")
+    .split(" ").forEach((n) => (GENDER[n] = "m"));
+  const baseName = (v) => v.name.replace(/\s*\((Enhanced|Premium|Compact)\)/i, "").replace(/\s*\(.*\)\s*$/, "").trim();
+  const genderOf = (v) => GENDER[baseName(v)] || "";
+  const quality = (v) => /premium/i.test(v.name + v.voiceURI) ? "Premium" : /enhanced/i.test(v.name + v.voiceURI) ? "Enhanced" : "";
+  const langName = (code) => { try { return new Intl.DisplayNames([LANGS[state.lang].locale], { type: "language" }).of(code) || code; } catch (e) { return code; } };
+  const OAI_VOICES = [["alloy", "n"], ["ash", "m"], ["ballad", "m"], ["coral", "f"], ["echo", "m"], ["fable", "m"], ["nova", "f"], ["onyx", "m"], ["sage", "f"], ["shimmer", "f"], ["verse", "m"], ["marin", "f"], ["cedar", "m"]];
+  const LEGACY_TTS = new Set(["alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer"]);
   let voices = [];
   function loadVoices() {
     try {
-      voices = (window.speechSynthesis && window.speechSynthesis.getVoices()) || [];
+      voices = SYN ? SYN.getVoices().filter((v) => !NOVELTY.test(v.name)) : [];
     } catch (e) {
       voices = [];
     }
+    try { if (cfgIsOpen) renderCfg(); } catch (e) {}   // settings blueprint: re-render Settings if it is open (declared further down)
   }
-  if (window.speechSynthesis) {
+  if (SYN) {
     loadVoices();
     try {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
+      if (SYN.addEventListener) SYN.addEventListener("voiceschanged", loadVoices);
+      else SYN.onvoiceschanged = loadVoices;
     } catch (e) {}
   }
-  function voiceFor(locale) {
-    const p = locale.slice(0, 2).toLowerCase();
-    const rank = (v) => (/premium/i.test(v.name + v.voiceURI) ? 2 : /enhanced/i.test(v.name + v.voiceURI) ? 1 : 0) + (String(v.lang).replace("_", "-") === locale ? 0.5 : 0);
-    return voices.filter((v) => String(v.lang || "").toLowerCase().replace("_", "-").indexOf(p) === 0).sort((a, b) => rank(b) - rank(a))[0] || null;
+  const sameLang = (v, locale) => String(v.lang || "").toLowerCase().replace("_", "-").indexOf(locale.slice(0, 2).toLowerCase()) === 0;
+  // The voice for a game language: the parent's pick for it, else the best (Premium, Enhanced) voice for that language.
+  function voiceFor(locale, lang) {
+    const saved = (state.settings.voiceURIs || {})[lang || state.lang];
+    const v0 = saved && voices.find((v) => v.voiceURI === saved);
+    if (v0) return v0;
+    const rank = (v) => (quality(v) === "Premium" ? 3 : quality(v) === "Enhanced" ? 2 : 0) + (String(v.lang).replace("_", "-") === locale ? 0.5 : 0);
+    return voices.filter((v) => sameLang(v, locale)).sort((a, b) => rank(b) - rank(a))[0] || null;
   }
-  function speakWord(w) {
-    const text = String(w).replace(/-/g, "");
+  const SILENT = (() => {   // 0.1 s of silence as a WAV, to unlock audio inside the tap
+    const n = 800, buf = new Uint8Array(44 + n), dv = new DataView(buf.buffer);
+    const w = (o, t0) => { for (let i = 0; i < t0.length; i++) buf[o + i] = t0.charCodeAt(i); };
+    w(0, "RIFF"); dv.setUint32(4, 36 + n, true); w(8, "WAVE"); w(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true); w(36, "data"); dv.setUint32(40, n, true); buf.fill(128, 44);
+    let str = ""; buf.forEach((x) => { str += String.fromCharCode(x); }); return "data:audio/wav;base64," + btoa(str);
+  })();
+  const au = new Audio(); au.preload = "auto"; au.setAttribute("playsinline", "");
+  let audioUnlocked = false;
+  function unlockAudio() {   // iOS lets audio start only inside a tap: play silence once, then the same element plays later
+    if (audioUnlocked) return;
+    try { au.src = SILENT; const pr = au.play(); if (pr && pr.catch) pr.catch(() => {}); audioUnlocked = true; } catch (e) {}
+  }
+  const aiAudio = {};   // word → MP3 for this session (the Scriptable side also keeps them on the phone)
+  let sayToken = 0;
+  function deviceSay(text) {
     const locale = LANGS[state.lang].locale;
     try {
-      if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
-        window.speechSynthesis.cancel();
+      if (SYN && window.SpeechSynthesisUtterance) {
+        SYN.cancel();
         const u = new SpeechSynthesisUtterance(text);
         u.lang = locale;
         const v = voiceFor(locale);
         if (v) u.voice = v;
-        u.rate = 0.8;
-        window.speechSynthesis.speak(u);
+        u.rate = Math.max(0.5, (+state.settings.voiceRate || 0.85) * 0.95);
+        u.pitch = +state.settings.voicePitch || 1;
+        SYN.speak(u);
         return;
       }
     } catch (e) {}
     send("say", { text, lang: locale });
+  }
+  function playMp3(b64) {
+    au.src = "data:audio/mpeg;base64," + b64;
+    const pr = au.play();
+    if (pr && pr.catch) pr.catch(() => {});
+  }
+  // onFail: what to do if the AI voice can't speak (the game falls back to the iPhone voice; the Settings test says why)
+  function speakWord(w, onFail) {
+    const text = String(w).replace(/-/g, "");
+    const my = ++sayToken;
+    try { if (SYN) SYN.cancel(); au.pause(); } catch (e) {}
+    if (state.settings.speechEngine === "ai" && AIX.hasOpenAI) {
+      const key = state.lang + "|" + text;
+      if (aiAudio[key]) return playMp3(aiAudio[key]);
+      send("ttsaudio", { text, lang: state.lang }, (ok, res) => {
+        if (my !== sayToken) return;   // another word came meanwhile
+        if (ok && res) {
+          aiAudio[key] = res;
+          playMp3(res);
+        } else {
+          deviceSay(text);
+          if (onFail) onFail(res);
+        }
+      });
+      return;
+    }
+    deviceSay(text);
+  }
+
+  // Settings › Listening (read-aloud blueprint, listenHTML), in the game's language
+  const SPK = "🔊 ";
+  function listenSecHTML() {
+    const sv = SET.settings, eng = sv.speechEngine === "ai" ? "ai" : "device";
+    const vseg = (k, opts) => `<div class="seg wide">${opts.map(([v, l]) => `<button class="${String(sv[k]) === String(v) ? "on" : ""}" data-act="voiceset" data-k="${k}" data-v="${v}">${esc(l)}</button>`).join("")}</div>`;
+    return `<h3 class="sec">${esc(t("listening"))}</h3>
+      <div class="lk-row"><span class="lk-l">${esc(t("voiceEngine"))}</span>${vseg("speechEngine", [["device", t("engDevice")], ["ai", t("engAI")]])}</div>` +
+      (eng === "ai" ? aiListenHTML(vseg) : deviceListenHTML(vseg));
+  }
+  function aiListenHTML(vseg) {
+    const sv = SET.settings;
+    if (!SET.hasOpenAI) return `<p class="hint">${esc(t("aiVoiceNeedsKey"))}</p>
+      <div class="aic-btns"><button class="sm primary" data-act="aiopen">${esc(t("addOpenAI"))}</button></div>`;
+    const model = sv.ttsModel || "gpt-4o-mini-tts", legacy = /^tts-1/.test(model), g = sv.voiceGender || "all";
+    const vs = OAI_VOICES.filter(([v, gg]) => (!legacy || LEGACY_TTS.has(v)) && (g === "all" || gg === g || v === sv.ttsVoice));
+    const loaded = ((SET.ttsModels || {}).list || []).map((m) => m.id);
+    const mlist = [model].concat(loaded.length ? loaded : ["gpt-4o-mini-tts", "tts-1-hd", "tts-1"]).filter((x, i, a) => a.indexOf(x) === i);
+    const gl = { f: t("gF"), m: t("gM"), n: t("gN") };
+    return `<div class="lk-row"><span class="lk-l">${esc(t("voice"))}</span>${vseg("voiceGender", [["all", t("gAll")], ["f", t("gFemale")], ["m", t("gMale")]])}
+        <select class="ttsvoicesel voicesel" aria-label="${esc(t("voice"))}">${vs.map(([v, gg]) => `<option value="${v}" ${v === sv.ttsVoice ? "selected" : ""}>${v[0].toUpperCase() + v.slice(1)}${gl[gg]}</option>`).join("")}</select></div>
+      <div class="lk-row"><span class="lk-l">${esc(t("speechModel"))}</span><select class="ttsmodelsel voicesel" aria-label="${esc(t("speechModel"))}">${mlist.map((m) => `<option value="${esc(m)}" ${m === model ? "selected" : ""}>${esc(m)}</option>`).join("")}</select></div>
+      ${legacy ? `<p class="hint">${esc(t("legacyNote"))}</p>` : `<div class="lk-row"><span class="lk-l">${esc(t("howSound"))}</span><textarea class="ttsinstr cfgsel" rows="3" maxlength="500" placeholder="${esc(t("howSoundPh"))}">${esc(sv.ttsInstructions || "")}</textarea></div>`}
+      <div class="lk-row"><span class="lk-l">${esc(t("speed"))}</span>${vseg("voiceRate", [[0.85, t("slow")], [1, t("normal")], [1.15, t("fast")], [1.3, t("faster")]])}</div>
+      <div class="aic-btns"><button class="sm" data-act="voicetest">${SPK}${esc(t("testVoice"))}</button><span class="note" id="voicemsg"></span></div>
+      <p class="hint">${esc(t("aiVoiceNote"))}${loaded.length ? "" : " " + esc(t("loadModelsNote"))}</p>`;
+  }
+  function deviceListenHTML(vseg) {
+    const lname = t("langNames")[state.lang], locale = LANGS[state.lang].locale;
+    if (!SYN || !voices.length) return `<p class="hint">${esc(t("noVoices"))}</p>`;
+    const sv = SET.settings, g = sv.voiceGender || "all";
+    const savedURI = (state.settings.voiceURIs || {})[state.lang];
+    const cur = savedURI ? voices.find((v) => v.voiceURI === savedURI) || null : null;   // null = Automatic
+    const shown = voices.filter((v) => g === "all" || genderOf(v) === g || v === cur);
+    const langs = {};
+    shown.forEach((v) => (langs[v.lang] = langs[v.lang] || []).push(v));
+    const rankLang = (l) => (sameLang({ lang: l }, locale) ? 0 : /^en/i.test(l) ? 50 : 100);
+    const order = Object.keys(langs).sort((x, y) => rankLang(x) - rankLang(y) || langName(x).localeCompare(langName(y)));
+    const label = (v) => `${baseName(v)}${quality(v) ? " — " + quality(v) : ""}${genderOf(v) ? (genderOf(v) === "f" ? t("gF") : t("gM")) : ""}`;
+    const hasLang = voices.some((v) => sameLang(v, locale));
+    return `${hasLang ? "" : `<p class="hint warnhint">${esc(t("voiceMissing", lname))}</p>`}
+      <div class="lk-row"><span class="lk-l">${esc(t("voiceFor", lname))}</span>${vseg("voiceGender", [["all", t("gAll")], ["f", t("gFemale")], ["m", t("gMale")]])}
+      <select class="voicesel devvoicesel" aria-label="${esc(t("voice"))}"><option value="" ${cur ? "" : "selected"}>${esc(t("autoVoice"))}${!cur && voiceFor(locale) ? " — " + esc(baseName(voiceFor(locale))) : ""}</option>${order.map((l) => `<optgroup label="${esc(langName(l))} (${esc(l)})">${langs[l].map((v) => `<option value="${esc(v.voiceURI)}" ${cur && v.voiceURI === cur.voiceURI ? "selected" : ""}>${esc(label(v))}</option>`).join("")}</optgroup>`).join("")}</select></div>
+      <div class="lk-row"><span class="lk-l">${esc(t("speed"))}</span>${vseg("voiceRate", [[0.85, t("slow")], [1, t("normal")], [1.15, t("fast")], [1.3, t("faster")]])}</div>
+      <div class="lk-row"><span class="lk-l">${esc(t("pitch"))}</span>${vseg("voicePitch", [[0.85, t("lower")], [1, t("normal")], [1.15, t("higher")]])}</div>
+      <div class="aic-btns"><button class="sm" data-act="voicetest">${SPK}${esc(t("testVoice"))}</button><span class="note">${esc(t("voicesCount", voices.length))}</span></div>
+      <p class="hint">${esc(t("moreVoices"))}${AIX.hasOpenAI ? "" : " " + esc(t("aiVoiceTip"))}</p>`;
   }
 
   // ── AI state: the Settings state carries it (ai-configuration Step 6); S is what the AI sheet renders ──
@@ -1999,7 +2263,7 @@ function webApp() {
   let aiOpen = false, aiArmed = null;
   const aiLoading = new Set();
   const PN = { anthropic: "Claude", openai: "OpenAI" };
-  const FEAT = { books: "Words from book photos", coach: "AI coach", test: "Connection tests", other: "Other" };
+  const FEAT = { books: "Words from book photos", coach: "AI coach", speech: "Read aloud", test: "Connection tests", other: "Other" };
   const fmtN = (n) => n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "k" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n);
   function rel(ts) {
     const m = Math.round((Date.now() - ts) / 60000);
@@ -2126,17 +2390,20 @@ function webApp() {
   }
   // Why a book word is (or isn't) in rounds right now. Blocking: book words Off, another language, no player at its
   // level. Informational: few words share its letter, so some pictures come from nearby letters.
-  const levelOfWord = (x) => (x.n <= 2 ? "beginner" : "expert");
+  const levelsOfWord = (x) => ["beginner", "expert"].filter((l) => fitsLevel(l, x));
+  const levelOfWord = (x) => { const ls = levelsOfWord(x), kids = ls.filter((l) => state.kids.some((k) => k.level === l)); return kids[0] || ls[0] || "none"; };
+  const levelIcons = (x) => levelsOfWord(x).map((l) => (l === "expert" ? "🦉" : "🐣")).join("") || "—";
   function wordNotes(x, lang, extra) {
     const notes = [];
     const lvl = levelOfWord(x);
     if (state.settings.bookMode === "off") notes.push({ k: "off", block: true, text: t("stOff") });
     if (lang !== state.lang) notes.push({ k: "lang", block: true, text: t("stLang", t("langNames")[lang]) });
-    if (!state.kids.some((k) => k.level === lvl)) notes.push({ k: "level", block: true, text: t(lvl === "expert" ? "stOnlyExpert" : "stOnlyBeginner") });
+    if (lvl === "none") notes.push({ k: "level", block: true, text: t("stNoLevel") });
+    else if (!state.kids.some((k) => k.level === lvl)) notes.push({ k: "level", block: true, text: t(lvl === "expert" ? "stOnlyExpert" : "stOnlyBeginner") });
     const k = x.k || firstLetter(lang, x.w);
     const partners = wordsFor(lang, true).concat(extra || [])
       .filter((o) => (o.k || firstLetter(lang, o.w)) === k && o.w !== x.w && o.e !== x.e).length;   // pictures may be any level, as in rounds
-    const need = (lvl === "expert" ? CFG.expertPics : CFG.beginnerPics) - 1;
+    const need = (lvl === "expert" ? CFG.expertPics : CFG.beginnerPics) - 1;   // "none": no level fits, partners don't matter
     if (partners < need) notes.push({ k: "near", block: false, text: t("stNear", caseWord(k), need - partners) });
     return notes;
   }
@@ -2189,7 +2456,7 @@ function webApp() {
         if (x.known) return "";
         const ns = wordNotes(x, book.lang, chosen);
         const icons = ns.map((n) => noteIcon[n.k]).join("");
-        return `<button class="bkw ${x.on ? "on" : ""} ${ns.some((n) => n.block) ? "blocked" : ""}" data-action="bookToggle" data-i="${i}"><span class="bke">${x.e}</span><span>${esc(x.w)}</span><span class="bklvl">${levelOfWord(x) === "expert" ? "🦉" : "🐣"}${icons}</span></button>`;
+        return `<button class="bkw ${x.on ? "on" : ""} ${ns.some((n) => n.block) ? "blocked" : ""}" data-action="bookToggle" data-i="${i}"><span class="bke">${x.e}</span><span>${esc(x.w)}</span><span class="bklvl">${levelIcons(x)}${icons}</span></button>`;
       }).join("")}</div>
       ${reviewNotesHTML(fresh.filter((x) => x.on), chosen)}`
         : `<p class="upds">${esc(t("noNewWords"))}</p>`}
@@ -2301,15 +2568,15 @@ function webApp() {
     const first = entries.reduce((n, [, st]) => n + st.c, 0);
     return {
       lang, uiLang: state.lang, level: kid.level,
-      ages: kid.level === "expert" ? "9-11" : "4-6", syllables: kid.level === "expert" ? "3 to 6" : "1 to 2",
+      ages: kid.level === "expert" ? "9-11" : "4-6", syllables: sylRange(kid.level).join(" to "),
       answered: seen, firstTryRate: seen ? Math.round((first / seen) * 100) : 0,
       hard, masteredCount: mastered.length, masteredSample: mastered.slice(-12), weakLetters,
-      vocabulary: wordsFor(lang, true).filter((x) => (kid.level === "expert" ? x.n >= 3 : x.n <= 2)).map((x) => plain(x.w)),
+      vocabulary: wordsFor(lang, true).filter((x) => fitsLevel(kid.level, x)).map((x) => plain(x.w)),
     };
   }
   function applyCoach(kid, res) {
     const lang = LANGS[res.lang] ? res.lang : state.lang;
-    const fits = (x) => (kid.level === "expert" ? x.n >= 3 && x.n <= 6 : x.n <= 2);
+    const fits = (x) => fitsLevel(kid.level, x);
     const words = cleanAiWords(res.words, lang).filter((x) => !x.known && fits(x));
     let src = state.books.find((b) => b.coachKid === kid.id && b.lang === lang);
     if (words.length) {
@@ -2604,11 +2871,20 @@ function webApp() {
   }
   // Beginner: 3 pictures. Expert: 5 pictures (both set in Settings › Rounds). All pictures share the word's
   // first letter; if the words can't fill the chosen number, the round uses the original number instead.
-  const fitsLevel = (level, w) => (level === "expert" ? w.n >= 3 && w.n <= 6 : w.n <= 2);
+  // Word length per level, in syllables (Settings › Rounds); a range set backwards still works.
+  function sylRange(level, def) {
+    const a = def ? (level === "expert" ? 3 : 1) : +(level === "expert" ? CFG.expertMinSyl : CFG.beginnerMinSyl) || 1;
+    const b = def ? (level === "expert" ? 6 : 2) : +(level === "expert" ? CFG.expertMaxSyl : CFG.beginnerMaxSyl) || 6;
+    return [Math.min(a, b), Math.max(a, b)];
+  }
+  const fitsLevel = (level, w, def) => { const [lo, hi] = sylRange(level, def); return w.n >= lo && w.n <= hi; };
+  const sylText = (level) => { const [lo, hi] = sylRange(level); return t("sylRange", lo, hi); };
   // Built-in words need enough same-letter partners; words you added from books (and the AI coach) always play:
   // when their letter is short of partners, the other pictures come from the nearest letters.
   function poolForN(kid, n) {
-    return wordsFor(state.lang).filter((w) => fitsLevel(kid.level, w) && (w.src || sameLetter(w).length >= n - 1));
+    const pick = (def) => wordsFor(state.lang).filter((w) => fitsLevel(kid.level, w, def) && (w.src || sameLetter(w).length >= n - 1));
+    const list = pick(false);
+    return list.length ? list : pick(true);   // a range with no words at all falls back to the level's original one
   }
   // The language's letters in alphabetical order, to find a letter's neighbours (z → ž, y, v…).
   const letterOrderCache = {};
@@ -2801,6 +3077,7 @@ function webApp() {
 
   // ── Game logic ──
   function startGame(kid) {
+    if (kid.speak !== "off") unlockAudio();
     game = { kidId: kid.id, deck: [], cur: null, options: [], missed: false, locked: false, streak: 0, last: null, wrong: new Set(), round: 0, recent: [], spoken: 0 };
     nextRound();
     go({ name: "game" });
@@ -2837,6 +3114,7 @@ function webApp() {
   }
   function pick(btn) {
     if (!game || game.locked) return;
+    unlockAudio();
     const kid = getKid(game.kidId);
     if (!kid) return go({ name: "home" });
     const i = Number(btn.dataset.i);
@@ -2951,7 +3229,7 @@ function webApp() {
     const lvl = (v, icon) => `
       <button class="lvl ${d.level === v ? "on" : ""}" data-action="setLevel" data-v="${v}" ${canChangeLevel ? "" : "disabled"}>
         <div class="lvlIcon">${icon}</div><b>${esc(t(v))}</b>
-        <small>${esc(t(v + "Ages"))}</small><small>${esc(t(v + "Desc"))}</small>
+        <small>${esc(t(v + "Ages"))}</small><small>${esc(sylText(v))}</small>
       </button>`;
     return `
       <div class="bar"><button class="icon" data-action="cancelEdit">⬅</button><h2>${esc(d.id ? t("editPlayer") : t("newPlayer"))}</h2><span></span></div>
@@ -2982,7 +3260,8 @@ function webApp() {
       <div class="pics">${game.options
         .map((o, i) => `<button class="pic ${game.wrong.has(i) ? "wrong" : ""}" style="background:${PIC_BG[i]}" data-action="pick" data-i="${i}"><span class="emo">${o.e}</span></button>`)
         .join("")}</div>
-      <div class="wordcard"><div class="word" id="word">${wordHTML(game.cur.w)}</div>${kid.speak !== "off" ? `<button class="hear" data-action="hear" aria-label="${esc(t("hearWord"))}">🔊</button>` : ""}</div>
+      <div class="wordcard"><div class="word" id="word">${wordHTML(game.cur.w)}</div></div>
+      ${kid.speak !== "off" ? `<div class="hearrow"><button class="hear" data-action="hear" aria-label="${esc(t("hearWord"))}">🔊</button></div>` : ""}
       <div class="feedback" id="fb"></div>
       <div class="gamefoot">${levelBadge(kid.level)}<button class="btn small ghost" data-action="skip">${esc(t("skip"))} ⏭</button></div>`;
   };
@@ -3111,7 +3390,7 @@ function webApp() {
         <details class="bkdetail"><summary>${esc(t("showWords"))}</summary>
         ${st.words.map((x, i) => {
           const ns = st.notes[i], block = ns.some((n) => n.block);
-          return `<div class="bkwrow ${block ? "blocked" : ""}"><span class="bke">${x.e}</span><b>${esc(x.w)}</b><span class="bklvl">${levelOfWord(x) === "expert" ? "🦉" : "🐣"}</span>
+          return `<div class="bkwrow ${block ? "blocked" : ""}"><span class="bke">${x.e}</span><b>${esc(x.w)}</b><span class="bklvl">${levelIcons(x)}</span>
             <small>${ns.length ? ns.map((n) => noteIcon[n.k] + " " + esc(n.text)).join("; ") : "✅ " + esc(t("stOk"))}</small></div>`;
         }).join("")}</details></div>`;
     }).join("");
@@ -3136,7 +3415,7 @@ function webApp() {
       <div class="srow"><div class="grow"><b>${esc(t("smartOrder"))}</b><small>${esc(t("smartOrderHint"))}</small></div>
         <button class="switch ${sv.smart ? "on" : ""}" data-act="toggle" data-v="smart" aria-label="${esc(t("smartOrder"))}"></button></div>
       <div class="lk-row"><span class="lk-l">${esc(t("bookMode"))}</span>${segRow("bookMode", [["mix", t("modeMix")], ["first", t("modeFirst")], ["off", t("modeOff")]], sv.bookMode, "set")}</div>
-      <div class="srow"><div class="grow"><b>🔊 ${esc(t("readAloud"))}</b><small>${esc(v ? t("voiceFound", lname, v.name) : t("voiceMissing", lname))}</small></div></div>`;
+`;
   }
   VIEWS.parent = () => `
       <div class="bar"><button class="icon" data-action="lockParent" aria-label="${esc(t("parents"))}">⬅</button><h2>👨‍👩‍👧 ${esc(t("parentArea"))}</h2><button class="icon" data-action="openSettings" aria-label="${esc(CT.title)}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button></div>
@@ -3314,6 +3593,7 @@ function webApp() {
       <h3 class="sec">${esc(CT.money)}</h3>
       <div class="lk-row"><span class="lk-l">${esc(t("currency"))}</span>${segRow("currency", SET.currencies.map((c) => [c, c]), s.currency, "set")}</div>
       ${learningSecHTML()}
+      ${listenSecHTML()}
       <h3 class="sec">${esc(CT.parent)}</h3>
       <button class="srow act" data-act="changePin"><div class="grow"><b>🔑 ${esc(t("changePin"))}</b><small>${esc(CT.pinHelp)}</small></div><span class="chev" aria-hidden="true">›</span></button>
       <p class="hint">${esc(t("storageNote"))}</p>
@@ -3339,6 +3619,13 @@ function webApp() {
     AIX.hasKey = !!st.hasKey;
     AIX.on = st.settings.ai !== false;
     Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, currency: st.settings.currency, smart: st.settings.smart !== false, bookMode: st.settings.bookMode || "mix" });
+    const vk = ["speechEngine", "voiceRate", "voicePitch", "ttsModel", "ttsVoice", "ttsInstructions"];
+    const before = JSON.stringify(vk.map((x) => state.settings[x]));
+    vk.forEach((x) => { if (st.settings[x] !== undefined) state.settings[x] = st.settings[x]; });
+    state.settings.voiceURIs = st.voiceURIs || state.settings.voiceURIs || {};
+    if (JSON.stringify(vk.map((x) => state.settings[x])) !== before) Object.keys(aiAudio).forEach((x) => delete aiAudio[x]);
+    AIX.hasOpenAI = !!st.hasOpenAI;
+    if (st.cfg) Object.assign(CFG, st.cfg);
     if (prevMode !== state.settings.bookMode) booksChanged();
     if (hadKey !== AIX.hasKey && view.name === "parent" && !cfgIsOpen) render();
     Object.assign(CFG, st.cfg);
@@ -3356,6 +3643,13 @@ function webApp() {
     const act = el.dataset.act, v = el.dataset.v, k = el.dataset.k;
     if (act === "cfgclose") return closeSettings();
     if (act === "aiopen") { aiOpen = true; return renderAI(); }
+    if (act === "voiceset") { const val = k === "voiceRate" || k === "voicePitch" ? +v : v; SET.settings[k] = val; state.settings[k] = val; renderCfg(); return sendCfg("set", { k, v: val }); }
+    if (act === "voicetest") {
+      unlockAudio();
+      const vm = document.getElementById("voicemsg");
+      if (vm) vm.textContent = "";
+      return speakWord(t("sample"), (err) => { const m = document.getElementById("voicemsg"); if (m) m.textContent = t("aiVoiceFailed", String(err || "").slice(0, 80)); });
+    }
     if (act === "look") { const val = k === "textSize" ? +v : v; LOOK[k] = val; applyLook(); renderCfg(); return sendCfg("set", { k, v: val }); }
     if (act === "set") { SET.settings[k] = v; renderCfg(); return sendCfg("set", { k, v }); }
     if (act === "toggle") { SET.settings[v] = !SET.settings[v]; renderCfg(); return sendCfg("set", { k: v, v: SET.settings[v] }); }
@@ -3387,6 +3681,11 @@ function webApp() {
   }
   function cfgChange(e) {
     e.stopPropagation();
+    const c = e.target.classList;
+    if (c.contains("devvoicesel")) { state.settings.voiceURIs = Object.assign({}, state.settings.voiceURIs, { [state.lang]: e.target.value }); return sendCfg("set", { k: "voiceURI", v: e.target.value, lang: state.lang }); }
+    if (c.contains("ttsvoicesel")) { state.settings.ttsVoice = e.target.value; return sendCfg("set", { k: "ttsVoice", v: e.target.value }); }
+    if (c.contains("ttsmodelsel")) { state.settings.ttsModel = e.target.value; return sendCfg("set", { k: "ttsModel", v: e.target.value }); }
+    if (c.contains("ttsinstr")) { state.settings.ttsInstructions = e.target.value; return sendCfg("set", { k: "ttsInstructions", v: e.target.value.slice(0, 500) }); }
     if (e.target.classList.contains("cfgin")) sendCfg("cfg", { k: e.target.dataset.k, v: e.target.value });
   }
   applyLook();
@@ -3570,6 +3869,7 @@ function webApp() {
       openSettings();
     },
     hear() {
+      unlockAudio();
       if (game && game.cur) speakWord(game.cur.w);
     },
     speakMode(b) {
@@ -4029,7 +4329,7 @@ const safeJSON = (x) => JSON.stringify(x === undefined ? null : x).replace(/</g,
 // The state the page starts from, handed over by bootApp() (never inlined in buildHTML): the game's save plus the settings it reads.
 function clientState() {
   return Object.assign({}, gameData || {}, { settings: gameSettings(), look: lookState(), cfg: cfgValues(), usageAsk: usageAvailable() && !settings.usageAsked && !settings.shareUsage,
-    ai: { hasKey: !!aiKey(), on: settings.ai !== false } });
+    ai: { hasKey: !!aiKey(), on: settings.ai !== false, hasOpenAI: !!keyFor("openai") } });
 }
 
 // The page, without any data: the launch screen and a "Loading your players…" placeholder. Only settings are read here.
@@ -4170,6 +4470,9 @@ async function handleAction(head, p) {
         return answer(true, Object.assign({ by: PROVIDERS[pr], lang: (m.summary || {}).lang }, out));
       } catch (e) { return answer(false, String((e && e.message) || e)); }
     }
+    case "ttsaudio":   // one word of AI speech, returned to the page as base64 MP3 (read-aloud)
+      try { return answer(true, await aiSpeech(m.text, m.lang)); }
+      catch (e) { return answer(false, String((e && e.message) || e)); }
     case "say":   // fallback voice when the page has no Web Speech
       try { Speech.speak(String(m.text || "")); } catch (e) {}
       return;
@@ -4189,6 +4492,13 @@ async function handleAction(head, p) {
     else if (p.e === "payout_made") track("payout_made");
     else if (p.e === "player_added") track("player_added");
     return;
+  }
+  if (head === "set" && p.k === "voiceURI") {   // the iPhone voice, one per game language
+    const lang = ["lt", "en", "es"].includes(p.lang) ? p.lang : "lt";
+    settings.voiceURIs = settings.voiceURIs || {};
+    if (p.v) settings.voiceURIs[lang] = String(p.v).slice(0, 300); else delete settings.voiceURIs[lang];
+    saveSettings();
+    return answer(true, settingsState());
   }
   if (head === "set") {
     if (!setSetting(p.k, p.v)) return answer(false, "That setting can't be changed here.");
