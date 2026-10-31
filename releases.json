@@ -4,6 +4,64 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.13.0",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Stickers talk with AI",
+        "lt": "Lipdukai kalba su DI",
+        "es": "Las pegatinas hablan con IA"
+      },
+      "highlights": [
+        {
+          "icon": "✦",
+          "title": {
+            "en": "Fresh lines from AI",
+            "lt": "Nauji sakiniai iš DI",
+            "es": "Frases nuevas con IA"
+          },
+          "text": {
+            "en": "With an AI key, AI writes what each sticker says, new every couple of days.",
+            "lt": "Su DI raktu ką sako lipdukas, parašo DI – vis naujai kas porą dienų.",
+            "es": "Con una clave de IA, la IA escribe lo que dice cada pegatina."
+          }
+        },
+        {
+          "icon": "🔊",
+          "title": {
+            "en": "Said in the AI voice",
+            "lt": "Ištaria DI balsas",
+            "es": "Dicho con la voz de IA"
+          },
+          "text": {
+            "en": "With an OpenAI key the AI voice says it; otherwise the iPhone voice.",
+            "lt": "Su OpenAI raktu ištaria DI balsas, kitaip – iPhone balsas.",
+            "es": "Con una clave de OpenAI lo dice la voz de IA; si no, la del iPhone."
+          }
+        },
+        {
+          "icon": "🔒",
+          "title": {
+            "en": "No names to AI",
+            "lt": "Vardai DI nesiunčiami",
+            "es": "Sin nombres para la IA"
+          },
+          "text": {
+            "en": "Lines are written without the kid's name; it is added on the iPhone.",
+            "lt": "Sakiniai rašomi be vaiko vardo – jis įrašomas telefone.",
+            "es": "Las frases se escriben sin el nombre; se añade en el iPhone."
+          }
+        }
+      ],
+      "changes": [
+        "Talking stickers: with an AI key and the new AI › What AI does › Talking stickers switch (on by default), a tapped sticker asks AI for 6 lines in the game's language (one request per sticker and language, kept on the iPhone for 2 days, shared by all kids) and takes them in turn",
+        "Lines use a {NAME} placeholder that the page fills in (Lithuanian vocative); the AI never gets the kid's name; links, empty and long lines are dropped",
+        "Voice: with an OpenAI key the line is said in the AI character voice (even when words use the iPhone voice); otherwise the iPhone voice",
+        "Falls back to the built-in line when AI is off, has no key, fails, or takes longer than 8 s (a late answer is kept for the next tap); a thinking bubble shows while the line is written",
+        "Token usage lists the new feature as Talking stickers"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.12.0",
       "date": "2026-11-01",
       "title": {
