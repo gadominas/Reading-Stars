@@ -6,6 +6,10 @@
  * READING STARS ⭐ — a picture-and-word reading game for kids (Scriptable, iOS)
  *
  * - Three pictures on top, one big word below split into syllables (na-mas, kar-vė).
+ * - Words from books: photograph a page, AI reads it and adds picture words (parent zone).
+ * - Learning: smart word order (spaced repetition, no AI) and an AI coach that picks practice words.
+ * - Read aloud: each kid can hear the word when it's shown or after answering.
+ * - AI settings (Claude or OpenAI): keys in the iOS Keychain only, models, token usage.
  * - In-app updates: checks releases.json on GitHub at start and offers new versions
  *   (Update now / Later = 2 days). See docs/RELEASING.md.
  * - Kid taps the picture that matches the word. First-try correct answer = +1 token,
@@ -38,7 +42,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.7.0';
+const VERSION = '1.8.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -61,10 +65,18 @@ const BLUEPRINTS_REPO = 'https://github.com/gadominas/app-blueprints';
 const BLUEPRINTS = [
   { id: 'in-app-updates', name: 'In-app updates', version: '1.0.0', since: '1.1.0' },
   { id: 'settings', name: 'Settings', version: '1.1.0', since: '1.6.0' },
+  { id: 'ai-configuration', name: 'AI configuration', version: '1.0.0', since: '1.8.0' },
   { id: 'launch-screen', name: 'Launch screen', version: '1.0.0', since: '1.3.0' },
   { id: 'widgets', name: 'Widgets', version: '1.0.0', since: '1.4.0' },
   { id: 'usage-analytics', name: 'Anonymous usage analytics', version: '1.1.0', since: '1.7.0' },
 ];
+
+// AI providers. Keychain names are unique per app; models are defaults until the user picks one.
+const AI = {
+  anthropic: { key: "READINGSTARS_ANTHROPIC_KEY", model: "claude-haiku-5-5" },
+  openai:    { key: "READINGSTARS_OPENAI_KEY",    model: "gpt-4o-mini" },
+};
+const PROVIDERS = { anthropic: "Claude", openai: "OpenAI" };
 
 // ───────────────────────── Storage (native side) ─────────────────────────
 
@@ -135,6 +147,7 @@ function keepBroken(fm, p, n, txt) {
 let gameData = null;
 let dataLoaded = false;   // data.json is only written once it was read, so a slow start can never save an empty game over it
 async function loadData() {
+  if (!usageRead) loadUsage();   // AI token counts: a local file, so it never waits on iCloud
   loadIssues.length = 0;   // loadRepaired is kept, so a damaged settings.json (read before this) still gets its toast
   gameData = await load("data", null);
   // On the phone but missing, unreadable or damaged (not just late from iCloud): the backup takes its place, as before.
@@ -193,6 +206,11 @@ const settings = {
   wordCase: "cap", sound: true, currency: "EUR",
   checkUpdates: true,   // offer new versions from GitHub (asks again 2 days after "Later")
   shareUsage: false, usageAsked: false,  // anonymous usage counts: off until a parent agrees
+  smart: true, bookMode: "mix",   // Learning: smart word order; book words Mixed in / First / Off
+  aiProvider: "anthropic",   // the provider marked "In use" (ai-configuration)
+  ai: true,                  // background AI jobs on/off ("What AI does"): the AI coach
+  // model:  { anthropic: "…", openai: "…" }   set when the user picks a model
+  // models: { anthropic: { at, list: [{ id, name }] }, openai: … }   cached model lists
   cfg: {},
 };
 const saveSettings = () => { if (!settingsOk) return false; try { fm.writeString(settingsPath, JSON.stringify(settings)); return true; } catch (e) { return false; } };
@@ -253,6 +271,7 @@ const SET_KEYS = {
   font: (v) => ["sans", "serif"].includes(v), textSize: (v) => [0.92, 1, 1.12, 1.25].includes(+v),
   wordCase: (v) => ["cap", "upper", "lower"].includes(v), currency: (v) => CURRENCY_CODES.includes(v),
   sound: "bool", checkUpdates: "bool", shareUsage: "bool",
+  smart: "bool", bookMode: (v) => ["mix", "first", "off"].includes(v), ai: "bool",
 };
 function setSetting(k, v) {
   const s = SET_KEYS[k];
@@ -271,6 +290,10 @@ async function loadSettings() {
   const d = { theme: "ink", density: "comfortable", font: "sans", textSize: 1, wordCase: "cap", currency: "EUR" };
   for (const k of Object.keys(d)) if (!setSetting(k, settings[k])) settings[k] = d[k];
   settings.sound = settings.sound !== false;
+  settings.smart = settings.smart !== false;
+  settings.ai = settings.ai !== false;
+  if (!["mix", "first", "off"].includes(settings.bookMode)) settings.bookMode = "mix";
+  if (!PROVIDERS[settings.aiProvider]) settings.aiProvider = "anthropic";
   settings.cfg = settings.cfg && typeof settings.cfg === "object" ? settings.cfg : {};
 }
 // Everything tunable lives here; the Settings screen edits these (stored in settings.cfg, defaults below).
@@ -328,7 +351,7 @@ function lookState() {
            shown: settings.theme === "auto" ? (Device.isUsingDarkAppearance() ? "night" : "ink") : settings.theme };
 }
 // What the game reads from settings, and what the Settings sheet shows.
-const gameSettings = () => ({ wordCase: settings.wordCase, sound: settings.sound, currency: settings.currency });
+const gameSettings = () => ({ wordCase: settings.wordCase, sound: settings.sound, currency: settings.currency, smart: settings.smart, bookMode: settings.bookMode });
 function settingsState() {
   return {
     settings: Object.fromEntries(Object.keys(SET_KEYS).map((k) => [k, settings[k]])),
@@ -337,7 +360,195 @@ function settingsState() {
     palettes: PALETTES, currencies: CURRENCY_CODES, version: VERSION, appName: "Reading Stars",
     usageAvailable: usageAvailable(), usageStatus: usageStatus(),
     blueprints: BLUEPRINTS, blueprintsRepo: BLUEPRINTS_REPO,
+    // ai-configuration Step 6: keys only masked
+    ai: aiState(),
+    hasKey: !!aiKey(), aiProvider: settings.aiProvider,
   };
+}
+
+// ───────────────────────── AI configuration ─────────────────────────
+// Follows github.com/gadominas/app-blueprints · blueprints/ai-configuration.md (reference: BlogPulse.js).
+// Every AI request goes through aiCall. Keys live in the iOS Keychain only; the page sees them masked.
+
+// Token usage lives in its own small file on this iPhone (local, never iCloud), read in loadData() (safe-startup).
+const aiFm = FileManager.local();
+const usagePath = aiFm.joinPath(aiFm.documentsDirectory(), APP_ID + "-usage.json");
+let usage = { since: Date.now(), p: {} }, usageRead = false;
+function loadUsage() {
+  try { if (aiFm.fileExists(usagePath)) usage = JSON.parse(aiFm.readString(usagePath)); } catch (e) { startLog("usage.json unreadable: " + e); }
+  if (!usage || typeof usage !== "object" || !usage.p) usage = { since: Date.now(), p: {} };
+  usageRead = true;
+}
+function writeUsage() {
+  if (!usageRead) return;   // never save over counts that were never read
+  try { aiFm.writeString(usagePath, JSON.stringify(usage)); } catch (e) {}
+}
+
+const keyFor   = (p) => Keychain.contains(AI[p].key) ? Keychain.get(AI[p].key) : null;
+const aiKey    = () => keyFor(settings.aiProvider);   // the key of the provider in use
+const modelFor = (p) => (settings.model && settings.model[p]) || AI[p].model;
+const maskKey  = (k) => k ? (k.length > 14 ? k.slice(0, 7) + "…" + k.slice(-4) : "…" + k.slice(-4)) : null;
+
+async function askKey(p) {
+  const cur = keyFor(p);
+  const al = new Alert();
+  al.title = `${PROVIDERS[p]} API key`;
+  al.message = cur ? `The saved key ends in …${cur.slice(-4)}. Paste a new key to replace it.`
+                   : "Paste your API key. It's stored in the iOS Keychain on this device only.";
+  al.addSecureTextField(p === "openai" ? "sk-…" : "sk-ant-…", "");
+  al.addAction("Save key");
+  al.addCancelAction("Cancel");
+  if (await al.present() !== 0) return false;
+  const v = al.textFieldValue(0).trim();
+  if (!v) return false;
+  Keychain.set(AI[p].key, v);
+  if (!aiKey()) settings.aiProvider = p;   // first key saved: use that provider
+  return true;
+}
+
+function removeKey(p) {
+  if (Keychain.contains(AI[p].key)) Keychain.remove(AI[p].key);
+}
+
+// The only way the app calls AI. feature: a short tag for the usage table ("books", "coach", "test").
+// provider: defaults to the one in use; "Test connection" passes the card's provider.
+// images: optional photos sent with the user text, as base64 strings (JPEG) or { data, type } (book pages).
+async function aiCall(system, user, maxTokens = 2500, feature = "other", provider = settings.aiProvider, images = []) {
+  const key = keyFor(provider);
+  if (!key) throw new Error(`No ${PROVIDERS[provider]} key saved`);
+  const openai = provider === "openai", model = modelFor(provider);
+  const r = new Request(openai ? "https://api.openai.com/v1/chat/completions" : "https://api.anthropic.com/v1/messages");
+  r.method = "POST";
+  r.timeoutInterval = 90;
+  const imgs = images.map((i) => typeof i === "string" ? { data: i } : i);
+  const oaUser = imgs.length ? [{ type: "text", text: user }].concat(imgs.map((i) => ({ type: "image_url", image_url: { url: `data:${i.type || "image/jpeg"};base64,${i.data}` } }))) : user;
+  const anUser = imgs.length ? imgs.map((i) => ({ type: "image", source: { type: "base64", media_type: i.type || "image/jpeg", data: i.data } })).concat([{ type: "text", text: user }]) : user;
+  if (openai) {
+    r.headers = { "Authorization": "Bearer " + key, "Content-Type": "application/json" };
+    r.body = JSON.stringify({ model, messages: [{ role: "system", content: system }, { role: "user", content: oaUser }] });
+  } else {
+    r.headers = { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" };
+    r.body = JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: "user", content: anUser }] });
+  }
+  const j = await r.loadJSON();
+  if (j.error) throw new Error(j.error.message || "AI request failed");
+  const u = j.usage || {};
+  recordUsage(provider, model, feature,
+    openai ? (u.prompt_tokens || 0) : (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0),
+    openai ? (u.completion_tokens || 0) : (u.output_tokens || 0));
+  return openai ? ((j.choices && j.choices[0] && j.choices[0].message.content) || "")
+                : (j.content || []).map((c) => c.text || "").join("");
+}
+
+// For prompts that ask for JSON: tolerate code fences and stray text around it.
+function parseJSON(txt) {
+  const s = String(txt).replace(/```json|```/g, "").trim();
+  const a = s.search(/[\[{]/), b = Math.max(s.lastIndexOf("}"), s.lastIndexOf("]"));
+  return JSON.parse(s.slice(a, b + 1));
+}
+
+const dayKey = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+function recordUsage(provider, model, feature, tin, tout) {
+  const P = usage.p[provider] = usage.p[provider] || { calls: 0, in: 0, out: 0, models: {}, features: {}, days: {} };
+  const b = (o, k) => o[k] = o[k] || { calls: 0, in: 0, out: 0 };
+  for (const x of [P, b(P.models, model), b(P.features, feature), b(P.days, dayKey())]) {
+    x.calls++; x.in += tin; x.out += tout;
+  }
+  const days = Object.keys(P.days).sort();
+  while (days.length > 400) delete P.days[days.shift()];   // keep about 13 months of days
+  writeUsage();   // save after every call: the app can be closed at any moment
+}
+
+function resetUsage() { usage = { since: Date.now(), p: {} }; writeUsage(); }
+
+async function fetchModels(p) {
+  const key = keyFor(p);
+  if (!key) throw new Error(`Add a ${PROVIDERS[p]} key first`);
+  const r = new Request(p === "openai" ? "https://api.openai.com/v1/models" : "https://api.anthropic.com/v1/models?limit=100");
+  r.headers = p === "openai" ? { "Authorization": "Bearer " + key } : { "x-api-key": key, "anthropic-version": "2023-06-01" };
+  r.timeoutInterval = 20;
+  const j = await r.loadJSON();
+  if (j.error) throw new Error(j.error.message || "Couldn't load models");
+  let list = (j.data || []).map((m) => ({
+    id: m.id, name: m.display_name || m.id,
+    t: m.created_at ? Date.parse(m.created_at) : (m.created || 0) * 1000,
+  }));
+  // OpenAI lists every model the key can reach; keep only the ones that write text.
+  if (p === "openai") list = list.filter((m) => /^(gpt-|o\d|chatgpt-)/.test(m.id)
+    && !/(audio|realtime|tts|transcribe|image|search|embedding|instruct|moderation)/.test(m.id));
+  list.sort((a, b) => b.t - a.t);
+  settings.models = settings.models || {};
+  settings.models[p] = { at: Date.now(), list: list.map((m) => ({ id: m.id, name: m.name })) };
+  return list.length;
+}
+
+// The state sent to the page: keys only masked.
+function aiState() {
+  return {
+      provider: settings.aiProvider,
+      keys: Object.fromEntries(Object.keys(PROVIDERS).map((p) => [p, maskKey(keyFor(p))])),
+      model: Object.fromEntries(Object.keys(PROVIDERS).map((p) => [p, modelFor(p)])),
+      models: settings.models || {}, usage, today: dayKey(),
+  };
+}
+
+// ───────────────────────── Words from a book photo · AI coach (native side) ─────────────────────────
+
+const LANG_NAMES = { lt: "Lithuanian", en: "English", es: "Spanish" };
+
+// Camera or photo library → JPEG (long edge ≤ 1568 px, what vision models read best) as base64.
+async function takeBookPhoto(source) {
+  let img = null;
+  try {
+    img = source === "library" ? await Photo.fromLibrary() : await Photo.fromCamera();
+  } catch (e) {
+    throw new Error("cancelled");
+  }
+  if (!img) throw new Error("cancelled");
+  const s = img.size, k = Math.min(1, 1568 / Math.max(s.width, s.height));
+  if (k < 1) {
+    const dc = new DrawContext();
+    dc.size = new Size(Math.round(s.width * k), Math.round(s.height * k));
+    dc.opaque = true;
+    dc.respectScreenScale = false;
+    dc.drawImageInRect(img, new Rect(0, 0, dc.size.width, dc.size.height));
+    img = dc.getImage();
+  }
+  return Data.fromJPEG(img).toBase64String();
+}
+
+const BOOK_SYSTEM = "You build vocabulary for a children's picture reading game. Reply with JSON only, no other text.";
+function bookPrompt(gameLang) {
+  return `Read the text in this photo of a book or page.
+Return JSON: {"lang": "lt" | "en" | "es" | "other", "title": "the book or page title if visible, else a 2-4 word description", "text": "the recognised text, at most 1200 characters", "words": [{"word": "na-mas", "emoji": "🏠"}]}
+Rules for "words":
+- Up to 30 concrete nouns from the text that a child can recognise in a picture (animals, food, objects, places, vehicles, nature, body parts).
+- In the language of the text. Dictionary form: Lithuanian nominative singular; Spanish and English singular unless the thing is normally plural.
+- Lowercase. Skip names of people and places, abstract words, verbs and adjectives.
+- Split into syllables with "-" following that language's hyphenation rules, 1 to 6 syllables.
+- Exactly one emoji that clearly shows the thing. Skip a word if no emoji shows it clearly.
+- No duplicates.
+If the text is not Lithuanian, English or Spanish, set "lang" to "other" and leave "words" empty. The game is currently in ${LANG_NAMES[gameLang] || "Lithuanian"}.`;
+}
+
+const COACH_SYSTEM = "You are a reading coach for a children's picture reading game. Reply with JSON only, no other text.";
+function coachPrompt(m) {
+  const L = LANG_NAMES[m.lang] || "Lithuanian";
+  const hard = (m.hard || []).map((h) => `${h.w} (wrong ${h.wrong}×, seen ${h.seen}×)`).join(", ") || "none yet";
+  const letters = (m.weakLetters || []).map((x) => `${x.letter}: ${x.wrongRate}% wrong`).join(", ") || "none";
+  return `Game language: ${L}. Level: ${m.level} (ages ${m.ages}), words with ${m.syllables} syllables.
+Answered words: ${m.answered}; correct on the first try: ${m.firstTryRate}%.
+Hardest words: ${hard}.
+First letters with most mistakes: ${letters}.
+Mastered words: ${m.masteredCount}${(m.masteredSample || []).length ? " (recent: " + m.masteredSample.join(", ") + ")" : ""}.
+Words already in the game: ${(m.vocabulary || []).join(", ")}.
+
+Return JSON: {"note": "…", "focus": ["…"], "words": [{"word": "syl-la-bles", "emoji": "🦊"}]}
+- note: 2 or 3 short sentences for the parent, in ${LANG_NAMES[m.uiLang] || L}: what is going well and what to practise. Call the child "the child".
+- focus: up to 8 words from "Words already in the game" to practise next, hardest first, written exactly as listed.
+- words: up to 12 NEW concrete nouns in ${L} that are not in the game yet, in dictionary form, lowercase, with ${m.syllables} syllables split with "-" by ${L} hyphenation rules, each with exactly one emoji that clearly shows it. Prefer words that start with the letters the child finds hard and that sound like the hardest words.`;
 }
 
 // ───────────────────────── In-app updates (native side) ─────────────────────────
@@ -818,6 +1029,121 @@ body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 #cfgsheet input{-webkit-user-select:text;user-select:text}
 #cfgsheet .srow.act{width:100%}
 #cfgsheet{font-family:var(--rounded)}
+#aisheet{position:fixed;inset:0;z-index:51;background:var(--paper);color:var(--ink);transform:translateY(102%);visibility:hidden;transition:transform .28s ease,visibility 0s linear .28s;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;text-align:left}
+#aisheet.open{transform:none;visibility:visible;transition:transform .28s ease}
+#aisheet button{font:inherit;color:inherit;background:none;border:0;border-radius:0;padding:0;font-weight:inherit;cursor:pointer;text-align:inherit}
+#aisheet .sh-head{position:sticky;top:0;z-index:2;background:var(--paper);display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top) + 14px) 18px 12px;border-bottom:1px solid var(--rule)}
+#aisheet .sh-head h2{font:700 calc(24px * var(--ts))/1 var(--display);margin:0}
+#aisheet .sh-body{padding:16px 18px calc(env(safe-area-inset-bottom) + 40px);max-width:680px;margin:0 auto}
+#aisheet .link{color:var(--signal);font-weight:600;font-size:16px}
+#aisheet .link.small{font-size:calc(14px * var(--ts))}
+#aisheet .hint{font-size:calc(13px * var(--ts));color:var(--muted);margin:8px 2px 0}
+#aisheet .muted{color:var(--muted)}
+#aisheet .sec{display:block;font:700 calc(17px * var(--ts))/1.2 var(--display);color:var(--ink);margin:26px 0 6px}
+#aisheet .srow{display:flex;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--rule)}
+#aisheet .grow{flex:1;min-width:0}
+#aisheet .grow b{display:block;font-weight:600}
+#aisheet .grow small{display:block;font-size:calc(13px * var(--ts));color:var(--ink-2)}
+#aisheet .switch{width:46px;height:28px;border-radius:14px;background:var(--rule);position:relative;flex:none;transition:background .2s}
+#aisheet .switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
+#aisheet .switch.on{background:var(--signal)}
+#aisheet .switch.on::after{transform:translateX(18px)}
+#aisheet .sm{font-size:calc(13px * var(--ts));padding:6px 11px;border-radius:8px;border:1px solid var(--rule);background:var(--sheet);white-space:nowrap;flex:none}
+#aisheet .danger{color:var(--danger)}
+#aisheet .danger.armed{background:var(--danger);color:#fff;border-color:var(--danger)}
+#aisheet .seg{display:flex;flex:none;gap:0;padding:0;border:1px solid var(--rule);border-radius:9px;overflow:hidden;background:var(--sheet)}
+#aisheet .seg button{font-size:calc(12.5px * var(--ts));padding:6px 10px;color:var(--ink-2);white-space:nowrap}
+#aisheet .seg button.on{background:var(--ink);color:var(--paper);font-weight:600}
+#aisheet .seg.wide button{flex:1;text-align:center;padding:9px 4px;font-size:calc(13.5px * var(--ts))}
+#aisheet .lk-row{margin:10px 0 14px}
+#aisheet .lk-l{display:block;font-size:calc(13px * var(--ts));font-weight:600;color:var(--ink-2);margin-bottom:6px}
+#aisheet .sws{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:3px 3px 2px}
+#aisheet .sws::-webkit-scrollbar{display:none}
+#aisheet .sw{display:flex;flex-direction:column;align-items:center;gap:5px;flex:none}
+#aisheet .sw .prev{position:relative;width:50px;height:50px;border-radius:13px;display:grid;place-items:center;border:1px solid rgba(127,127,127,.35);font:700 18px/1 var(--display)}
+#aisheet .sw .prev i{position:absolute;right:6px;bottom:6px;width:9px;height:9px;border-radius:5px}
+#aisheet .sw.on .prev{outline:2.5px solid var(--signal);outline-offset:2px}
+#aisheet .sw small{font-size:12px;color:var(--ink-2)}
+#aisheet .sw.on small{color:var(--ink);font-weight:600}
+#aisheet .cfg{padding:12px 0;border-bottom:1px solid var(--rule)}
+#aisheet .cfg.ch .cfg-h b::after{content:"";display:inline-block;width:7px;height:7px;border-radius:4px;background:var(--signal);margin-left:7px;vertical-align:2px}
+#aisheet .cfg-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+#aisheet .cfg-h b{font-weight:600}
+#aisheet .cfg small{display:block;font-size:calc(13px * var(--ts));margin-top:2px}
+#aisheet .stepper{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+#aisheet .stepper button{width:38px;height:36px;border-radius:9px;border:1px solid var(--rule);background:var(--sheet);font-size:20px;font-weight:600;text-align:center}
+#aisheet .stepper button[disabled]{opacity:.35}
+#aisheet .stepper input{width:86px;text-align:center;font:600 16px var(--sans);padding:7px 6px;border-radius:9px;border:1px solid var(--rule);background:var(--paper);color:var(--ink)}
+#aisheet .stepper .unit{font-size:calc(14px * var(--ts));color:var(--ink-2);min-width:2.5em}
+#aisheet .stepper .range{flex-basis:100%;font-size:calc(12px * var(--ts));color:var(--muted)}
+#aisheet .cfgin.wide,#aisheet .cfgsel{display:block;width:100%;margin-top:8px;font:16px/1.45 var(--sans);padding:9px 11px;border-radius:9px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);-webkit-appearance:none;appearance:none}
+#aisheet textarea.cfgsel{resize:none}
+#aisheet .cfgin:focus,#aisheet .cfgsel:focus{outline:2px solid var(--signal);outline-offset:-1px}
+#aisheet .cfg-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:18px}
+#aisheet h3.sec{font:700 calc(12.5px * var(--ts, 1))/1.2 var(--sans, -apple-system, system-ui, sans-serif);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:28px 4px 8px}
+#aisheet .grp{background:var(--sheet);border:1px solid var(--rule);border-radius:16px;padding:0 16px;overflow:hidden}
+#aisheet .grp>*:last-child{border-bottom:0}
+#aisheet .grp .lk-row{margin:0;padding:12px 0;border-bottom:1px solid var(--rule)}
+#aisheet .cfg-foot{margin:10px 4px 0}
+#aisheet .note{font-size:12.5px;color:var(--muted)}
+#aisheet .srow.bp{width:100%;text-align:left}
+#aisheet .chev{flex:none;color:var(--muted);font-size:calc(20px * var(--ts));line-height:1}
+#aisheet input{-webkit-user-select:text;user-select:text}
+#aisheet .srow.act{width:100%}
+#aisheet{font-family:var(--rounded)}
+/* AI settings sheet (app-blueprints · ai-configuration Step 7, shared tokens). Above Settings (50), so z-index 51 */
+#aisheet .aicard,#aisheet .ucard{background:var(--sheet);border:1px solid var(--rule);border-radius:14px;padding:14px;margin:14px 0}
+#aisheet .aicard.active{border-color:var(--signal);box-shadow:0 0 0 1px var(--signal)}
+#aisheet .aic-h{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:17px}
+#aisheet .aic-row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px}
+#aisheet .aic-row.lbl,#aisheet .aic-row .lbl{font-weight:600;color:var(--ink-2)}
+#aisheet .aicard code{font:13px ui-monospace,Menlo,monospace;background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:2px 6px}
+#aisheet .aic-btns{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+#aisheet .sm[disabled]{opacity:.5}
+#aisheet .sm.primary{background:var(--signal);color:#fff;border-color:var(--signal)}
+#aisheet .modelsel{display:block;width:100%;margin-top:6px;font:16px var(--sans);color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:9px;padding:9px 10px}
+.badge-ai{display:inline-block;font-size:12px;font-weight:700;color:var(--signal);background:var(--signal-wash);border-radius:6px;padding:2px 8px}
+.badge-ex{display:inline-block;font-size:12px;font-weight:600;color:var(--ink-2);border:1px dashed var(--muted);border-radius:6px;padding:1px 8px}
+#aisheet .ustat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 4px}
+#aisheet .ustat div{background:var(--paper);border-radius:10px;padding:8px 10px}
+#aisheet .ustat b{display:block;font-size:20px;font-weight:700}
+#aisheet .ustat small{color:var(--muted);font-size:12px}
+#aisheet .ubars{display:flex;align-items:flex-end;gap:3px;height:56px;margin-top:10px}
+#aisheet .ubars span{flex:1;background:var(--signal);border-radius:3px 3px 0 0;min-height:2px}
+#aisheet .ubars span.zero{background:var(--rule)}
+#aisheet .ubars-l{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:4px}
+#aisheet .utab{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+#aisheet .utab th{text-align:left;font-weight:600;color:var(--muted);padding:4px 4px 4px 0;border-bottom:1px solid var(--rule)}
+#aisheet .utab td{padding:6px 4px 6px 0;border-bottom:1px solid var(--rule);color:var(--ink-2);word-break:break-word}
+#aisheet .utab th:not(:first-child),#aisheet .utab td:not(:first-child){text-align:right;white-space:nowrap}
+#aisheet .pad{padding:8px 0}
+#aisheet .small{font-size:13px}
+#cfgsheet .sm.primary{background:var(--signal);color:#fff;border-color:var(--signal)}
+/* Learning, read aloud, AI coach, words from books */
+.learnbox .setrow{margin-bottom:8px}
+.learnbox .mhint{margin:2px 0 0}
+.coachbox{margin-top:12px;border-top:1px solid var(--hair);padding-top:10px}
+.coachnote p{margin:8px 0 4px;font-weight:700;font-size:15px;line-height:1.4}
+.coachnote small{color:var(--muted);font-weight:700;font-size:13px}
+.sub3{margin:18px 0 4px;font-size:16px}
+.topgap{margin-top:16px}
+.bksrc{align-items:center;gap:8px}
+.bksrc small{color:var(--muted);font-weight:700}
+.hear{position:absolute;right:10px;bottom:8px;width:46px;height:46px;border-radius:50%;background:var(--sun);font-size:22px;box-shadow:0 3px 0 var(--sunDeep)}
+.hear:active{transform:translateY(2px);box-shadow:none}
+#booksheet{position:fixed;inset:0;z-index:52;background:rgba(36,38,74,.55);display:none;align-items:flex-end}
+#booksheet.open{display:flex;animation:fade .2s}
+.bkp{width:100%;max-width:760px;max-height:92%;overflow-y:auto;margin:0 auto;background:var(--sheet);color:var(--ink);border-radius:26px 26px 0 0;padding:20px 18px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;animation:updUp .35s cubic-bezier(.2,.8,.3,1)}
+.bkhead{display:flex;justify-content:space-between;align-items:center}
+.bkflag{font-size:26px}
+.bkwords{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.bkw{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:14px;background:var(--chipbg);border:2px solid var(--hair);font-weight:900;font-size:16px;opacity:.45;text-decoration:line-through}
+.bkw.on{opacity:1;text-decoration:none;border-color:var(--grass);background:#E6F8EE}
+.bke{font-size:24px}
+.bktext{margin:4px 0 8px}
+.bktext p{white-space:pre-wrap;color:var(--ink-2);font-size:14px;line-height:1.45}
+.bkbusy{display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px 0;font-size:19px}
+.bkspin{font-size:54px;animation:float 1.2s ease-in-out infinite}
 `;
 
 // ───────────────────────── Web app (runs inside the WebView) ─────────────────────────
@@ -917,6 +1243,53 @@ function webApp() {
       updRetry: "Try again",
       updFailed: "Update failed",
       version: "Version",
+      learning: "Learning",
+      smartOrder: "Smart word order",
+      smartOrderHint: "Repeats the words a kid finds hard and shows mastered ones less often. No AI.",
+      aiRowTitle: "Keys, models and token usage",
+      aiRowNoKey: "Add a Claude or OpenAI key to read words from book photos and use the AI coach",
+      aiSettings: "AI settings",
+      tokensUsed: (n) => `${n} tokens used`,
+      bookWords: "Words from books",
+      bookHint: "Take a photo of a page. AI reads it and picks words a child can recognise in a picture.",
+      takePhoto: "Take a photo",
+      fromPhotos: "From photos",
+      readingPage: "Reading the page…",
+      bookMode: "Book words in the game",
+      modeMix: "Mixed in",
+      modeFirst: "First",
+      modeOff: "Off",
+      sourceWords: (n) => `${n} words`,
+      noBooks: "No book words yet.",
+      reviewTitle: "New words from the page",
+      reviewHint: "Tap a word to leave it out.",
+      addWords: (n) => `Add ${n} words`,
+      sourceName: "Name",
+      recognized: "Recognised text",
+      noNewWords: "No new picture words found on this page.",
+      langUnsupported: "This text isn't in Lithuanian, English or Spanish.",
+      wordsAdded: (n) => `✅ ${n} words added`,
+      alreadyKnown: (n) => `${n} already in the game`,
+      readAloud: "Read words aloud",
+      speakOff: "Off",
+      speakShown: "When shown",
+      speakAfter: "After answer",
+      hearWord: "Hear the word",
+      voiceFound: (l, name) => `${l} voice: ${name}`,
+      voiceMissing: (l) => `No ${l} voice on this iPhone. Add one in Settings › Accessibility › Spoken Content › Voices.`,
+      langNames: { lt: "Lithuanian", en: "English", es: "Spanish" },
+      coach: "AI coach",
+      askCoach: "Ask the AI coach",
+      coachBusy: "The coach is thinking…",
+      coachNeedsWords: "After 10 words the coach can suggest what to practise.",
+      coachBy: (prov, date) => `✦ AI coach by ${prov} · ${date}`,
+      coachFocus: "Practising next",
+      coachAdded: (n) => `+${n} new words`,
+      coachSource: (name) => `✦ AI coach · ${name}`,
+      wordsStats: (m, l, h) => `Words: ${m} mastered · ${l} learning · ${h} hard`,
+      builtWith: "Built with",
+      confirm: "Confirm",
+      aiFailed: (m) => `AI failed: ${m}`,
       sample: "ap-ple",
     },
     es: {
@@ -1004,6 +1377,53 @@ function webApp() {
       updRetry: "Reintentar",
       updFailed: "Error al actualizar",
       version: "Versión",
+      learning: "Aprendizaje",
+      smartOrder: "Orden inteligente",
+      smartOrderHint: "Repite las palabras difíciles y muestra menos las que ya domina. Sin IA.",
+      aiRowTitle: "Claves, modelos y uso de tokens",
+      aiRowNoKey: "Añade una clave de Claude u OpenAI para leer palabras de fotos de libros y usar el entrenador IA",
+      aiSettings: "Ajustes de IA",
+      tokensUsed: (n) => `${n} tokens usados`,
+      bookWords: "Palabras de libros",
+      bookHint: "Haz una foto de una página. La IA la lee y elige palabras que un niño reconoce en un dibujo.",
+      takePhoto: "Hacer foto",
+      fromPhotos: "De fotos",
+      readingPage: "Leyendo la página…",
+      bookMode: "Palabras de libros en el juego",
+      modeMix: "Mezcladas",
+      modeFirst: "Primero",
+      modeOff: "No",
+      sourceWords: (n) => `${n} palabras`,
+      noBooks: "Aún no hay palabras de libros.",
+      reviewTitle: "Palabras nuevas de la página",
+      reviewHint: "Toca una palabra para quitarla.",
+      addWords: (n) => `Añadir ${n} palabras`,
+      sourceName: "Nombre",
+      recognized: "Texto reconocido",
+      noNewWords: "No se encontraron palabras nuevas con dibujo en esta página.",
+      langUnsupported: "Este texto no está en lituano, inglés ni español.",
+      wordsAdded: (n) => `✅ ${n} palabras añadidas`,
+      alreadyKnown: (n) => `${n} ya están en el juego`,
+      readAloud: "Leer palabras en voz alta",
+      speakOff: "No",
+      speakShown: "Al mostrar",
+      speakAfter: "Tras responder",
+      hearWord: "Escuchar la palabra",
+      voiceFound: (l, name) => `Voz (${l}): ${name}`,
+      voiceMissing: (l) => `No hay voz en ${l} en este iPhone. Añádela en Ajustes › Accesibilidad › Contenido leído › Voces.`,
+      langNames: { lt: "lituano", en: "inglés", es: "español" },
+      coach: "Entrenador IA",
+      askCoach: "Preguntar al entrenador IA",
+      coachBusy: "El entrenador está pensando…",
+      coachNeedsWords: "Tras 10 palabras el entrenador podrá sugerir qué practicar.",
+      coachBy: (prov, date) => `✦ Entrenador IA de ${prov} · ${date}`,
+      coachFocus: "Practicará ahora",
+      coachAdded: (n) => `+${n} palabras nuevas`,
+      coachSource: (name) => `✦ Entrenador IA · ${name}`,
+      wordsStats: (m, l, h) => `Palabras: ${m} dominadas · ${l} aprendiendo · ${h} difíciles`,
+      builtWith: "Construido con",
+      confirm: "Confirmar",
+      aiFailed: (m) => `Error de IA: ${m}`,
       sample: "ga-to",
     },
     lt: {
@@ -1091,6 +1511,53 @@ function webApp() {
       updRetry: "Bandyti dar kartą",
       updFailed: "Nepavyko atnaujinti",
       version: "Versija",
+      learning: "Mokymasis",
+      smartOrder: "Išmani žodžių tvarka",
+      smartOrderHint: "Dažniau kartoja sunkius žodžius, o išmoktus rodo rečiau. Be DI.",
+      aiRowTitle: "Raktai, modeliai ir žetonų naudojimas",
+      aiRowNoKey: "Pridėkite Claude arba OpenAI raktą, kad galėtumėte skaityti žodžius iš knygų nuotraukų ir naudoti DI trenerį",
+      aiSettings: "DI nustatymai",
+      tokensUsed: (n) => `panaudota ${n} žetonų`,
+      bookWords: "Žodžiai iš knygų",
+      bookHint: "Nufotografuokite puslapį. DI jį perskaitys ir atrinks žodžius, kuriuos vaikas atpažins paveikslėlyje.",
+      takePhoto: "Fotografuoti",
+      fromPhotos: "Iš nuotraukų",
+      readingPage: "Skaitomas puslapis…",
+      bookMode: "Knygų žodžiai žaidime",
+      modeMix: "Kartu",
+      modeFirst: "Pirmiausia",
+      modeOff: "Išjungta",
+      sourceWords: (n) => `žodžiai: ${n}`,
+      noBooks: "Knygų žodžių dar nėra.",
+      reviewTitle: "Nauji žodžiai iš puslapio",
+      reviewHint: "Paspauskite žodį, kad jo nepridėtumėte.",
+      addWords: (n) => `Pridėti žodžius (${n})`,
+      sourceName: "Pavadinimas",
+      recognized: "Atpažintas tekstas",
+      noNewWords: "Šiame puslapyje naujų žodžių su paveikslėliais nerasta.",
+      langUnsupported: "Šis tekstas ne lietuvių, anglų ar ispanų kalba.",
+      wordsAdded: (n) => `✅ Pridėta žodžių: ${n}`,
+      alreadyKnown: (n) => `jau žaidime: ${n}`,
+      readAloud: "Ištarti žodžius",
+      speakOff: "Ne",
+      speakShown: "Kai parodomas",
+      speakAfter: "Po atsakymo",
+      hearWord: "Išklausyti žodį",
+      voiceFound: (l, name) => `Balsas (${l}): ${name}`,
+      voiceMissing: (l) => `Šiame iPhone nėra balso (${l}). Pridėkite: Nustatymai › Prieinamumas › Ištariamas turinys › Balsai.`,
+      langNames: { lt: "lietuvių", en: "anglų", es: "ispanų" },
+      coach: "DI treneris",
+      askCoach: "Klausti DI trenerio",
+      coachBusy: "Treneris galvoja…",
+      coachNeedsWords: "Po 10 žodžių treneris galės patarti, ką praktikuoti.",
+      coachBy: (prov, date) => `✦ DI treneris (${prov}) · ${date}`,
+      coachFocus: "Toliau praktikuos",
+      coachAdded: (n) => `+${n} nauji žodžiai`,
+      coachSource: (name) => `✦ DI treneris · ${name}`,
+      wordsStats: (m, l, h) => `Žodžiai: išmokta ${m} · mokosi ${l} · sunkūs ${h}`,
+      builtWith: "Sukurta pagal",
+      confirm: "Patvirtinti",
+      aiFailed: (m) => `DI klaida: ${m}`,
       sample: "na-mas",
     },
   };
@@ -1208,9 +1675,13 @@ function webApp() {
     version: 1,
     lang: LANGS[init.lang] ? init.lang : detectLang(),
     pinHash: init.pinHash || null,
-    settings: Object.assign({ wordCase: "cap", sound: true, currency: "EUR" }, init.settings || {}),
+    settings: Object.assign({ wordCase: "cap", sound: true, currency: "EUR", smart: true, bookMode: "mix" }, init.settings || {}),
     kids: (Array.isArray(init.kids) ? init.kids : []).filter((k) => k && typeof k === "object").map(normalizeKid),
+    // Words added from book photos and by the AI coach: [{ id, lang, title, at, by, coachKid?, words: [{ w, e }] }]
+    books: (Array.isArray(init.books) ? init.books : []).filter((b) => b && LANGS[b.lang] && Array.isArray(b.words)),
   };
+  // AI flags (ai-configuration): is there a key, and is the background job (AI coach) on. Kept fresh by useState().
+  const AIX = { hasKey: !!(init.ai && init.ai.hasKey), on: !(init.ai && init.ai.on === false) };
   function normalizeKid(k) {
     const num = (v) => (typeof v === "number" && isFinite(v) ? v : 0);
     const arr = (v) => (Array.isArray(v) ? v.filter((x) => x && typeof x === "object") : []);
@@ -1228,6 +1699,10 @@ function webApp() {
       budget: Math.max(0, num(k.budget)),
       payouts: arr(k.payouts),
       topups: arr(k.topups),
+      learn: k.learn && typeof k.learn === "object" ? k.learn : {}, // { lang: { word: { s, c, w, b, t } } }
+      speak: ["off", "shown", "after"].indexOf(k.speak) >= 0 ? k.speak : "off",
+      coach: k.coach && typeof k.coach === "object" ? k.coach : null,
+      answered: num(k.answered),
     };
   }
 
@@ -1361,6 +1836,387 @@ function webApp() {
       m.remove();
     });
     document.body.appendChild(m);
+  }
+
+  // ── Learning: per kid and word, spaced repetition (no AI). Boxes 0–5: 0 = hard, 5 = mastered ──
+  const BOX_W = [6, 4, 2.5, 1.2, 0.6, 0.25];
+  function peekStat(kid, w) {
+    const M = (kid.learn || {})[state.lang];
+    return M ? M[w] : null;
+  }
+  function wstat(kid, w) {
+    const L = kid.learn || (kid.learn = {});
+    const M = L[state.lang] || (L[state.lang] = {});
+    return M[w] || (M[w] = { s: 0, c: 0, w: 0, b: 0, t: 0 });
+  }
+  function learnDone(kid, w, firstTry) {
+    const st = wstat(kid, w);
+    st.s++;
+    st.t = Date.now();
+    if (firstTry) {
+      st.c++;
+      st.b = Math.min(5, st.b + 1);
+    }
+  }
+  function learnMiss(kid, w) {
+    const st = wstat(kid, w);
+    st.w++;
+    st.b = Math.max(0, st.b - 2);
+  }
+  function learnSkip(kid, w) {
+    const st = wstat(kid, w);
+    st.s++;
+    st.t = Date.now();
+    st.b = Math.max(0, st.b - 1);
+  }
+  // Weighted pick: hard words most often, new words next, mastered words rarely; the AI coach's focus words
+  // and (with "First") book words are boosted. Words seen in the last 6 rounds are left out.
+  function smartPick(kid, pool) {
+    const recent = game.recent || [];
+    const coach = kid.coach && kid.coach.lang === state.lang ? kid.coach : null;
+    const focus = new Set((coach && coach.focus) || []);
+    const hardCount = pool.filter((x) => {
+      const st = peekStat(kid, x.w);
+      return st && st.s && st.b === 0 && st.w;   // hard = real mistakes, as in the parent zone
+    }).length;
+    const day = 864e5;
+    let total = 0;
+    const ws = pool.map((x) => {
+      if (recent.indexOf(x.w) >= 0) return 0;
+      const st = peekStat(kid, x.w);
+      let wt = !st || !st.s ? (hardCount >= 6 ? 1 : 3) : BOX_W[st.b];
+      if (st && st.s && st.b >= 1 && Date.now() - st.t > day) wt *= 1.5;
+      if (focus.has(x.w)) wt *= 2.5;
+      if (x.src && !x.coachKid && state.settings.bookMode === "first") wt *= 3;
+      if (x.coachKid === kid.id) wt *= 2;
+      total += wt;
+      return wt;
+    });
+    if (!total) return pickRand(pool);
+    let r = Math.random() * total;
+    for (let i = 0; i < pool.length; i++) {
+      r -= ws[i];
+      if (r <= 0) return pool[i];
+    }
+    return pool[pool.length - 1];
+  }
+  function learnCounts(kid) {
+    const M = (kid.learn || {})[state.lang] || {};
+    let m = 0, l = 0, h = 0;
+    Object.keys(M).forEach((w) => {
+      const st = M[w];
+      if (!st.s) return;
+      if (st.b >= 4) m++;
+      else if (st.b === 0 && st.w) h++;
+      else l++;
+    });
+    return { m, l, h, seen: m + l + h };
+  }
+
+  // ── Read words aloud: the iPhone's voices (Web Speech), Scriptable's Speech as a fallback ──
+  let voices = [];
+  function loadVoices() {
+    try {
+      voices = (window.speechSynthesis && window.speechSynthesis.getVoices()) || [];
+    } catch (e) {
+      voices = [];
+    }
+  }
+  if (window.speechSynthesis) {
+    loadVoices();
+    try {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    } catch (e) {}
+  }
+  function voiceFor(locale) {
+    const p = locale.slice(0, 2).toLowerCase();
+    const rank = (v) => (/premium/i.test(v.name + v.voiceURI) ? 2 : /enhanced/i.test(v.name + v.voiceURI) ? 1 : 0) + (String(v.lang).replace("_", "-") === locale ? 0.5 : 0);
+    return voices.filter((v) => String(v.lang || "").toLowerCase().replace("_", "-").indexOf(p) === 0).sort((a, b) => rank(b) - rank(a))[0] || null;
+  }
+  function speakWord(w) {
+    const text = String(w).replace(/-/g, "");
+    const locale = LANGS[state.lang].locale;
+    try {
+      if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = locale;
+        const v = voiceFor(locale);
+        if (v) u.voice = v;
+        u.rate = 0.8;
+        window.speechSynthesis.speak(u);
+        return;
+      }
+    } catch (e) {}
+    send("say", { text, lang: locale });
+  }
+
+  // ── AI state: the Settings state carries it (ai-configuration Step 6); S is what the AI sheet renders ──
+  let S = null;
+  window.__toast = function (m) {
+    toast(m);
+  };
+
+  // ── AI settings sheet (ai-configuration blueprint, Step 7) ──
+  let aiOpen = false, aiArmed = null;
+  const aiLoading = new Set();
+  const PN = { anthropic: "Claude", openai: "OpenAI" };
+  const FEAT = { books: "Words from book photos", coach: "AI coach", test: "Connection tests", other: "Other" };
+  const fmtN = (n) => n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "k" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n);
+  function rel(ts) {
+    const m = Math.round((Date.now() - ts) / 60000);
+    return m < 1 ? "just now" : m < 60 ? m + " min ago" : m < 1440 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " d ago";
+  }
+  function arm(key) {
+    aiArmed = key;
+    renderAI();
+    setTimeout(() => {
+      if (aiArmed === key) {
+        aiArmed = null;
+        renderAI();
+      }
+    }, 3500);
+  }
+  function usageBlock(p, P) {
+    const days = [], now = new Date();
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      days.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+    }
+    const tot = (k) => { const x = P.days[k]; return x ? x.in + x.out : 0; };
+    const max = Math.max(1, ...days.map(tot)), month = S.ai.today.slice(0, 7);
+    const monthTot = Object.entries(P.days).filter(([k]) => k.startsWith(month)).reduce((n, [, x]) => n + x.in + x.out, 0);
+    const rows = (obj, label) => Object.entries(obj).sort((x, y) => (y[1].in + y[1].out) - (x[1].in + x[1].out))
+      .map(([k, x]) => `<tr><td>${esc(label(k))}</td><td>${x.calls}</td><td>${fmtN(x.in)}</td><td>${fmtN(x.out)}</td></tr>`).join("");
+    return `<div class="ucard"><div class="aic-h"><b>${PN[p]}</b><span class="muted small">${P.calls} request${P.calls === 1 ? "" : "s"}</span></div>
+      <div class="ustat"><div><b>${fmtN(P.in + P.out)}</b><small>total tokens</small></div><div><b>${fmtN(P.in)}</b><small>input</small></div><div><b>${fmtN(P.out)}</b><small>output</small></div></div>
+      <p class="note">Today ${fmtN(tot(S.ai.today))} tokens — this month ${fmtN(monthTot)} tokens</p>
+      <div class="ubars" aria-label="Tokens per day, last 14 days">${days.map((k) => `<span style="height:${Math.max(tot(k) ? 6 : 2, tot(k) / max * 100)}%" class="${tot(k) ? "" : "zero"}" title="${k}: ${tot(k)} tokens"></span>`).join("")}</div>
+      <div class="ubars-l"><span>2 weeks ago</span><span>Today</span></div>
+      <table class="utab"><tr><th>Feature</th><th>Requests</th><th>In</th><th>Out</th></tr>${rows(P.features, (k) => FEAT[k] || k)}</table>
+      <table class="utab"><tr><th>Model</th><th>Requests</th><th>In</th><th>Out</th></tr>${rows(P.models, (k) => k)}</table></div>`;
+  }
+  const aiSheet = () => {
+    let el = document.getElementById("aisheet");
+    if (!el) {
+      el = document.createElement("div"); el.id = "aisheet"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "AI");
+      document.body.appendChild(el);
+      el.addEventListener("click", aiClick);
+      el.addEventListener("change", (e) => {
+        e.stopPropagation();
+        if (e.target.classList.contains("modelsel")) sendAI("aimodel", { p: e.target.dataset.p, v: e.target.value });
+      });
+    }
+    return el;
+  };
+  // AI sheet actions answer with the fresh Settings state (keys masked)
+  const sendAI = (action, params) => send(action, params, (ok, st) => { if (ok && st && st.cfgSchema) useState(st); aiLoading.clear(); renderAI(); renderCfg(); });
+  function aiClick(e) {
+    e.stopPropagation();   // the sheet's taps never reach the game or Settings
+    if (e.target.closest("select, option, input, textarea")) return;
+    const t0 = e.target.closest("[data-act]");
+    if (!t0 || t0.disabled) return;
+    const act = t0.dataset.act, v = t0.dataset.v;
+    switch (act) {
+      case "aiclose": aiOpen = false; renderAI(); renderCfg(); break;
+      case "aikey": case "aitest": case "aiprov": sendAI(act, { v }); break;
+      case "aimodels": aiLoading.add(v); renderAI(); sendAI("aimodels", { v }); break;
+      case "airm": if (aiArmed === "rm" + v) { aiArmed = null; sendAI("airm", { v }); } else arm("rm" + v); break;
+      case "usagereset": if (aiArmed === "reset") { aiArmed = null; sendAI("usagereset", {}); } else arm("reset"); break;
+      case "toggle": if (v === "ai") { SET.settings.ai = !SET.settings.ai; renderAI(); sendAI("set", { k: "ai", v: SET.settings.ai }); } break;
+    }
+  }
+  function renderAI() {
+    const el = aiSheet();
+    const keep = el.scrollTop;
+    el.classList.toggle("open", aiOpen && !!(S && S.ai));
+    if (!aiOpen || !S || !S.ai) return;
+    const A = S.ai;
+    const card = (p) => {
+      const key = A.keys[p], ml = (A.models[p] || {}).list || [], cur = A.model[p];
+      const opts = ml.some((m) => m.id === cur) ? ml : [{ id: cur, name: cur }].concat(ml);   // keep the chosen model visible
+      return `<div class="aicard ${A.provider === p ? "active" : ""}">
+        <div class="aic-h"><b>${PN[p]}</b>${A.provider === p ? `<span class="badge-ai">In use</span>` : key ? `<button class="sm" data-act="aiprov" data-v="${p}">Use ${PN[p]}</button>` : ""}</div>
+        <div class="aic-row"><span class="lbl">API key</span>${key ? `<code>${esc(key)}</code>` : `<span class="muted">Not set</span>`}</div>
+        <div class="aic-btns"><button class="sm ${key ? "" : "primary"}" data-act="aikey" data-v="${p}">${key ? "Change key" : "Add key"}</button>
+          ${key ? `<button class="sm" data-act="aitest" data-v="${p}">Test connection</button><button class="sm danger ${aiArmed === "rm" + p ? "armed" : ""}" data-act="airm" data-v="${p}">${aiArmed === "rm" + p ? "Confirm" : "Remove"}</button>` : ""}</div>
+        <label class="aic-row lbl" for="ms-${p}">Model</label>
+        <select id="ms-${p}" class="modelsel" data-p="${p}">${opts.map((m) => `<option value="${esc(m.id)}" ${m.id === cur ? "selected" : ""}>${esc(m.name)}${m.name !== m.id ? " — " + esc(m.id) : ""}</option>`).join("")}</select>
+        <div class="aic-btns"><button class="sm" data-act="aimodels" data-v="${p}" ${key && !aiLoading.has(p) ? "" : "disabled"}>${aiLoading.has(p) ? "Loading…" : ml.length ? "Refresh model list" : "Load my models"}</button>
+          <span class="note">${ml.length ? `${ml.length} models, updated ${rel(A.models[p].at)}` : key ? "Loads the models your key can use" : "Add a key to load models"}</span></div>
+      </div>`;
+    };
+    const order = A.provider === "openai" ? ["openai", "anthropic"] : ["anthropic", "openai"];
+    const used = Object.keys(A.usage.p).filter((p) => A.usage.p[p].calls);
+    el.innerHTML = `<div class="sh-head"><h2>AI</h2><button class="link" data-act="aiclose">Done</button></div><div class="sh-body">
+      <p class="hint">Keys stay in this iPhone's Keychain. Only the provider marked “In use” is called.</p>
+      ${order.map(card).join("")}
+      <h3 class="sec">What AI does</h3>
+      <div class="srow"><div class="grow"><b>AI coach</b><small class="muted">After every 40 words a kid answers, one request suggests their next practice words and a tip for you. Words from book photos run only when you take a photo.</small></div>
+        <button class="switch ${S.settings.ai ? "on" : ""}" data-act="toggle" data-v="ai" aria-label="AI coach"></button></div>
+      <h3 class="sec">Token usage</h3>
+      ${used.length ? used.map((p) => usageBlock(p, A.usage.p[p])).join("") : `<p class="muted pad">No AI requests yet.</p>`}
+      ${used.length ? `<div class="aic-btns"><span class="note">Counting since ${new Date(A.usage.since).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}</span>
+        <button class="sm danger ${aiArmed === "reset" ? "armed" : ""}" data-act="usagereset">${aiArmed === "reset" ? "Confirm reset" : "Reset counters"}</button></div>` : ""}
+    </div>`;
+    el.scrollTop = keep;   // re-renders must not jump the user back to the top
+  }
+
+  // ── Words from a book photo: AI reads the page, the parent reviews, words join the game ──
+  let book = null; // { busy, lang, title, text, by, words: [{ w, e, n, known, on }] }
+  let bookArmed = null;
+  const EMOJI_RE = /\p{Extended_Pictographic}/u;
+  // Checks AI words: letters and "-" only, 1–6 syllables, one emoji; marks words the game already has.
+  function cleanAiWords(list, lang) {
+    const loc = LANGS[lang] ? LANGS[lang].locale : "en";
+    const have = new Set(wordsFor(lang, true).map((x) => x.w.replace(/-/g, "")));
+    const seen = new Set(), out = [];
+    (Array.isArray(list) ? list : []).forEach((x) => {
+      if (!x) return;
+      const w = String(x.word || "").trim().toLocaleLowerCase(loc).replace(/[·‧–—]/g, "-").replace(/\s+/g, "");
+      const segs = w.split("-");
+      if (segs.length < 1 || segs.length > 6 || segs.some((sg) => !/^\p{L}+$/u.test(sg))) return;
+      const plain = segs.join("");
+      if (plain.length < 2 || seen.has(plain)) return;
+      const e = String(x.emoji || "").trim();
+      if (!e || !EMOJI_RE.test(e) || /[\p{L}\d]/u.test(e.replace(/[\u20E3\uFE0F]/g, "")) || [...e].length > 8) return;
+      seen.add(plain);
+      out.push({ w: segs.join("-"), e, n: segs.length, known: have.has(plain) });
+    });
+    return out;
+  }
+  window.__bookReading = function () {
+    if (book) {
+      book.busy = "reading";
+      renderBook();
+    }
+  };
+  function renderBook() {
+    let el = document.getElementById("booksheet");
+    if (!el) {
+      el = document.createElement("div"); el.id = "booksheet"; el.setAttribute("role", "dialog");
+      document.body.appendChild(el);
+    }
+    el.classList.toggle("open", !!book);
+    if (!book) {
+      el.innerHTML = "";
+      return;
+    }
+    if (book.busy) {
+      el.innerHTML = `<div class="bkp"><div class="bkbusy"><div class="bkspin">📖</div><b>${esc(book.busy === "reading" ? t("readingPage") : "📷")}</b></div></div>`;
+      return;
+    }
+    const fresh = book.words.filter((x) => !x.known);
+    const on = fresh.filter((x) => x.on).length;
+    const known = book.words.length - fresh.length;
+    el.innerHTML = `<div class="bkp">
+      <div class="bkhead"><span class="badge-ai">✦ AI by ${esc(book.by || "")}</span><span class="bkflag">${LANGS[book.lang].flag}</span></div>
+      <h2 class="updt">${esc(t("reviewTitle"))}</h2>
+      <label class="lbl" for="bookTitle">${esc(t("sourceName"))}</label>
+      <input id="bookTitle" class="input" maxlength="40" value="${esc(book.title || "")}" autocomplete="off">
+      ${fresh.length ? `<p class="upds">${esc(t("reviewHint"))}${known ? " · " + esc(t("alreadyKnown", known)) : ""}</p>
+      <div class="bkwords">${book.words.map((x, i) => x.known ? "" : `<button class="bkw ${x.on ? "on" : ""}" data-action="bookToggle" data-i="${i}"><span class="bke">${x.e}</span><span>${esc(x.w)}</span></button>`).join("")}</div>`
+        : `<p class="upds">${esc(t("noNewWords"))}</p>`}
+      ${book.text ? `<details class="bktext"><summary>${esc(t("recognized"))}</summary><p>${esc(book.text)}</p></details>` : ""}
+      <div class="row">
+        <button class="btn ghost" data-action="bookCancel">${esc(t("cancel"))}</button>
+        <button class="btn go" data-action="bookAdd" ${on ? "" : "disabled"}>✅ ${esc(t("addWords", on))}</button>
+      </div></div>`;
+  }
+  function bookPhoto(source) {
+    book = { busy: "camera" };
+    renderBook();
+    send("bookphoto", { source, lang: state.lang }, (ok, res) => {
+      if (!ok) {
+        book = null;
+        renderBook();
+        if (res !== "cancelled") toast(t("aiFailed", res));
+        return;
+      }
+      const out = res && typeof res === "object" ? res : {};
+      const lang = LANGS[out.lang] ? out.lang : null;
+      if (!lang) {
+        book = null;
+        renderBook();
+        toast(t("langUnsupported"));
+        return;
+      }
+      const words = cleanAiWords(out.words, lang).map((x) => Object.assign(x, { on: true }));
+      book = { lang, title: String(out.title || "").slice(0, 40), text: String(out.text || "").slice(0, 1200), by: out.by, words };
+      renderBook();
+    });
+  }
+
+  // ── AI coach: sends the kid's progress (no names), gets focus words, new words and a tip ──
+  const coachBusy = {};
+  function coachSummary(kid) {
+    const lang = state.lang, M = (kid.learn || {})[lang] || {};
+    const entries = Object.keys(M).map((w) => [w, M[w]]).filter(([, st]) => st.s || st.w);
+    const plain = (w) => w.replace(/-/g, "");
+    const hard = entries.filter(([, st]) => st.b === 0 && st.w).sort((a, b) => b[1].w - a[1].w).slice(0, 15)
+      .map(([w, st]) => ({ w: plain(w), wrong: st.w, seen: st.s }));
+    const mastered = entries.filter(([, st]) => st.b >= 4).sort((a, b) => a[1].t - b[1].t).map(([w]) => plain(w));
+    const byLetter = {};
+    entries.forEach(([w, st]) => {
+      const k = firstLetter(lang, w);
+      const L = byLetter[k] || (byLetter[k] = { seen: 0, wrong: 0 });
+      L.seen += st.s;
+      L.wrong += st.w;
+    });
+    const weakLetters = Object.keys(byLetter).filter((k) => byLetter[k].seen >= 3 && byLetter[k].wrong)
+      .map((k) => ({ letter: k, wrongRate: Math.round((byLetter[k].wrong / byLetter[k].seen) * 100) }))
+      .sort((a, b) => b.wrongRate - a.wrongRate).slice(0, 6);
+    const seen = entries.reduce((n, [, st]) => n + st.s, 0);
+    const first = entries.reduce((n, [, st]) => n + st.c, 0);
+    return {
+      lang, uiLang: state.lang, level: kid.level,
+      ages: kid.level === "expert" ? "9-11" : "4-6", syllables: kid.level === "expert" ? "3 to 6" : "1 to 2",
+      answered: seen, firstTryRate: seen ? Math.round((first / seen) * 100) : 0,
+      hard, masteredCount: mastered.length, masteredSample: mastered.slice(-12), weakLetters,
+      vocabulary: wordsFor(lang, true).filter((x) => (kid.level === "expert" ? x.n >= 3 : x.n <= 2)).map((x) => plain(x.w)),
+    };
+  }
+  function applyCoach(kid, res) {
+    const lang = LANGS[res.lang] ? res.lang : state.lang;
+    const fits = (x) => (kid.level === "expert" ? x.n >= 3 && x.n <= 6 : x.n <= 2);
+    const words = cleanAiWords(res.words, lang).filter((x) => !x.known && fits(x));
+    let src = state.books.find((b) => b.coachKid === kid.id && b.lang === lang);
+    if (words.length) {
+      if (!src) {
+        src = { id: uid(), lang, title: t("coachSource", kid.name), at: Date.now(), by: res.by, coachKid: kid.id, words: [] };
+        state.books.push(src);
+      }
+      src.words = src.words.concat(words.map((x) => ({ w: x.w, e: x.e }))).slice(-60);
+      src.at = Date.now();
+      src.by = res.by;
+      booksChanged();
+    }
+    const byPlain = new Map(wordsFor(lang, true).map((x) => [x.w.replace(/-/g, ""), x.w]));
+    const focus = (Array.isArray(res.focus) ? res.focus : []).map((f) => byPlain.get(String(f).replace(/-/g, "").trim().toLocaleLowerCase(LANGS[lang].locale))).filter(Boolean).slice(0, 8);
+    kid.coach = { at: Date.now(), by: res.by, lang, note: String(res.note || "").slice(0, 600), focus, added: words.length, n: kid.answered };
+    persist();
+  }
+  function runCoach(kid, auto) {
+    if (coachBusy[kid.id]) return;
+    coachBusy[kid.id] = true;
+    if (view.name === "parent") render();
+    send("coach", { summary: coachSummary(kid) }, (ok, res) => {
+      coachBusy[kid.id] = false;
+      if (ok) {
+        try {
+          applyCoach(kid, res || {});
+        } catch (e) {
+          if (!auto) toast(t("aiFailed", e.message));
+        }
+      } else if (!auto) toast(t("aiFailed", res));
+      if (view.name === "parent") render();
+    });
+  }
+  function maybeAutoCoach(kid) {
+    if (!AIX.hasKey || !AIX.on || state.settings.smart === false) return;
+    if (kid.answered - ((kid.coach && kid.coach.n) || 0) < 40 || learnCounts(kid).seen < 10) return;
+    runCoach(kid, true);
   }
 
   // ── In-app update sheet (shown on the home screen only, never during a round) ──
@@ -1568,17 +2424,43 @@ function webApp() {
   }
 
   // ── Words ──
-  const wordCache = {};
-  function wordsFor(lang) {
-    if (!wordCache[lang]) {
+  let wordCache = {};
+  let booksRev = 0;
+  function booksChanged() {
+    booksRev++;
+    wordCache = {};
+  }
+  // Every word of a language: built-in, then book and AI-coach words (book words leave out when "Off").
+  function wordsFor(lang, all) {
+    const key = lang + (all ? ":all" : "");
+    if (!wordCache[key]) {
+      const base = builtinWords(lang);
+      const have = new Set(base.map((x) => x.w));
+      const extra = [];
+      state.books.forEach((b) => {
+        if (b.lang !== lang || (!all && !b.coachKid && state.settings.bookMode === "off")) return;
+        b.words.forEach((x) => {
+          if (!x || !x.w || !x.e || have.has(x.w)) return;
+          have.add(x.w);
+          extra.push({ w: x.w, e: x.e, n: x.w.split("-").length, k: firstLetter(lang, x.w), src: b.id, coachKid: b.coachKid || null });
+        });
+      });
+      wordCache[key] = base.concat(extra);
+    }
+    return wordCache[key];
+  }
+  const builtinCache = {};
+  function builtinWords(lang) {
+    if (!builtinCache[lang]) {
+
       const base = WORDS[lang].map((s) => s.split("|"));
       const more = MORE_WORDS.map((s) => {
         const parts = s.split("|");
         return [parts[MORE_COL[lang]], parts[0]];
       }).filter(([w]) => w);
-      wordCache[lang] = base.concat(more).map(([w, e]) => ({ w, e, n: w.split("-").length, k: firstLetter(lang, w) }));
+      builtinCache[lang] = base.concat(more).map(([w, e]) => ({ w, e, n: w.split("-").length, k: firstLetter(lang, w) }));
     }
-    return wordCache[lang];
+    return builtinCache[lang];
   }
   // First letter used to pick look-alike pictures. Spanish accents (á→a) count as the same letter;
   // Lithuanian letters with marks (š, ž, č, ū…) are their own letters, as kids learn them.
@@ -1745,7 +2627,14 @@ function webApp() {
   function render() {
     try {
       app.innerHTML = VIEWS[view.name]();
-      if (view.name === "game") fitWord();
+      if (view.name === "game") {
+        fitWord();
+        const kid = getKid(game.kidId);
+        if (kid && kid.speak === "shown" && game.spoken !== game.round) {
+          game.spoken = game.round;
+          speakWord(game.cur.w);
+        }
+      }
       if (view.name === "home") setTimeout(maybeShowUpdate, 250);
     } catch (e) {
       showError(e);
@@ -1760,20 +2649,26 @@ function webApp() {
 
   // ── Game logic ──
   function startGame(kid) {
-    game = { kidId: kid.id, deck: [], cur: null, options: [], missed: false, locked: false, streak: 0, last: null, wrong: new Set(), round: 0 };
+    game = { kidId: kid.id, deck: [], cur: null, options: [], missed: false, locked: false, streak: 0, last: null, wrong: new Set(), round: 0, recent: [], spoken: 0 };
     nextRound();
     go({ name: "game" });
     if (isShort(kid)) setTimeout(() => notice(t("needTopUp")), 400);
   }
   function nextRound() {
     const kid = getKid(game.kidId);
-    if (!game.deck.length) {
-      const pool = poolFor(kid);
-      game.deck = shuffle(pool.filter((w) => w.w !== game.last));
-      if (!game.deck.length) game.deck = shuffle(pool);
+    let word;
+    if (state.settings.smart !== false) {
+      word = smartPick(kid, poolFor(kid));
+    } else {
+      if (!game.deck.length) {
+        const pool = poolFor(kid);
+        game.deck = shuffle(pool.filter((w) => w.w !== game.last));
+        if (!game.deck.length) game.deck = shuffle(pool);
+      }
+      word = game.deck.pop();
     }
-    const word = game.deck.pop();
     game.last = word.w;
+    game.recent = [word.w].concat(game.recent || []).slice(0, 6);
     const picks = [];
     const candidates = shuffle(sameLetter(word)).concat(shuffle(wordsFor(state.lang)));
     const need = picCount(kid) - 1;
@@ -1800,6 +2695,10 @@ function webApp() {
       const earned = !game.missed;
       const wasShort = isShort(kid);
       kid.correct++;
+      kid.answered++;
+      learnDone(kid, game.cur.w, earned);
+      if (kid.speak === "after") speakWord(game.cur.w);
+      maybeAutoCoach(kid);
       if (earned) {
         kid.tokens++;
         kid.total++;
@@ -1836,6 +2735,7 @@ function webApp() {
     } else {
       if (game.wrong.has(i)) return;
       game.wrong.add(i);
+      if (!game.missed) learnMiss(kid, game.cur.w);
       game.missed = true;
       game.streak = 0;
       kid.wrong++;
@@ -1930,7 +2830,7 @@ function webApp() {
       <div class="pics">${game.options
         .map((o, i) => `<button class="pic ${game.wrong.has(i) ? "wrong" : ""}" style="background:${PIC_BG[i]}" data-action="pick" data-i="${i}"><span class="emo">${o.e}</span></button>`)
         .join("")}</div>
-      <div class="wordcard"><div class="word" id="word">${wordHTML(game.cur.w)}</div></div>
+      <div class="wordcard"><div class="word" id="word">${wordHTML(game.cur.w)}</div>${kid.speak !== "off" ? `<button class="hear" data-action="hear" aria-label="${esc(t("hearWord"))}">🔊</button>` : ""}</div>
       <div class="feedback" id="fb"></div>
       <div class="gamefoot">${levelBadge(kid.level)}<button class="btn small ghost" data-action="skip">${esc(t("skip"))} ⏭</button></div>`;
   };
@@ -2017,15 +2917,71 @@ function webApp() {
           <button class="btn danger" data-action="deleteKid" data-id="${k.id}" aria-label="${esc(t("deleteBtn"))}">🗑️</button>
         </div>
         ${k.tokens && cantPay ? `<div class="warnline">${esc(t("topUpFirst"))}</div>` : ""}
+        ${kidLearningHTML(k)}
         <details><summary>${esc(t("history"))} (${events.length})</summary>${hist}</details>
       </div>`;
   }
 
+  // Per kid: read aloud, word progress and the AI coach (shown only with an AI key).
+  function kidLearningHTML(k) {
+    const c = learnCounts(k);
+    const chip = (v, label) => `<button class="chip ${k.speak === v ? "on" : ""}" data-action="speakMode" data-id="${k.id}" data-v="${v}">${esc(label)}</button>`;
+    const coach = k.coach && k.coach.lang === state.lang ? k.coach : null;
+    let coachHTML = "";
+    if (AIX.hasKey) {
+      const busy = coachBusy[k.id];
+      coachHTML = `<div class="coachbox">
+        <div class="setrow"><span>✦ ${esc(t("coach"))}</span>
+          <button class="btn small ghost" data-action="askCoach" data-id="${k.id}" ${busy || c.seen < 10 ? "disabled" : ""}>${esc(busy ? t("coachBusy") : t("askCoach"))}</button></div>
+        ${coach ? `<div class="coachnote"><span class="badge-ai">${esc(t("coachBy", coach.by || "", fmtDate(coach.at)))}</span>
+          <p>${esc(coach.note)}</p>
+          ${coach.focus && coach.focus.length ? `<small>${esc(t("coachFocus"))}: ${coach.focus.map(esc).join(", ")}</small>` : ""}
+          ${coach.added ? `<small> · ${esc(t("coachAdded", coach.added))}</small>` : ""}</div>`
+          : c.seen < 10 ? `<p class="note">${esc(t("coachNeedsWords"))}</p>` : ""}
+      </div>`;
+    }
+    return `<div class="money learnbox">
+      <div class="setrow"><span>🔊 ${esc(t("readAloud"))}</span><div class="seg3">${chip("off", t("speakOff"))}${chip("shown", t("speakShown"))}${chip("after", t("speakAfter"))}</div></div>
+      <small class="mhint">🧠 ${esc(t("wordsStats", c.m, c.l, c.h))}</small>
+      ${coachHTML}
+    </div>`;
+  }
+
+  // Parent zone: words from books (photo buttons only with an AI key; sources stay usable without one).
+  function booksPanelHTML() {
+    if (!AIX.hasKey && !state.books.length) return "";
+    const srcs = state.books.slice().sort((a, b) => b.at - a.at).map((b) => `<div class="hist bksrc">
+        <span>${LANGS[b.lang].flag} <b>${esc(b.title || "—")}</b><br><small>${esc(t("sourceWords", b.words.length))} · ${esc(fmtDate(b.at))}${b.by ? " · ✦ " + esc(b.by) : ""}</small></span>
+        <button class="btn small ${bookArmed === b.id ? "danger" : "ghost"}" data-action="bookDel" data-id="${b.id}">${bookArmed === b.id ? esc(t("confirm")) : "🗑️"}</button></div>`).join("");
+    return `<div class="panel">
+      <h3>📷 ${esc(t("bookWords"))}</h3>
+      ${AIX.hasKey ? `<p class="note">${esc(t("bookHint"))}</p>
+        <div class="row"><button class="btn go" data-action="bookCamera">📷 ${esc(t("takePhoto"))}</button><button class="btn ghost" data-action="bookLibrary">🖼️ ${esc(t("fromPhotos"))}</button></div>` : ""}
+      ${srcs || `<p class="note">${esc(t("noBooks"))}</p>`}
+    </div>`;
+  }
+  // Settings › Learning (the app's own section): AI settings row (ai-configuration Step 7), smart order, book words, voice.
+  function learningSecHTML() {
+    const A = SET.ai, sv = SET.settings;
+    const pu = A && A.usage.p[A.provider];
+    const line = SET.hasKey
+      ? `${PN[A.provider]} — ${esc(A.model[A.provider])}${pu ? " — " + esc(t("tokensUsed", fmtN(pu.in + pu.out))) : ""}`
+      : esc(t("aiRowNoKey"));
+    const locale = LANGS[state.lang].locale, lname = t("langNames")[state.lang], v = voiceFor(locale);
+    return `<h3 class="sec">${esc(t("learning"))}</h3>
+      <div class="srow"><div class="grow"><b>${esc(t("aiRowTitle"))}</b><small class="muted">${line}</small></div>
+        <button class="sm ${SET.hasKey ? "" : "primary"}" data-act="aiopen">${esc(t("aiSettings"))}</button></div>
+      <div class="srow"><div class="grow"><b>${esc(t("smartOrder"))}</b><small>${esc(t("smartOrderHint"))}</small></div>
+        <button class="switch ${sv.smart ? "on" : ""}" data-act="toggle" data-v="smart" aria-label="${esc(t("smartOrder"))}"></button></div>
+      <div class="lk-row"><span class="lk-l">${esc(t("bookMode"))}</span>${segRow("bookMode", [["mix", t("modeMix")], ["first", t("modeFirst")], ["off", t("modeOff")]], sv.bookMode, "set")}</div>
+      <div class="srow"><div class="grow"><b>🔊 ${esc(t("readAloud"))}</b><small>${esc(v ? t("voiceFound", lname, v.name) : t("voiceMissing", lname))}</small></div></div>`;
+  }
   VIEWS.parent = () => `
       <div class="bar"><button class="icon" data-action="lockParent" aria-label="${esc(t("parents"))}">⬅</button><h2>👨‍👩‍👧 ${esc(t("parentArea"))}</h2><button class="icon" data-action="openSettings" aria-label="${esc(CT.title)}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button></div>
       ${usageAsk ? `<section id="usageask" class="panel" aria-label="${esc(CT.uaTitle)}"><b>${esc(CT.uaTitle)}</b><p>${esc(CT.uaText)}</p><div class="uabtns"><button class="btn" data-action="usageAnswer" data-v="1">${esc(CT.uaYes)}</button><button class="btn ghost" data-action="usageAnswer" data-v="0">${esc(CT.uaNo)}</button></div></section>` : ""}
       ${state.kids.length ? "" : `<p class="empty">${esc(t("noKids"))}</p>`}
-      ${state.kids.map(parentKid).join("")}`;
+      ${state.kids.map(parentKid).join("")}
+      ${booksPanelHTML()}`;
 
   // ── PIN handling ──
   function openPin(mode, from) {
@@ -2195,6 +3151,7 @@ function webApp() {
       <div class="srow"><div class="grow"><b>${esc(t("sound"))}</b></div><button class="switch ${s.sound ? "on" : ""}" data-act="toggle" data-v="sound" aria-label="${esc(t("sound"))}"></button></div>
       <h3 class="sec">${esc(CT.money)}</h3>
       <div class="lk-row"><span class="lk-l">${esc(t("currency"))}</span>${segRow("currency", SET.currencies.map((c) => [c, c]), s.currency, "set")}</div>
+      ${learningSecHTML()}
       <h3 class="sec">${esc(CT.parent)}</h3>
       <button class="srow act" data-act="changePin"><div class="grow"><b>🔑 ${esc(t("changePin"))}</b><small>${esc(CT.pinHelp)}</small></div><span class="chev" aria-hidden="true">›</span></button>
       <p class="hint">${esc(t("storageNote"))}</p>
@@ -2215,7 +3172,13 @@ function webApp() {
   }
   function useState(st) {   // the game reads its settings from here
     SET = st;
-    Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, currency: st.settings.currency });
+    S = { ai: st.ai, settings: { ai: st.settings.ai !== false, aiProvider: st.aiProvider, hasKey: !!st.hasKey } };   // the AI sheet's view
+    const hadKey = AIX.hasKey, prevMode = state.settings.bookMode;
+    AIX.hasKey = !!st.hasKey;
+    AIX.on = st.settings.ai !== false;
+    Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, currency: st.settings.currency, smart: st.settings.smart !== false, bookMode: st.settings.bookMode || "mix" });
+    if (prevMode !== state.settings.bookMode) booksChanged();
+    if (hadKey !== AIX.hasKey && view.name === "parent" && !cfgIsOpen) render();
     Object.assign(CFG, st.cfg);
   }
   const sendCfg = (action, params) => send(action, params, (ok, st) => { if (ok && st && st.cfgSchema) useState(st); else if (!ok) toast(st); renderCfg(); });
@@ -2223,13 +3186,14 @@ function webApp() {
     if (cfgIsOpen) return;
     send("settings-get", {}, (ok, st) => { if (!ok) return toast(st); useState(st); cfgIsOpen = true; renderCfg(); cfgSheet().scrollTop = 0; });
   }
-  function closeSettings() { cfgIsOpen = false; cfgArmed = false; renderCfg(); render(); }
+  function closeSettings() { cfgIsOpen = false; cfgArmed = false; aiOpen = false; renderAI(); renderCfg(); render(); }
   function cfgClick(e) {
     e.stopPropagation();   // the sheet's taps never reach the game's own click handler
     if (e.target.closest("select, option, input, textarea")) return;
     const el = e.target.closest("[data-act]"); if (!el || el.disabled) return;
     const act = el.dataset.act, v = el.dataset.v, k = el.dataset.k;
     if (act === "cfgclose") return closeSettings();
+    if (act === "aiopen") { aiOpen = true; return renderAI(); }
     if (act === "look") { const val = k === "textSize" ? +v : v; LOOK[k] = val; applyLook(); renderCfg(); return sendCfg("set", { k, v: val }); }
     if (act === "set") { SET.settings[k] = v; renderCfg(); return sendCfg("set", { k, v }); }
     if (act === "toggle") { SET.settings[v] = !SET.settings[v]; renderCfg(); return sendCfg("set", { k: v, v: SET.settings[v] }); }
@@ -2332,7 +3296,10 @@ function webApp() {
     },
     skip() {
       if (!game || game.locked) return;
+      const kid = getKid(game.kidId);
+      if (kid && game.cur) learnSkip(kid, game.cur.w);
       game.streak = 0;
+      persist();
       nextRound();
       render();
     },
@@ -2364,6 +3331,8 @@ function webApp() {
       go({ name: pinPad && pinPad.from === "parent" && parentUnlocked ? "parent" : "home" });
     },
     lockParent() {
+      book = null;
+      renderBook();
       parentUnlocked = false;
       go({ name: "home" });
     },
@@ -2438,6 +3407,75 @@ function webApp() {
       if (!requireParent()) return;
       openSettings();
     },
+    hear() {
+      if (game && game.cur) speakWord(game.cur.w);
+    },
+    speakMode(b) {
+      if (!requireParent()) return;
+      const k = getKid(b.dataset.id);
+      if (!k) return;
+      k.speak = b.dataset.v;
+      persist();
+      render();
+      if (k.speak !== "off") speakWord(t("sample"));
+    },
+    bookCamera() {
+      if (requireParent()) bookPhoto("camera");
+    },
+    bookLibrary() {
+      if (requireParent()) bookPhoto("library");
+    },
+    bookToggle(b) {
+      const x = book && book.words[Number(b.dataset.i)];
+      if (!x) return;
+      x.on = !x.on;
+      const inp = document.getElementById("bookTitle");
+      if (inp) book.title = inp.value;
+      renderBook();
+    },
+    bookCancel() {
+      book = null;
+      renderBook();
+    },
+    bookAdd() {
+      if (!book || !requireParent()) return;
+      const inp = document.getElementById("bookTitle");
+      const words = book.words.filter((x) => x.on && !x.known);
+      if (!words.length) return;
+      state.books.push({ id: uid(), lang: book.lang, title: ((inp && inp.value) || book.title || "").trim().slice(0, 40), at: Date.now(), by: book.by, words: words.map((x) => ({ w: x.w, e: x.e })) });
+      booksChanged();
+      persist();
+      toast(t("wordsAdded", words.length));
+      book = null;
+      renderBook();
+      render();
+    },
+    bookDel(b) {
+      if (!requireParent()) return;
+      const id = b.dataset.id;
+      if (bookArmed !== id) {
+        bookArmed = id;
+        render();
+        setTimeout(() => {
+          if (bookArmed === id) {
+            bookArmed = null;
+            if (view.name === "parent") render();
+          }
+        }, 3500);
+        return;
+      }
+      bookArmed = null;
+      state.books = state.books.filter((x) => x.id !== id);
+      booksChanged();
+      persist();
+      render();
+    },
+    askCoach(b) {
+      if (!requireParent()) return;
+      const k = getKid(b.dataset.id);
+      if (k) runCoach(k, false);
+    },
+
     changePin() {
       if (!requireParent()) return;
       openPin("set1", "parent");
@@ -2455,6 +3493,7 @@ function webApp() {
   };
 
   document.addEventListener("click", (e) => {
+    if (e.target.closest("select, option, input, textarea")) return;
     const el = e.target.closest("[data-action]");
     if (!el || el.disabled) return;
     const fn = A[el.dataset.action];
@@ -2827,7 +3866,8 @@ const safeJSON = (x) => JSON.stringify(x === undefined ? null : x).replace(/</g,
 
 // The state the page starts from, handed over by bootApp() (never inlined in buildHTML): the game's save plus the settings it reads.
 function clientState() {
-  return Object.assign({}, gameData || {}, { settings: gameSettings(), look: lookState(), cfg: cfgValues(), usageAsk: usageAvailable() && !settings.usageAsked && !settings.shareUsage });
+  return Object.assign({}, gameData || {}, { settings: gameSettings(), look: lookState(), cfg: cfgValues(), usageAsk: usageAvailable() && !settings.usageAsked && !settings.shareUsage,
+    ai: { hasKey: !!aiKey(), on: settings.ai !== false } });
 }
 
 // The page, without any data: the launch screen and a "Loading your players…" placeholder. Only settings are read here.
@@ -2913,6 +3953,65 @@ const offerUpdate = () => {
 // Actions sent by the page with send(action, params): readingstars://<action>?p=<json>
 async function handleAction(head, p) {
   const answer = (ok, msg) => js(`window.__done(${JSON.stringify(p.req || "")}, ${ok}, ${JSON.stringify(msg)})`);
+  const m = p;
+  // AI configuration (blueprint Step 6): each action answers with the fresh settings state (keys masked)
+  switch (head) {
+    case "aikey": {
+      const pr = PROVIDERS[m.v] ? m.v : settings.aiProvider;
+      if (await askKey(pr)) {
+        settings.ai = true; saveSettings();
+        try { const n = await fetchModels(pr); toast(`${PROVIDERS[pr]} key saved — ${n} models available`); }
+        catch (e) { toast(`Key saved, but checking it failed: ${String(e.message || e).slice(0, 70)}`); }
+      }
+      saveSettings(); return answer(true, settingsState());
+    }
+    case "airm": {
+      const pr = m.v;
+      if (PROVIDERS[pr]) { removeKey(pr); toast(`${PROVIDERS[pr]} key removed`); }
+      if (!aiKey()) { const other = Object.keys(PROVIDERS).find((x) => keyFor(x)); if (other) settings.aiProvider = other; }
+      saveSettings(); return answer(true, settingsState());
+    }
+    case "aiprov": if (PROVIDERS[m.v] && keyFor(m.v)) settings.aiProvider = m.v; saveSettings(); return answer(true, settingsState());
+    case "aimodels":
+      try { const n = await fetchModels(m.v); toast(`${n} ${PROVIDERS[m.v]} models found`); }
+      catch (e) { toast(String(e.message || e).slice(0, 90)); }
+      saveSettings(); return answer(true, settingsState());
+    case "aimodel":
+      if (PROVIDERS[m.p] && m.v) { settings.model = settings.model || {}; settings.model[m.p] = m.v; toast(`${PROVIDERS[m.p]} now uses ${m.v}`); }
+      saveSettings(); return answer(true, settingsState());
+    case "aitest": {
+      const pr = m.v, t0 = Date.now();
+      try {
+        await aiCall("Reply with the single word OK.", "Connection test.", 10, "test", pr);
+        toast(`${PROVIDERS[pr]} works — ${modelFor(pr)} answered in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+      } catch (e) { toast(`${PROVIDERS[pr]} test failed: ${String(e.message || e).slice(0, 80)}`); }
+      return answer(true, settingsState());
+    }
+    case "usagereset": resetUsage(); toast("Usage counters reset"); return answer(true, settingsState());
+    // Words from a book photo: the photo goes to the provider in use, the words come back for the parent to review
+    case "bookphoto": {
+      try {
+        if (!aiKey()) throw new Error("Add a key in Settings › AI settings");
+        const img = await takeBookPhoto(m.source);
+        js("window.__bookReading && window.__bookReading()");
+        const pr = settings.aiProvider;
+        const out = parseJSON(await aiCall(BOOK_SYSTEM, bookPrompt(m.lang), 3000, "books", pr, [img]));
+        return answer(true, Object.assign({ by: PROVIDERS[pr] }, out));
+      } catch (e) { return answer(false, String((e && e.message) || e)); }
+    }
+    // AI coach: the page sends a kid's word progress (no names)
+    case "coach": {
+      try {
+        if (!aiKey()) throw new Error("Add a key in Settings › AI settings");
+        const pr = settings.aiProvider;
+        const out = parseJSON(await aiCall(COACH_SYSTEM, coachPrompt(m.summary || {}), 2000, "coach", pr));
+        return answer(true, Object.assign({ by: PROVIDERS[pr], lang: (m.summary || {}).lang }, out));
+      } catch (e) { return answer(false, String((e && e.message) || e)); }
+    }
+    case "say":   // fallback voice when the page has no Web Speech
+      try { Speech.speak(String(m.text || "")); } catch (e) {}
+      return;
+  }
   // Settings (app-blueprints · settings): each change is applied and saved at once; the answer is the fresh state.
   if (head === "settings-get") return answer(true, settingsState());
   if (head === "set" && p.k === "shareUsage") { setUsage(p.v === true || p.v === "true" || p.v === "1"); return answer(true, settingsState()); }   // off also deletes the install ID
@@ -3036,7 +4135,7 @@ async function bootApp(isClosed) {
   let seen = "";
   try { seen = await ev(`document.visibilityState + ", " + innerWidth + "x" + innerHeight`, 5000); } catch (e) { seen = String(e.message || e); }
   startLog(`screen ready in ${((Date.now() - t0) / 1000).toFixed(1)} s (page: ${seen})`);
-  track("app_open", { layout: settings.density, theme: settings.theme, language: (gameData && gameData.lang) || "", players });
+  track("app_open", { layout: settings.density, theme: settings.theme, ai_key: !!aiKey(), language: (gameData && gameData.lang) || "", players });
   if (loadIssues.length) toast(bootText().late);
   else if (loadRepaired.length) toast(bootText().fresh);
   // Deferred work, once the first screen is drawn: updates, then the widget's icon. Reading Stars has no refresh of its own.

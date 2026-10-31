@@ -2,6 +2,26 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.8.0 (2026-10-31): Learns with your kid
+
+- 📷 **Words from your books**: Snap a page and AI turns its words into new picture rounds.
+- 🧠 **Practises what's hard**: Hard words come back more often, and an AI coach picks what to practise next.
+- 🔊 **Hear the word**: Each kid can hear the word when it appears or after answering.
+
+**Changes**
+
+- Words from books (parent zone): take a photo of a page or pick one from Photos; AI reads it and suggests picturable nouns in dictionary form, split into syllables, each with an emoji; the parent reviews and names the source before the words join the game
+- Book word sources listed in the parent zone with two-tap delete; Settings › Learning › Book words in the game: Mixed in, First or Off
+- Smart word order (Settings › Learning, on by default, no AI): per-kid, per-word spaced repetition; hard words come back more often, mastered ones rarely
+- AI coach per kid: a short tip for the parent, up to 8 focus words and up to 12 new words aimed at the letters the kid finds hard; runs after every 40 answered words (What AI does) or on Ask the AI coach; sends word progress only, never names
+- Read words aloud per kid (Off, When shown, After answer) with a 🔊 replay button on the word card; the iPhone's voices, Scriptable Speech as a fallback; Settings › Learning says whether a voice for the game's language is installed
+- AI settings (app-blueprints · ai-configuration 1.0.0) in Settings › Learning: Claude or OpenAI, keys only in the iOS Keychain, model menu, Test connection, token usage by feature, model and day
+- Anonymous usage (if on): app_open now says whether an AI key is set (ai_key)
+
+**Fixes**
+
+- Hard words are counted from real mistakes only, so skipping words doesn't slow down new words
+
 ## 1.7.0 (2026-10-31): Anonymous usage, if you agree
 
 - 📊 **Help shape Reading Stars**: If you agree, Reading Stars sends anonymous counts of the features you use. Nothing else.

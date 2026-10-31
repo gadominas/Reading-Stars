@@ -10,7 +10,7 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
 
 [![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgadominas%2FReading-Stars%2Fmain%2Freleases.json&query=%24.releases%5B0%5D.version&label=version&color=FACC15&labelColor=0E1116&style=flat-square)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/iOS-Scriptable-171B22?style=flat-square&labelColor=0E1116)](https://apps.apple.com/app/scriptable/id1405459188)
-[![AI](https://img.shields.io/badge/AI-none-171B22?style=flat-square&labelColor=0E1116)](#ai)
+[![AI](https://img.shields.io/badge/AI-optional%20(Claude%20%C2%B7%20OpenAI)-171B22?style=flat-square&labelColor=0E1116)](#ai)
 [![Blueprints](https://img.shields.io/badge/built%20with-app--blueprints-171B22?style=flat-square&labelColor=0E1116)](docs/BLUEPRINTS.md)
 [![Last commit](https://img.shields.io/github/last-commit/gadominas/Reading-Stars?style=flat-square&labelColor=0E1116&color=171B22&label=updated)](https://github.com/gadominas/Reading-Stars/commits)
 [![License](https://img.shields.io/badge/license-MIT-171B22?style=flat-square&labelColor=0E1116)](LICENSE)
@@ -37,6 +37,9 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
 - **Real pocket money, set per kid.** Each kid has their own token value and a hidden budget. When the budget can't cover the tokens, the kid is asked to get a top-up, and nothing earned is lost.
 - **Parent zone behind a PIN.** Top up budgets, pay out tokens, edit or delete players and see every payout and top-up with its date.
 - **Leaderboard.** All-time stars with a podium for the top three. Payouts never lower it.
+- **📷 Words from your books.** Photograph a page and AI suggests the words a child can recognise in a picture, ready to play: dictionary form, syllables and an emoji. You review them first.
+- **🧠 Learns what to practise.** Smart word order brings hard words back more often and mastered ones rarely (no AI). An optional ✦ AI coach picks the next words for each kid and gives you a short tip.
+- **🔊 Hear the word.** Per kid: off, when the word appears, or after answering, with a replay button.
 - **Three languages.** Lithuanian 🇱🇹, English 🇬🇧 and Spanish 🇪🇸, with about 190–200 picture words in each.
 - **Home Screen widget.** The top reader and everyone's stars and tokens, or one player's tokens. Never money, budgets or the PIN.
 - **Launch screen, Settings and updates** shared with the other apps: six colour palettes and three layouts, and new versions offered in the game.
@@ -61,6 +64,14 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
 <p align="center">
   <img src="docs/screenshots/13-dark.png" width="31%" alt="Home screen in the Night palette: the player cards on a dark night sky.">
   <img src="docs/screenshots/14-widget.png" width="31%" alt="Medium widget: Jonas as top reader with 112 points and 38 tokens to spend, then Ema, Leo and Ona with their stars and tokens.">
+</p>
+<p align="center">
+  <img src="docs/screenshots/17-book-words.png" width="31%" alt="New words from a book page: AI by Claude found ka-ra-liu-kas, ba-o-ba-bas and ro-žy-nas on a page named Mažasis princas, ready to add.">
+  <img src="docs/screenshots/18-ai-coach.png" width="31%" alt="Parent zone: Ema's read-aloud choice, word progress (9 mastered, 3 hard) and the AI coach tip with the words she practises next.">
+  <img src="docs/screenshots/15-learning-settings.png" width="31%" alt="Settings › Learning: the AI settings row, smart word order switch, book words Mixed in, First or Off, and the voice status.">
+</p>
+<p align="center">
+  <img src="docs/screenshots/16-ai-settings.png" width="31%" alt="AI settings: the Claude card in use with a masked key, Change key, Test connection, Remove and the model menu, then OpenAI and What AI does.">
 </p>
 
 ### Tested at home
@@ -205,7 +216,17 @@ The widget shows what the game saved last, so it works offline and updates after
 
 ## AI
 
-Reading Stars uses no AI. It needs no API key and sends nothing to an AI provider.
+AI is optional. Without a key Reading Stars works exactly as before, and the AI parts are hidden. With your own **Claude** or **OpenAI** key (**Parent zone › Settings › Learning › AI settings**) you get:
+
+- **📷 Words from books.** In the parent zone, tap **Take a photo** (or **From photos**). The page goes to the AI provider you chose, which reads it and suggests concrete nouns a child can recognise in a picture: in dictionary form (*lapė* even if the page says *lapės*), split into syllables by that language's rules, each with an emoji. Tap away any you don't want, name the source and add them. Book words follow the game's rules (same-letter pictures, Beginner 1–2 syllables, Expert 3–6) and are listed in the parent zone, where you can delete a source (two taps). **Settings › Learning › Book words in the game** mixes them in, puts them first, or turns them off.
+- **✦ AI coach.** For each kid, from their word progress (never their name): a short tip for you, up to 8 words to practise next, and up to 12 new words that start with the letters they find hard, sized for their level. It runs by itself after every 40 answered words (switch: **AI settings › What AI does**), or when you tap **Ask the AI coach** on a kid in the parent zone.
+
+The AI settings are the shared [ai-configuration](https://github.com/gadominas/app-blueprints/blob/main/blueprints/ai-configuration.md) blueprint: the key is typed into an iOS prompt and stored only in the iPhone's Keychain (the page sees `sk-ant-…9f2c`), you can pick any model your key can use, test the connection, and see the tokens used per feature, model and day. Everything AI wrote is labelled ✦ with the provider.
+
+Two learning features need no AI and no key:
+
+- **🧠 Smart word order** (**Settings › Learning**, on by default) tracks each kid's progress per word. Words they got wrong come back often, new words are introduced steadily, mastered words appear rarely.
+- **🔊 Read words aloud** is set per kid in the parent zone: **Off**, **When shown** (good for the youngest) or **After answer** (read first, then hear it). A 🔊 button on the word card repeats it. It uses the iPhone's voices; **Settings › Learning** says whether one is installed for the game's language and where to add it.
 
 ## Settings
 
@@ -216,6 +237,7 @@ Open the parent zone (PIN) and tap the sliders icon at the top right. Changes ap
 | Appearance | Colours (Auto or six palettes: Ink, the game's bright look and the default, Sepia, Mint, Contrast, Slate, Night; Slate and Night give a night sky), layout (Comfortable, Compact, Tiny: one line per player on the leaderboard and in the parent zone), text size, headline font. The game screen looks the same in every layout |
 | Game | Word letters (*Ap-ple*, *AP-PLE*, *ap-ple*; *Na-mas*, *NA-MAS*, *na-mas* in Lithuanian), sounds |
 | Money | Currency (EUR, USD, GBP) |
+| Learning | **AI settings** (Claude or OpenAI key, model, token usage, the AI coach switch), smart word order, book words in the game (Mixed in, First, Off), which voice reads the words |
 | Parent | Change PIN |
 | Updates | Offer new versions, check now |
 | Rounds | Pictures per round for Beginner (2–4, original 3) and Expert (3–5, original 5), each with Reset |
@@ -230,19 +252,20 @@ The sheet appears only on the home screen and never interrupts a round, in the g
 
 ## Privacy and security
 
-- **Anonymous usage, only if a parent agrees.** A one-time question in the PIN-protected parent zone (and **Settings › Privacy › Share anonymous usage**, also behind the PIN) decides whether Reading Stars sends anonymous counts to PostHog's US cloud: app opens with the number of players, rounds played (the level and whether the first try was right), payouts made and players added, the app version and a few display settings (including the language). Each event carries a random install ID made on your phone. Never sent: names, avatars, words, tokens, money or the PIN. Turning it off stops sending and deletes the install ID. The kids never see the question.
+- **Anonymous usage, only if a parent agrees.** A one-time question in the PIN-protected parent zone (and **Settings › Privacy › Share anonymous usage**, also behind the PIN) decides whether Reading Stars sends anonymous counts to PostHog's US cloud: app opens with the number of players and whether an AI key is set, rounds played (the level and whether the first try was right), payouts made and players added, the app version and a few display settings (including the language). Each event carries a random install ID made on your phone. Never sent: names, avatars, words, tokens, money or the PIN. Turning it off stops sending and deletes the install ID. The kids never see the question.
 
 - Progress is saved to `iCloud Drive › Scriptable › ReadingStars › data.json`, with `data.backup.json` and the parent's choices (`settings.json`) next to it, or to local Scriptable storage if iCloud is off. Kids' names, tokens, budgets and the PIN hash live only in that file, never in this repository.
 - The widget reads a small copy with only names, avatars, points and tokens, kept in Scriptable's local storage on this device (`reading-stars-widget.json`).
 - Nothing about the players leaves the phone. Apart from the update check, the app downloads only from this repository: the new script when you tap **Update now**, and the app icon the widget caches once per version.
-- No AI, no accounts, no API keys.
+- **AI only with your own key.** A book photo is sent to the AI provider you chose, only when you take it. The AI coach sends word statistics (words, how often they were right or wrong, the level, the language), never names, avatars, tokens or money. API keys stay in the iPhone's Keychain, never in files, the page or this repository. No accounts.
 - The update check only downloads `releases.json` from this repository.
 
 ## How it works
 
 - **One script, one page.** *Reading Stars.js* builds the game as an HTML page in a Scriptable `WebView`. The page talks to the script through `readingstars://` links: `save` writes the progress file after every change, and the other actions read and change settings and run the update.
 - **Launch screen.** Reading Stars opens on its logo for 2.4 seconds: the star traces its outline and pops in, the sparkle and the reading line follow, then "Read. Match. Shine." (*Skaityk. Rask. Spindėk.*, *Lee. Elige. Brilla.* in the game's language). Tap to skip; with Reduce Motion it appears without movement. It is the shared [launch-screen](https://github.com/gadominas/app-blueprints/blob/main/blueprints/launch-screen.md) blueprint, so all the apps start the same way. The same star sits on top of the home screen.
-- **Rounds** draw from a shuffled deck of the level's words, so a word doesn't come back until the deck runs out, and fill the other pictures with words that start with the same letter.
+- **Rounds** pick the next word with smart word order (each kid's progress per word, kept in `data.json`), or from a shuffled deck when it's off, and fill the other pictures with words that start with the same letter. Book and AI-coach words join the same pool.
+- **AI** requests all go through one function on the Scriptable side (`aiCall`), which also counts tokens; the page never holds a key.
 - **The widget branch** runs without the page: it reads the saved snapshot and draws the widget natively.
 
 ## Troubleshooting
@@ -254,12 +277,15 @@ The sheet appears only on the home screen and never interrupts a round, in the g
 | *Pay out* is greyed out | The budget is below one token's value: *Top up the budget to pay out*. |
 | No update offer | **Later** hides it for two days, and **Offer new versions** may be off. Use **Settings › Updates › Check for updates now**. |
 | "GitHub is still serving the old version" | GitHub can take a few minutes to serve a new release. Try again in a few minutes. |
+| No voice when a word should be read aloud | Add a voice for the game's language in iOS Settings › Accessibility › Spoken Content › Voices (Settings › Learning shows whether one is found), and check the silent switch. |
+| No **Take a photo** or **Ask the AI coach** | They appear once an AI key is saved in **Settings › Learning › AI settings**. |
+| The AI coach button is greyed out | The kid needs about 10 answered words in the game's language first. |
 | The widget's footer shows "⟳ Updated …" in amber | Nobody has played for a while (12 hours by default). Open the game once; the widget follows. |
 
 ## Built with
 
 - **[Scriptable](https://scriptable.app)** by Simon Støvring: one JavaScript file, a WebView for the interface.
-- **[app-blueprints](https://github.com/gadominas/app-blueprints)**: the shared in-app updates, settings, AI configuration, launch screen and widgets that every one of these apps uses, so they look and behave alike. **Settings › Built with** lists the versions; [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md) adds the deviations. Reading Stars follows four of them: in-app updates, settings, launch screen and widgets.
+- **[app-blueprints](https://github.com/gadominas/app-blueprints)**: the shared in-app updates, settings, AI configuration, launch screen and widgets that every one of these apps uses, so they look and behave alike. **Settings › Built with** lists the versions; [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md) adds the deviations. Reading Stars follows six of them: in-app updates, settings, AI configuration, launch screen, widgets and anonymous usage analytics.
 - **Pictures** are the iPhone's own emoji, so the game needs no image files and works offline.
 
 Maintainers: release notes live in [`releases.json`](releases.json); see [docs/RELEASING.md](docs/RELEASING.md). Screenshots are regenerated with [repo-site](https://github.com/gadominas/app-blueprints/tree/main/repo-site) from [`docs/site/scenario.js`](docs/site/scenario.js).
