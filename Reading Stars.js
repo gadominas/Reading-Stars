@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.11.0';
+const VERSION = '1.11.1';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -855,11 +855,15 @@ h1{margin:2px 0 14px;font-family:var(--display);font-size:calc(36px * var(--ts))
 .stk.wiggle{animation:stkWig .6s ease}
 @keyframes stkLand{0%{transform:scale(.3) rotate(var(--rot))}60%{transform:scale(1.35) rotate(var(--rot))}100%{transform:scale(1) rotate(var(--rot))}}
 @keyframes stkWig{0%,100%{transform:rotate(var(--rot)) scale(1)}25%{transform:rotate(-14deg) scale(1.2)}50%{transform:rotate(12deg) scale(1.2)}75%{transform:rotate(-6deg) scale(1.1)}}
-body.shelf-on #app{padding-bottom:calc(var(--shelfH, 96px) + 8px)}
 /* 1.10.1: the game screen is fixed to the screen; fitGame() sizes the pictures so nothing scrolls */
 body.game-fixed{position:fixed;inset:0;overflow:hidden;overscroll-behavior:none}
 body.game-fixed #app{height:100%;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column}
 body.game-fixed #app>*{flex:none}
+body.game-fixed #app{padding-bottom:0}
+body.game-fixed .shelf{position:relative;left:auto;bottom:auto;transform:none;width:auto;margin:auto -16px 0}   /* the column's last row */
+body.game-fixed .shelf{overflow:hidden}   /* nothing may poke out of the last row: the fit check counts every pixel */
+body.tight-shelf .sh-prog b{bottom:-4px}
+body.game-fixed .feedback{margin-bottom:8px}
 .pics.sized .pic{width:var(--tile)}
 .pics.sized .emo{font-size:calc(var(--tile) * .62)}
 #app.tight .hint{display:none}
@@ -3118,14 +3122,21 @@ function webApp() {
   }
   // The game screen is fixed to the phone's screen (no scrolling): the picture tiles shrink until everything fits
   // above the sticker shelf; on very small screens the hint line goes and the spacing tightens first.
+  // 1.11.1: the shelf is the last row of the game's column (not floating over it), so nothing can ever sit under it;
+  // the column is as tall as the visible screen, and fitting runs again whenever the screen or the shelf changes size.
+  let fitRO = null, fitKey = "";
+  const fitSizes = () => { const sh = document.getElementById("shelf"); return window.innerHeight + "x" + window.innerWidth + ":" + (sh ? sh.offsetHeight : 0); };
+  function refitIfChanged() {
+    if (view.name === "game" && fitSizes() !== fitKey) fitGame();
+  }
   function fitGame() {
     const app = document.getElementById("app"), pics = app && app.querySelector(".pics");
     if (!pics || !pics.firstElementChild) return;
-    const shelf = document.getElementById("shelf"), rows = Math.ceil(pics.children.length / 3), MIN = 52;
+    app.style.height = window.innerHeight + "px";
+    const rows = Math.ceil(pics.children.length / 3), MIN = 52;
     const reset = (tight) => {
       app.classList.toggle("tight", tight);
       document.body.classList.toggle("tight-shelf", tight);
-      document.documentElement.style.setProperty("--shelfH", (shelf ? shelf.offsetHeight : 0) + "px");
       pics.classList.remove("sized");
       pics.style.removeProperty("--tile");
     };
@@ -3142,10 +3153,19 @@ function webApp() {
     };
     reset(false);
     const roomy = squeeze();
-    if (roomy >= 96) return;   // the normal layout fits with good-sized pictures
-    reset(true);
-    const tight = squeeze();
-    if (roomy > tight) { reset(false); squeeze(); }   // the normal layout gave bigger pictures after all
+    if (roomy < 96) {   // the normal layout doesn't give good-sized pictures: try the compact one
+      reset(true);
+      const tight = squeeze();
+      if (roomy > tight) { reset(false); squeeze(); }
+    }
+    fitKey = fitSizes();
+    if (window.ResizeObserver) {
+      if (!fitRO) fitRO = new ResizeObserver(() => requestAnimationFrame(refitIfChanged));
+      fitRO.disconnect();
+      fitRO.observe(document.body);
+      const sh = document.getElementById("shelf");
+      if (sh) fitRO.observe(sh);
+    }
   }
   function fitWord() {
     const el = document.getElementById("word");
@@ -3590,7 +3610,7 @@ function webApp() {
       app.innerHTML = VIEWS[view.name]();
       document.body.classList.toggle("shelf-on", view.name === "game");   // room for the sticker shelf
       document.body.classList.toggle("game-fixed", view.name === "game");   // the game screen never scrolls (1.10.1)
-      if (view.name !== "game") { closeAlbum(); document.body.classList.remove("tight-shelf"); }
+      if (view.name !== "game") { closeAlbum(); document.body.classList.remove("tight-shelf"); app.style.height = ""; }
       if (view.name === "game") {
         fitWord();
         fitGame();
@@ -4568,6 +4588,7 @@ function webApp() {
   window.addEventListener("resize", () => {
     if (view.name === "game") { fitWord(); fitGame(); }
   });
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", () => refitIfChanged());
 
   render();
 }

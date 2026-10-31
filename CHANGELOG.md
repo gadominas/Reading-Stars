@@ -2,6 +2,20 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.11.1 (2026-11-01): Nothing under the stickers
+
+- 📐 **Tips always visible**: Tips and cheers no longer slip under the sticker shelf.
+
+**Changes**
+
+- The sticker shelf is now the last row of the game screen instead of floating over it, so nothing can sit under it
+- The game screen takes the phone's visible height, and fits again whenever the screen or the shelf changes size (safe areas that arrive late, rotation)
+- Nothing pokes out of the shelf any more, so the fitting no longer shrinks the pictures for nothing (iPhone SE: Expert pictures back to 100 px)
+
+**Fixes**
+
+- On iPhone, the coach line under the word could slip under the sticker shelf
+
 ## 1.11.0 (2026-11-01): A little reading coach
 
 - 👀 **Read, don't guess**: A quick wrong tap gets a tip: read the whole word first.
