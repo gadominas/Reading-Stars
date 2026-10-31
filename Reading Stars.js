@@ -42,7 +42,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.8.1';
+const VERSION = '1.8.2';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -1115,6 +1115,22 @@ body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 .bksrc small{color:var(--muted);font-weight:700}
 .hear{position:absolute;right:10px;bottom:8px;width:46px;height:46px;border-radius:50%;background:var(--sun);font-size:22px;box-shadow:0 3px 0 var(--sunDeep)}
 .hear:active{transform:translateY(2px);box-shadow:none}
+.bkw .bklvl{font-size:13px;margin-left:2px}
+.bkw.blocked{border-style:dashed}
+.bknotes{margin:2px 0 6px}
+.bknote{margin:4px 0;font-size:calc(13.5px * var(--ts));font-weight:700;color:var(--ink-2);line-height:1.4}
+.bknote.blocked{color:var(--danger)}
+.bknote.ok{color:var(--grass)}
+.bksrcbox{border-bottom:1px solid var(--hair)}
+.bksrcbox .bksrc{border-bottom:0}
+.bksrc small.warn{color:var(--danger)}
+.bkdetail{margin:0 0 10px}
+.bkdetail summary{font-size:calc(14px * var(--ts));font-weight:800;color:var(--signal);cursor:pointer}
+.bkwrow{display:grid;grid-template-columns:30px auto 1fr;align-items:center;column-gap:8px;padding:6px 0;border-top:1px dashed var(--hair)}
+.bkwrow .bke{font-size:22px}
+.bkwrow .bklvl{justify-self:start}
+.bkwrow small{grid-column:2 / 4;color:var(--muted);font-weight:700;font-size:calc(12.5px * var(--ts));line-height:1.35}
+.bkwrow.blocked small{color:var(--danger)}
 .bkpanel.ai{background:linear-gradient(160deg,var(--signal-wash) 0%,var(--sheet) 70%);border:2px solid var(--signal);box-shadow:0 6px 0 rgba(36,38,74,.12),0 0 0 4px color-mix(in srgb,var(--signal) 18%,transparent)}
 .bkpanel.ai h3{display:flex;align-items:center;gap:8px}
 .bkpanel.ai .badge-ai{font-size:calc(13px * var(--ts))}
@@ -1237,6 +1253,15 @@ function webApp() {
       aiRowNoKey: "Add a Claude or OpenAI key to read words from book photos and use the AI coach",
       aiSettings: "AI settings",
       tokensUsed: (n) => `${n} tokens used`,
+      inRounds: (a, n) => `${a} of ${n} words in rounds`,
+      showWords: "Show the words",
+      allPlay: "All these words will be in rounds.",
+      stOk: "in rounds",
+      stOff: "book words are Off in Settings › Learning",
+      stLang: (l) => `plays when the game is in ${l}`,
+      stOnlyExpert: "Expert only, and there is no Expert player",
+      stOnlyBeginner: "Beginner only, and there is no Beginner player",
+      stNear: (L, m) => `few words start with ${L}, so ${m === 1 ? "1 picture comes" : m + " pictures come"} from nearby letters`,
       bookWords: "Words from books",
       photoUnreadable: "Couldn\u2019t open that photo. Try another one.",
       bookHint: "Take a photo of a page. AI reads it and picks words a child can recognise in a picture.",
@@ -1373,6 +1398,15 @@ function webApp() {
       aiRowNoKey: "Añade una clave de Claude u OpenAI para leer palabras de fotos de libros y usar el entrenador IA",
       aiSettings: "Ajustes de IA",
       tokensUsed: (n) => `${n} tokens usados`,
+      inRounds: (a, n) => `${a} de ${n} palabras en juego`,
+      showWords: "Ver las palabras",
+      allPlay: "Todas estas palabras estarán en juego.",
+      stOk: "en juego",
+      stOff: "las palabras de libros están desactivadas en Ajustes › Aprendizaje",
+      stLang: (l) => `se juega con el juego en ${l}`,
+      stOnlyExpert: "solo Experto, y no hay ningún jugador Experto",
+      stOnlyBeginner: "solo Principiante, y no hay ningún jugador Principiante",
+      stNear: (L, m) => `pocas palabras empiezan por ${L}, así que ${m === 1 ? "1 dibujo viene" : m + " dibujos vienen"} de letras cercanas`,
       bookWords: "Palabras de libros",
       photoUnreadable: "No se pudo abrir la foto. Prueba con otra.",
       bookHint: "Haz una foto de una página. La IA la lee y elige palabras que un niño reconoce en un dibujo.",
@@ -1509,6 +1543,15 @@ function webApp() {
       aiRowNoKey: "Pridėkite Claude arba OpenAI raktą, kad galėtumėte skaityti žodžius iš knygų nuotraukų ir naudoti DI trenerį",
       aiSettings: "DI nustatymai",
       tokensUsed: (n) => `panaudota ${n} žetonų`,
+      inRounds: (a, n) => `Žaidžiama ${a} iš ${n} žodžių`,
+      showWords: "Rodyti žodžius",
+      allPlay: "Visi šie žodžiai bus žaidžiami.",
+      stOk: "žaidžiama",
+      stOff: "knygų žodžiai išjungti: Nustatymai › Mokymasis",
+      stLang: (l) => `žaidžiama, kai žaidimas ${l} kalba`,
+      stOnlyExpert: "tik ekspertams, o eksperto žaidėjo nėra",
+      stOnlyBeginner: "tik pradedantiesiems, o pradedančiojo žaidėjo nėra",
+      stNear: (L, m) => `mažai žodžių iš ${L}, todėl paveikslėlių iš gretimų raidžių: ${m}`,
       bookWords: "Žodžiai iš knygų",
       photoUnreadable: "Nepavyko atidaryti nuotraukos. Pabandykite kitą.",
       bookHint: "Nufotografuokite puslapį. DI jį perskaitys ir atrinks žodžius, kuriuos vaikas atpažins paveikslėlyje.",
@@ -2081,12 +2124,42 @@ function webApp() {
     });
     return out;
   }
+  // Why a book word is (or isn't) in rounds right now. Blocking: book words Off, another language, no player at its
+  // level. Informational: few words share its letter, so some pictures come from nearby letters.
+  const levelOfWord = (x) => (x.n <= 2 ? "beginner" : "expert");
+  function wordNotes(x, lang, extra) {
+    const notes = [];
+    const lvl = levelOfWord(x);
+    if (state.settings.bookMode === "off") notes.push({ k: "off", block: true, text: t("stOff") });
+    if (lang !== state.lang) notes.push({ k: "lang", block: true, text: t("stLang", t("langNames")[lang]) });
+    if (!state.kids.some((k) => k.level === lvl)) notes.push({ k: "level", block: true, text: t(lvl === "expert" ? "stOnlyExpert" : "stOnlyBeginner") });
+    const k = x.k || firstLetter(lang, x.w);
+    const partners = wordsFor(lang, true).concat(extra || [])
+      .filter((o) => (o.k || firstLetter(lang, o.w)) === k && o.w !== x.w && o.e !== x.e).length;   // pictures may be any level, as in rounds
+    const need = (lvl === "expert" ? CFG.expertPics : CFG.beginnerPics) - 1;
+    if (partners < need) notes.push({ k: "near", block: false, text: t("stNear", caseWord(k), need - partners) });
+    return notes;
+  }
+  const noteIcon = { off: "⏸", lang: "🌐", level: "👤", near: "🔤" };
+  function bookStats(b) {
+    const words = b.words.map((x) => ({ w: x.w, e: x.e, n: x.w.split("-").length, k: firstLetter(b.lang, x.w) }));
+    const notes = words.map((x) => wordNotes(x, b.lang));
+    return { words, notes, playing: notes.filter((ns) => !ns.some((n) => n.block)).length };
+  }
   window.__bookReading = function () {
     if (book) {
       book.busy = "reading";
       renderBook();
     }
   };
+  // Under the review chips: which chosen words won't play yet, and which get nearby-letter pictures, with the reason.
+  function reviewNotesHTML(list, chosen) {
+    const rows = list.map((x) => ({ x, ns: wordNotes(x, book.lang, chosen) })).filter((r) => r.ns.length);
+    if (!rows.length) return `<p class="bknote ok">✅ ${esc(t("allPlay"))}</p>`;
+    const playing = list.length - rows.filter((r) => r.ns.some((n) => n.block)).length;
+    return `<div class="bknotes"><p class="bknote"><b>${esc(t("inRounds", playing, list.length))}</b></p>
+      ${rows.map((r) => `<p class="bknote ${r.ns.some((n) => n.block) ? "blocked" : ""}"><b>${r.x.e} ${esc(r.x.w)}</b> — ${r.ns.map((n) => noteIcon[n.k] + " " + esc(n.text)).join("; ")}</p>`).join("")}</div>`;
+  }
   function renderBook() {
     let el = document.getElementById("booksheet");
     if (!el) {
@@ -2104,6 +2177,7 @@ function webApp() {
     }
     const fresh = book.words.filter((x) => !x.known);
     const on = fresh.filter((x) => x.on).length;
+    const chosen = fresh.filter((x) => x.on).map((x) => ({ w: x.w, e: x.e, n: x.n, k: firstLetter(book.lang, x.w) }));
     const known = book.words.length - fresh.length;
     el.innerHTML = `<div class="bkp">
       <div class="bkhead"><span class="badge-ai">✦ AI by ${esc(book.by || "")}</span><span class="bkflag">${LANGS[book.lang].flag}</span></div>
@@ -2111,7 +2185,13 @@ function webApp() {
       <label class="lbl" for="bookTitle">${esc(t("sourceName"))}</label>
       <input id="bookTitle" class="input" maxlength="40" value="${esc(book.title || "")}" autocomplete="off">
       ${fresh.length ? `<p class="upds">${esc(t("reviewHint"))}${known ? " · " + esc(t("alreadyKnown", known)) : ""}</p>
-      <div class="bkwords">${book.words.map((x, i) => x.known ? "" : `<button class="bkw ${x.on ? "on" : ""}" data-action="bookToggle" data-i="${i}"><span class="bke">${x.e}</span><span>${esc(x.w)}</span></button>`).join("")}</div>`
+      <div class="bkwords">${book.words.map((x, i) => {
+        if (x.known) return "";
+        const ns = wordNotes(x, book.lang, chosen);
+        const icons = ns.map((n) => noteIcon[n.k]).join("");
+        return `<button class="bkw ${x.on ? "on" : ""} ${ns.some((n) => n.block) ? "blocked" : ""}" data-action="bookToggle" data-i="${i}"><span class="bke">${x.e}</span><span>${esc(x.w)}</span><span class="bklvl">${levelOfWord(x) === "expert" ? "🦉" : "🐣"}${icons}</span></button>`;
+      }).join("")}</div>
+      ${reviewNotesHTML(fresh.filter((x) => x.on), chosen)}`
         : `<p class="upds">${esc(t("noNewWords"))}</p>`}
       ${book.text ? `<details class="bktext"><summary>${esc(t("recognized"))}</summary><p>${esc(book.text)}</p></details>` : ""}
       <div class="row">
@@ -2524,10 +2604,32 @@ function webApp() {
   }
   // Beginner: 3 pictures. Expert: 5 pictures (both set in Settings › Rounds). All pictures share the word's
   // first letter; if the words can't fill the chosen number, the round uses the original number instead.
+  const fitsLevel = (level, w) => (level === "expert" ? w.n >= 3 && w.n <= 6 : w.n <= 2);
+  // Built-in words need enough same-letter partners; words you added from books (and the AI coach) always play:
+  // when their letter is short of partners, the other pictures come from the nearest letters.
   function poolForN(kid, n) {
-    return wordsFor(state.lang).filter(
-      (w) => (kid.level === "expert" ? w.n >= 3 && w.n <= 6 : w.n <= 2) && sameLetter(w).length >= n - 1
-    );
+    return wordsFor(state.lang).filter((w) => fitsLevel(kid.level, w) && (w.src || sameLetter(w).length >= n - 1));
+  }
+  // The language's letters in alphabetical order, to find a letter's neighbours (z → ž, y, v…).
+  const letterOrderCache = {};
+  function letterIndex(lang, k) {
+    const key = lang + booksRev;
+    if (!letterOrderCache[key]) {
+      const loc = LANGS[lang].locale;
+      letterOrderCache[key] = Array.from(new Set(wordsFor(lang, true).map((x) => x.k))).sort((a, b) => a.localeCompare(b, loc));
+    }
+    const i = letterOrderCache[key].indexOf(k);
+    return i < 0 ? 0 : i;
+  }
+  // Other pictures for a round: same letter first, then the nearest letters, nearest first.
+  function distractorCandidates(word) {
+    const same = shuffle(sameLetter(word));
+    const at = letterIndex(state.lang, word.k);
+    const rest = shuffle(wordsFor(state.lang).filter((o) => o.k !== word.k))
+      .map((o) => [Math.abs(letterIndex(state.lang, o.k) - at), o])
+      .sort((a, b) => a[0] - b[0])
+      .map(([, o]) => o);
+    return same.concat(rest);
   }
   function picCount(kid) {
     const want = kid.level === "expert" ? CFG.expertPics : CFG.beginnerPics, def = kid.level === "expert" ? 5 : 3;
@@ -2720,7 +2822,7 @@ function webApp() {
     game.last = word.w;
     game.recent = [word.w].concat(game.recent || []).slice(0, 6);
     const picks = [];
-    const candidates = shuffle(sameLetter(word)).concat(shuffle(wordsFor(state.lang)));
+    const candidates = distractorCandidates(word);
     const need = picCount(kid) - 1;
     for (const o of candidates) {
       if (picks.length === need) break;
@@ -3000,9 +3102,19 @@ function webApp() {
   // Parent zone: words from books (photo buttons only with an AI key; sources stay usable without one).
   function booksPanelHTML() {
     if (!AIX.hasKey && !state.books.length) return "";
-    const srcs = state.books.slice().sort((a, b) => b.at - a.at).map((b) => `<div class="hist bksrc">
-        <span>${LANGS[b.lang].flag} <b>${esc(b.title || "—")}</b><br><small>${esc(t("sourceWords", b.words.length))} · ${esc(fmtDate(b.at))}${b.by ? " · ✦ " + esc(b.by) : ""}</small></span>
-        <button class="btn small ${bookArmed === b.id ? "danger" : "ghost"}" data-action="bookDel" data-id="${b.id}">${bookArmed === b.id ? esc(t("confirm")) : "🗑️"}</button></div>`).join("");
+    const srcs = state.books.slice().sort((a, b) => b.at - a.at).map((b) => {
+      const st = bookStats(b);
+      const all = st.playing === st.words.length;
+      return `<div class="bksrcbox"><div class="hist bksrc">
+        <span>${LANGS[b.lang].flag} <b>${esc(b.title || "—")}</b><br><small class="${all ? "" : "warn"}">${esc(t("inRounds", st.playing, st.words.length))} · ${esc(fmtDate(b.at))}${b.by ? " · ✦ " + esc(b.by) : ""}</small></span>
+        <button class="btn small ${bookArmed === b.id ? "danger" : "ghost"}" data-action="bookDel" data-id="${b.id}">${bookArmed === b.id ? esc(t("confirm")) : "🗑️"}</button></div>
+        <details class="bkdetail"><summary>${esc(t("showWords"))}</summary>
+        ${st.words.map((x, i) => {
+          const ns = st.notes[i], block = ns.some((n) => n.block);
+          return `<div class="bkwrow ${block ? "blocked" : ""}"><span class="bke">${x.e}</span><b>${esc(x.w)}</b><span class="bklvl">${levelOfWord(x) === "expert" ? "🦉" : "🐣"}</span>
+            <small>${ns.length ? ns.map((n) => noteIcon[n.k] + " " + esc(n.text)).join("; ") : "✅ " + esc(t("stOk"))}</small></div>`;
+        }).join("")}</details></div>`;
+    }).join("");
     return `<div class="panel bkpanel ${AIX.hasKey ? "ai" : ""}">
       <h3>📷 ${esc(t("bookWords"))}${AIX.hasKey ? ` <span class="badge-ai">${esc(t("aiBadge"))}</span>` : ""}</h3>
       ${AIX.hasKey ? `<p class="note">${esc(t("bookHint"))}</p>

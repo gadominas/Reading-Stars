@@ -2,6 +2,22 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.8.2 (2026-11-01): Every book word gets played
+
+- 🔤 **No word left out**: Book words with a rare first letter play too, with pictures from nearby letters.
+- 🔍 **See why**: Before adding, each word says if it will play, and if not, why.
+- 📚 **Words in rounds**: Each book shows how many of its words are in rounds; tap to see every word.
+
+**Changes**
+
+- Words from books and the AI coach always play: when few words share their first letter, the other pictures come from the nearest letters (Z → Ž…), same letter first. Built-in words keep the strict same-letter rule
+- Review sheet: each word shows its level (🐣/🦉) and, under the list, "3 of 4 words in rounds" with the reason for every word that won't play yet (book words Off, another language, no player at that level) or gets nearby-letter pictures
+- Parent zone › Words from books: "12 of 15 words in rounds" per book, and Show the words lists every word with its status
+
+**Fixes**
+
+- Book words starting with a letter that has few game words (Lithuanian Z, I, H, Ū…) were saved but never shown in a round
+
 ## 1.8.1 (2026-11-01): Book photos, fixed
 
 - 📷 **Photos open again**: Take a photo and From photos open the iPhone's picker on top of the game.
