@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.9.1';
+const VERSION = '1.10.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -275,7 +275,7 @@ const SET_KEYS = {
   theme: (v) => v === "auto" || !!PALETTES[v], density: (v) => ["comfortable", "compact", "tiny"].includes(v),
   font: (v) => ["sans", "serif"].includes(v), textSize: (v) => [0.92, 1, 1.12, 1.25].includes(+v),
   wordCase: (v) => ["cap", "upper", "lower"].includes(v), currency: (v) => CURRENCY_CODES.includes(v),
-  sound: "bool", checkUpdates: "bool", shareUsage: "bool",
+  sound: "bool", fun: "bool", checkUpdates: "bool", shareUsage: "bool",
   smart: "bool", bookMode: (v) => ["mix", "first", "off"].includes(v), ai: "bool",
   speechEngine: (v) => ["device", "ai"].includes(v), voiceGender: (v) => ["all", "f", "m"].includes(v),
   voiceRate: (v) => [0.85, 1, 1.15, 1.3].includes(+v), voicePitch: (v) => [0.85, 1, 1.15].includes(+v),
@@ -299,6 +299,7 @@ async function loadSettings() {
   const d = { theme: "ink", density: "comfortable", font: "sans", textSize: 1, wordCase: "cap", currency: "EUR" };
   for (const k of Object.keys(d)) if (!setSetting(k, settings[k])) settings[k] = d[k];
   settings.sound = settings.sound !== false;
+  settings.fun = settings.fun !== false;   // funny animations after a right answer (1.10.0)
   settings.smart = settings.smart !== false;
   settings.ai = settings.ai !== false;
   if (!["mix", "first", "off"].includes(settings.bookMode)) settings.bookMode = "mix";
@@ -324,6 +325,10 @@ const CONFIG = [
       en: { label: "Shortest word, Expert", unit: "syllables" }, lt: { label: "Trumpiausias žodis, ekspertams", unit: "skiem." }, es: { label: "Palabra más corta, Experto", unit: "sílabas" } },
     { k: "expertMaxSyl", def: 6, min: 1, max: 6, step: 1,
       en: { label: "Longest word, Expert", unit: "syllables" }, lt: { label: "Ilgiausias žodis, ekspertams", unit: "skiem." }, es: { label: "Palabra más larga, Experto", unit: "sílabas" } },
+    { k: "stickerEvery", def: 5, min: 2, max: 20, step: 1,
+      en: { label: "Words for a sticker", help: "Right on the first try", unit: "words" },
+      lt: { label: "Žodžių lipdukui gauti", help: "Atspėtų iš pirmo karto", unit: "žodž." },
+      es: { label: "Palabras para una pegatina", help: "Acertadas a la primera", unit: "palabras" } },
   ]],
   [{ en: "Widget", lt: "Valdiklis", es: "Widget" }, [
     { k: "widgetRefreshMin", def: 30, min: 15, max: 240, step: 15,
@@ -371,7 +376,7 @@ function lookState() {
            shown: settings.theme === "auto" ? (Device.isUsingDarkAppearance() ? "night" : "ink") : settings.theme };
 }
 // What the game reads from settings, and what the Settings sheet shows.
-const gameSettings = () => ({ wordCase: settings.wordCase, sound: settings.sound, currency: settings.currency, smart: settings.smart, bookMode: settings.bookMode,
+const gameSettings = () => ({ wordCase: settings.wordCase, sound: settings.sound, fun: settings.fun, currency: settings.currency, smart: settings.smart, bookMode: settings.bookMode,
   speechEngine: settings.speechEngine, voiceURIs: settings.voiceURIs, voiceRate: settings.voiceRate, voicePitch: settings.voicePitch,
   ttsModel: settings.ttsModel, ttsVoice: settings.ttsVoice, ttsInstructions: settings.ttsInstructions });
 function settingsState() {
@@ -830,6 +835,68 @@ h1{margin:2px 0 14px;font-family:var(--display);font-size:calc(36px * var(--ts))
 .feedback.bad{animation:shake .4s}
 .gamefoot{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
 
+/* Funny animations (1.10.0) */
+.fun-actor{position:fixed;left:0;top:0;font-size:120px;line-height:1;will-change:transform;filter:drop-shadow(0 8px 6px rgba(36,38,74,.22))}
+.fun-bit{position:fixed;left:0;top:0;line-height:1;will-change:transform,opacity}
+.fun-say{position:fixed;transform:translate(-50%,-50%) scale(0);background:#fff;color:#24264A;font-weight:900;font-size:26px;padding:8px 16px;border-radius:20px;white-space:nowrap;
+  box-shadow:0 5px 0 rgba(36,38,74,.18);animation:funSay 1.3s cubic-bezier(.3,1.6,.5,1) both}
+.fun-say::after{content:"";position:absolute;left:50%;bottom:-9px;margin-left:-9px;border:9px solid transparent;border-bottom:0;border-top-color:#fff}
+@keyframes funSay{0%{transform:translate(-50%,-50%) scale(0) rotate(-8deg)}18%{transform:translate(-50%,-50%) scale(1.12) rotate(4deg)}30%{transform:translate(-50%,-50%) scale(1) rotate(-2deg)}
+  80%{opacity:1;transform:translate(-50%,-60%) scale(1)}100%{opacity:0;transform:translate(-50%,-80%) scale(.9)}}
+
+/* Stickers (1.10.0): a die-cut look from white outlines around the emoji */
+.stk{display:inline-block;flex:none;font-size:34px;line-height:1;transform:rotate(var(--rot,0deg));
+  filter:drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 3px 3px rgba(36,38,74,.28))}
+.stk.shiny{filter:drop-shadow(2px 0 0 #FFD23F) drop-shadow(-2px 0 0 #FFD23F) drop-shadow(0 2px 0 #FFD23F) drop-shadow(0 -2px 0 #FFD23F) drop-shadow(0 0 7px rgba(255,190,40,.95))}
+.stk.big{font-size:46px}
+.stk.locked{filter:brightness(0);opacity:.13}
+.stk.landed{animation:stkLand .5s cubic-bezier(.3,1.7,.5,1)}
+.stk.wiggle{animation:stkWig .6s ease}
+@keyframes stkLand{0%{transform:scale(.3) rotate(var(--rot))}60%{transform:scale(1.35) rotate(var(--rot))}100%{transform:scale(1) rotate(var(--rot))}}
+@keyframes stkWig{0%,100%{transform:rotate(var(--rot)) scale(1)}25%{transform:rotate(-14deg) scale(1.2)}50%{transform:rotate(12deg) scale(1.2)}75%{transform:rotate(-6deg) scale(1.1)}}
+body.shelf-on #app{padding-bottom:calc(env(safe-area-inset-bottom) + 104px)}
+.shelf{position:fixed;z-index:40;left:50%;bottom:0;transform:translateX(-50%);width:min(760px,100%);box-sizing:border-box;display:flex;align-items:center;gap:12px;
+  padding:10px 14px calc(env(safe-area-inset-bottom) + 10px);background:var(--sheet);border-radius:26px 26px 0 0;
+  box-shadow:0 -5px 0 rgba(36,38,74,.08),0 -12px 30px rgba(36,38,74,.14);cursor:pointer}
+.sh-prog{--p:0;position:relative;flex:none;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(var(--signal) calc(var(--p) * 1%),var(--rule) 0)}
+.sh-prog::before{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--sheet)}
+.sh-prog.tick{animation:shTick .5s cubic-bezier(.3,1.7,.5,1)}
+@keyframes shTick{50%{transform:scale(1.15)}}
+.sh-gift{position:relative;font-size:26px;line-height:1}
+.sh-prog b{position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);background:var(--signal);color:#fff;font-size:12px;font-weight:900;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.sh-strip{flex:1;min-width:0;display:flex;align-items:center;gap:8px;overflow-x:auto;overflow-y:hidden;padding:8px 6px;scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)}
+.sh-strip::-webkit-scrollbar{display:none}
+.sh-empty{color:var(--muted);font-weight:800;font-size:calc(15px * var(--ts))}
+.kstk{display:flex;align-items:center;gap:3px;margin-top:2px}
+.kstk .stk{font-size:20px}
+.kstk small{font-weight:900;color:var(--muted);font-size:12px;margin-left:2px}
+.stk-rev{position:fixed;width:0;height:0}
+.stk-rev .stk.big{position:absolute;left:0;top:0;margin:-70px 0 0 -70px;width:140px;text-align:center;font-size:118px}
+.stk-rays{position:absolute;left:-150px;top:-150px;width:300px;height:300px;border-radius:50%;opacity:0;
+  background:repeating-conic-gradient(rgba(255,210,63,.55) 0 12deg,transparent 12deg 30deg);-webkit-mask-image:radial-gradient(circle,#000 25%,transparent 70%);mask-image:radial-gradient(circle,#000 25%,transparent 70%);
+  animation:raySpin 3s linear infinite}
+.stk-rev.shiny .stk-rays{background:repeating-conic-gradient(rgba(255,255,255,.8) 0 8deg,rgba(255,200,40,.5) 8deg 16deg,transparent 16deg 30deg)}
+@keyframes raySpin{to{transform:rotate(360deg)}}
+.stk-label{position:absolute;left:0;top:-128px;transform:translateX(-50%);opacity:0;white-space:nowrap;font-size:26px;font-weight:900;color:#fff;
+  background:var(--signal);padding:6px 18px;border-radius:20px;box-shadow:0 5px 0 rgba(36,38,74,.25)}
+.albumov{position:fixed;inset:0;z-index:80;background:rgba(20,22,45,.5);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s}
+.albumcard{width:min(760px,100%);max-height:86vh;overflow:auto;box-sizing:border-box;background:var(--sheet);border-radius:28px 28px 0 0;
+  padding:16px 16px calc(env(safe-area-inset-bottom) + 24px);animation:alUp .3s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes alUp{from{transform:translateY(40%)}}
+.al-head{display:flex;align-items:center;gap:10px}
+.al-t{flex:1;display:flex;flex-direction:column}
+.al-t b{font-size:calc(20px * var(--ts))}
+.al-t small{color:var(--muted);font-weight:800}
+.al-bar{height:12px;border-radius:8px;background:var(--rule);margin:12px 0 6px;overflow:hidden}
+.al-bar i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--signal),#FF8FC7)}
+.al-note{margin:6px 0 12px;font-weight:800;color:var(--ink-2)}
+.al-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:10px}
+.al-cell{aspect-ratio:1;display:grid;place-items:center;border-radius:18px;background:var(--paper);border:2px dashed var(--rule)}
+button.al-cell{border-style:solid;border-color:transparent;background:var(--signal-wash)}
+@media (prefers-reduced-motion: reduce){.stk-rays{animation:none}.stk.landed,.stk.wiggle,.sh-prog.tick{animation:none}}
+
 /* Effects */
 #fx{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
 .cf{position:fixed;left:var(--x);top:var(--y);width:var(--s);height:calc(var(--s) * .62);background:var(--c);border-radius:3px;animation:burst var(--d) cubic-bezier(.2,.7,.3,1) forwards}
@@ -1281,6 +1348,15 @@ function webApp() {
       settings: "Settings",
       wordStyle: "Word letters",
       sound: "Sounds",
+      funny: "Funny animations",
+      funnyHelp: "The right picture acts out its word",
+      stickers: "Stickers",
+      newSticker: "New sticker!",
+      shinySticker: "Shiny sticker! ✨",
+      nextSticker: (n) => (n === 1 ? "1 more word for a sticker!" : `${n} more words for a sticker!`),
+      stickerCount: (n, all) => `${n} of ${all} stickers`,
+      stickersDone: "All stickers collected! Now they come shiny ✨",
+      close: "Close",
       balance: "Balance",
       allTime: "All-time",
       paidOut: "Paid out",
@@ -1452,6 +1528,15 @@ function webApp() {
       settings: "Ajustes",
       wordStyle: "Letras de la palabra",
       sound: "Sonidos",
+      funny: "Animaciones divertidas",
+      funnyHelp: "La imagen correcta representa su palabra",
+      stickers: "Pegatinas",
+      newSticker: "¡Pegatina nueva!",
+      shinySticker: "¡Pegatina brillante! ✨",
+      nextSticker: (n) => (n === 1 ? "¡1 palabra más para una pegatina!" : `¡${n} palabras más para una pegatina!`),
+      stickerCount: (n, all) => `${n} de ${all} pegatinas`,
+      stickersDone: "¡Todas las pegatinas reunidas! Ahora llegan brillantes ✨",
+      close: "Cerrar",
       balance: "Saldo",
       allTime: "Total",
       paidOut: "Canjeado",
@@ -1623,6 +1708,15 @@ function webApp() {
       settings: "Nustatymai",
       wordStyle: "Žodžio raidės",
       sound: "Garsai",
+      funny: "Linksmos animacijos",
+      funnyHelp: "Teisingas paveikslėlis suvaidina savo žodį",
+      stickers: "Lipdukai",
+      newSticker: "Naujas lipdukas!",
+      shinySticker: "Blizgus lipdukas! ✨",
+      nextSticker: (n) => (n === 1 ? "Dar 1 žodis iki lipduko!" : n < 10 ? `Dar ${n} žodžiai iki lipduko!` : `Dar ${n} žodžių iki lipduko!`),
+      stickerCount: (n, all) => `${n} iš ${all} lipdukų`,
+      stickersDone: "Visi lipdukai surinkti! Dabar jie bus blizgūs ✨",
+      close: "Uždaryti",
       balance: "Likutis",
       allTime: "Iš viso",
       paidOut: "Išmokėta",
@@ -1856,12 +1950,12 @@ function webApp() {
   const LOOK = Object.assign({ theme: "ink", density: "comfortable", font: "sans", textSize: 1 }, init.look || {});
   let usageAsk = !!init.usageAsk;   // the one-time usage question, for a parent only (usage-analytics)
   const usageEvent = (params) => send("usage-event", params);
-  const CFG = Object.assign({ beginnerPics: 3, expertPics: 5, beginnerMinSyl: 1, beginnerMaxSyl: 2, expertMinSyl: 3, expertMaxSyl: 6 }, init.cfg || {});
+  const CFG = Object.assign({ beginnerPics: 3, expertPics: 5, beginnerMinSyl: 1, beginnerMaxSyl: 2, expertMinSyl: 3, expertMaxSyl: 6, stickerEvery: 5 }, init.cfg || {});
   const state = {
     version: 1,
     lang: LANGS[init.lang] ? init.lang : detectLang(),
     pinHash: init.pinHash || null,
-    settings: Object.assign({ wordCase: "cap", sound: true, currency: "EUR", smart: true, bookMode: "mix" }, init.settings || {}),
+    settings: Object.assign({ wordCase: "cap", sound: true, fun: true, currency: "EUR", smart: true, bookMode: "mix" }, init.settings || {}),
     kids: (Array.isArray(init.kids) ? init.kids : []).filter((k) => k && typeof k === "object").map(normalizeKid),
     // Words added from book photos and by the AI coach: [{ id, lang, title, at, by, coachKid?, words: [{ w, e }] }]
     books: (Array.isArray(init.books) ? init.books : []).filter((b) => b && LANGS[b.lang] && Array.isArray(b.words)),
@@ -1891,6 +1985,7 @@ function webApp() {
       speak: ["off", "shown", "after"].indexOf(k.speak) >= 0 ? k.speak : "after",   // new players hear the word after answering
       coach: k.coach && typeof k.coach === "object" ? k.coach : null,
       answered: num(k.answered),
+      stickers: normStickers(k.stickers),   // { have: [emoji, newest first], shiny: [emoji], pts: steps towards the next }
     };
   }
 
@@ -2968,7 +3063,7 @@ function webApp() {
     for (let i = 0; i < buf.length; i += 8192) str += String.fromCharCode.apply(null, buf.subarray(i, i + 8192));
     return { src: "data:audio/wav;base64," + btoa(str), ms: Math.round(total * 1000) };
   }
-  const SFX = { win: [[523, 659, 784, 1047, 1319], 0.15, "triangle"], soft: [[523, 784], 0.15, "triangle"], bad: [[260, 196], 0.2, "sine"], key: [[880], 0.06, "sine"] };
+  const SFX = { win: [[523, 659, 784, 1047, 1319], 0.15, "triangle"], soft: [[523, 784], 0.15, "triangle"], bad: [[260, 196], 0.2, "sine"], key: [[880], 0.06, "sine"], sticker: [[784, 988, 1175, 1568, 1976], 0.1, "sine"] };
   const sfxAu = new Audio(); sfxAu.preload = "auto"; sfxAu.setAttribute("playsinline", "");
   let actx = null;
   function webAudioTone(freqs, dur, type) {   // fallback only, if the <audio> element can't play
@@ -3065,6 +3160,240 @@ function webApp() {
     fb.textContent = text;
   }
 
+  // ── Funny animations (1.10.0): the right picture jumps out of its tile and acts out its word ──
+  // Cars drive off, birds fly away, fish swim, food gets eaten, animals hop, flowers bloom; anything else dances or spins.
+  const FUN_KINDS = {
+    drive: "🚗🚕🚙🚌🚎🏎🚓🚑🚒🚐🛻🚚🚛🚜🏍🛵🚲🛴🚂🚆🚇🚊🚝🚃🚋🛺🚤⛵🛶🚢⛴🛳🚄🚅🚈🦼🦽🛷",
+    fly: "🐦🐤🐥🦅🦆🦢🦉🦜🕊🐝🦋🐞🪲🦟🪰🦗🦇🐉🦚🦩🪶✈🛩🚁🚀🛸🪁🎈☁🌙⭐🌟☀🪂🧚",
+    swim: "🐟🐠🐡🦈🐬🐳🐋🐙🦑🦀🦞🦐🐢🦭🪼🐊🦦🐚🦆",
+    chomp: "🍏🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶🫑🌽🥕🧄🧅🥔🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🥩🍗🍖🌭🍔🍟🍕🥪🌮🌯🥗🍝🍜🍲🍛🍣🍱🥟🍤🍙🍚🍘🍥🍦🍧🍨🍩🍪🎂🍰🧁🥧🍫🍬🍭🍮🍯🥛🍼☕🍵🧃🥤🍿🥜🌰🍄🫓🥫",
+    bloom: "🌸🌺🌻🌹🌷🌼💐🌱🌿🍀🌳🌲🌴🌵🍁🍂🌾🌈🪴🌍🌎🌏",
+    hop: "🐶🐕🐱🐈🐭🐹🐰🐇🦊🐻🐼🐨🐯🦁🐮🐄🐷🐖🐸🐵🐒🦍🐔🐣🐴🐎🦄🦓🦒🐘🦏🦛🐪🐫🦘🦌🐐🐑🐏🐿🦔🦖🦕🐍🐌🦎🐺🐗🦝🦥🐀🐁🦫🦬🐃🐂🐓🦃🦤🐧⚽🏀🎾🏐🏈⚾🥎🎱🏉🥏",
+  };
+  const FUN_SAY = {
+    drive: { en: "Vroom vroom!", lt: "Brum brum!", es: "¡Brum brum!" },
+    fly: { en: "Wheee!", lt: "Valio!", es: "¡Uiii!" },
+    swim: { en: "Splash!", lt: "Pliumpt!", es: "¡Chof!" },
+    chomp: { en: "Nom nom!", lt: "Nam nam!", es: "¡Ñam ñam!" },
+    bloom: { en: "Ta-da!", lt: "Ta-dam!", es: "¡Tachán!" },
+    hop: { en: "Boing!", lt: "Šokt šokt!", es: "¡Boing!" },
+    dance: { en: "La-la-la!", lt: "Tra-la-la!", es: "¡La-la-la!" },
+    spin: { en: "Whoa!", lt: "Oho!", es: "¡Guau!" },
+  };
+  const bare = (e) => String(e || "").replace(/\uFE0F/g, "");
+  function funKind(e) {
+    const b = bare(e);
+    for (const k of Object.keys(FUN_KINDS)) if (b && FUN_KINDS[k].indexOf(b) >= 0) return k;
+    return Math.random() < 0.5 ? "dance" : "spin";
+  }
+  const reducedMotion = () => !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  // one flying bit (puff, bubble, crumb, note, sparkle): from (x, y) by (dx, dy)
+  function funBit(ch, x, y, dx, dy, ms, size, delay) {
+    const b = document.createElement("div");
+    b.className = "fun-bit";
+    b.textContent = ch;
+    b.style.fontSize = (size || 26) + "px";
+    fx.appendChild(b);
+    const at = (xx, yy, s, o) => ({ transform: `translate(${xx}px,${yy}px) translate(-50%,-50%) scale(${s})`, opacity: o });
+    try {
+      b.animate([at(x, y, 0.4, 0), at(x + dx * 0.25, y + dy * 0.25, 1, 1), at(x + dx, y + dy, 0.8, 0)], { duration: ms, delay: delay || 0, easing: "ease-out", fill: "both" });
+    } catch (e) {}
+    setTimeout(() => b.remove(), ms + (delay || 0) + 50);
+  }
+  function funSay(text, x, y, delay) {
+    const s = document.createElement("div");
+    s.className = "fun-say";
+    s.textContent = text;
+    s.style.left = x + "px";
+    s.style.top = y + "px";
+    s.style.animationDelay = (delay || 0) + "ms";
+    fx.appendChild(s);
+    setTimeout(() => s.remove(), 1500 + (delay || 0));
+  }
+  // Plays the animation for the picture in `btn`; returns how long it lasts (ms), 0 when switched off.
+  function funnyAnim(btn, emoji) {
+    if (state.settings.fun === false || !btn) return 0;
+    const r = btn.getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight;
+    const pics = document.querySelector(".pics"), pr = pics ? pics.getBoundingClientRect() : r;
+    const x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    const cx = W / 2, cy = Math.min(H * 0.62, Math.max(H * 0.32, pr.top + pr.height / 2 + 10));
+    const kind = funKind(emoji), say = (FUN_SAY[kind] || FUN_SAY.dance)[state.lang] || FUN_SAY[kind].en;
+    const wal = document.querySelector(".wallet"), sayTop = wal ? wal.getBoundingClientRect().bottom + 26 : 60;
+    const funSayAt = (text, x, y, delay) => funSay(text, x, Math.max(y, sayTop), delay);   // never over the wallet
+    const emo = btn.querySelector(".emo"), size = 120, s0 = emo ? Math.max(0.4, emo.getBoundingClientRect().height / size) : 0.8;
+    const a = document.createElement("div");
+    a.className = "fun-actor";
+    a.textContent = emoji;
+    fx.appendChild(a);
+    if (emo) emo.style.visibility = "hidden";
+    // key(offset, x, y, scale, rotate, squashX, squashY, opacity)
+    const K = (o, x, y, s, rot, sx, sy, op) => ({ offset: o, transform: `translate(${x}px,${y}px) translate(-50%,-50%) rotate(${rot || 0}deg) scale(${s * (sx || 1)},${s * (sy || 1)})`, opacity: op === undefined ? 1 : op });
+    let D = 1750, keys;
+    if (reducedMotion()) {
+      D = 1100;
+      keys = [K(0, x0, y0, s0), K(0.3, x0, y0, s0 * 1.35), K(0.6, x0, y0, s0 * 1.2), K(1, x0, y0, s0 * 1.2, 0, 1, 1, 0)];
+      funSayAt(say, x0, y0 - r.height * 0.6, 150);
+    } else if (kind === "hop") {
+      keys = [K(0, x0, y0, s0), K(0.15, cx, cy, 1, 0, 1.25, 0.8), K(0.27, cx - 30, cy - 110, 1, -10, 0.9, 1.15), K(0.38, cx - 50, cy, 1, 0, 1.3, 0.75),
+              K(0.5, cx, cy - 130, 1, 10, 0.9, 1.15), K(0.61, cx + 40, cy, 1, 0, 1.3, 0.75), K(0.76, cx + 10, cy - 150, 1.05, -360, 0.95, 1.1),
+              K(0.87, cx, cy, 1, -360, 1.2, 0.85), K(1, cx, cy, 0.2, -360, 1, 1, 0)];
+      [0.38, 0.61, 0.87].forEach((o, i) => setTimeout(() => { funBit("💨", cx - 70 + i * 40, cy + 48, -50, -10, 600, 24); funBit("💨", cx - 10 + i * 40, cy + 48, 50, -10, 600, 24); }, o * D));
+      funSayAt(say, cx, cy - 170, 0.35 * D);
+    } else if (kind === "drive") {
+      keys = [K(0, x0, y0, s0), K(0.16, cx, cy, 1.1), K(0.22, cx + 4, cy - 3, 1.1, -3), K(0.28, cx - 4, cy + 2, 1.1, 3), K(0.34, cx + 4, cy - 3, 1.1, -3),
+              K(0.42, cx + 30, cy, 1.1, 4, 0.9, 1.05), K(0.85, -180, cy - 10, 1.1, -6, 1.3, 0.9), K(1, -260, cy - 10, 1, 0, 1, 1, 0)];
+      [0.2, 0.27, 0.34, 0.45, 0.55, 0.65].forEach((o, i) => setTimeout(() => funBit("💨", i < 3 ? cx + 70 : cx + 70 - (i - 2) * 90, cy + 30, 70, -20, 700, 30), o * D));
+      funSayAt(say, cx, cy - 110, 0.12 * D);
+    } else if (kind === "fly") {
+      keys = [K(0, x0, y0, s0), K(0.15, cx, cy, 1), K(0.25, cx, cy - 10, 1, 0, 1.15, 0.85), K(0.33, cx, cy - 20, 1, 0, 0.85, 1.15), K(0.45, cx + 70, cy - 80, 1, 15),
+              K(0.6, cx - 70, cy - 170, 0.95, -15), K(0.75, cx + 60, cy - 270, 0.9, 15), K(1, cx - 40, -140, 0.8, -10, 1, 1, 0.9)];
+      [0.35, 0.45, 0.55, 0.65, 0.75].forEach((o, i) => setTimeout(() => funBit(i % 2 ? "✨" : "⭐", cx + (i % 2 ? 50 : -50), cy - 60 - i * 55, 0, 40, 700, 22), o * D));
+      funSayAt(say, cx, cy - 110, 0.2 * D);
+    } else if (kind === "swim") {
+      keys = [K(0, x0, y0, s0), K(0.15, cx, cy, 1.05), K(0.3, cx - 50, cy - 40, 1.05, -12), K(0.45, cx - 110, cy + 30, 1.05, 12), K(0.6, cx - 170, cy - 40, 1.05, -12),
+              K(0.78, cx - 240, cy + 30, 1.05, 12), K(1, -200, cy - 20, 1, -12, 1, 1, 0)];
+      for (let i = 0; i < 8; i++) setTimeout(() => funBit("🫧", cx + 20 - i * 40 + Math.random() * 20, cy - 10, Math.random() * 30 - 15, -160 - Math.random() * 80, 1000, 16 + Math.random() * 14), (0.18 + i * 0.08) * D);
+      funSayAt(say, cx, cy - 110, 0.15 * D);
+    } else if (kind === "chomp") {
+      keys = [K(0, x0, y0, s0), K(0.15, cx, cy, 1.3), K(0.25, cx, cy, 1.3, 0, 1.15, 0.85), K(0.33, cx, cy, 1.05, -8), K(0.43, cx, cy, 1.05, 0, 1.15, 0.85),
+              K(0.51, cx, cy, 0.8, 8), K(0.61, cx, cy, 0.8, 0, 1.15, 0.85), K(0.69, cx, cy, 0.5, -8), K(0.8, cx, cy, 0.15, 0, 1, 1, 0), K(1, cx, cy, 0.1, 0, 1, 1, 0)];
+      [0.25, 0.43, 0.61].forEach((o) => setTimeout(() => { for (let j = 0; j < 4; j++) funBit(["✨", "·", "•", "✨"][j], cx + 40, cy - 10, 30 + Math.random() * 70, 30 + Math.random() * 80, 600, 22); }, o * D));
+      setTimeout(() => {   // all gone: a happy face pops up
+        const yum = document.createElement("div");
+        yum.className = "fun-actor";
+        yum.textContent = "😋";
+        fx.appendChild(yum);
+        try { yum.animate([K(0, cx, cy, 0.2, -20), K(0.35, cx, cy, 1.25, 10), K(0.6, cx, cy, 1, -6), K(1, cx, cy, 1, 0, 1, 1, 0)], { duration: 0.32 * D + 300, easing: "ease-out", fill: "both" }); } catch (e) {}
+        setTimeout(() => yum.remove(), 0.32 * D + 360);
+      }, 0.72 * D);
+      funSayAt(say, cx, cy - 120, 0.22 * D);
+    } else if (kind === "bloom") {
+      keys = [K(0, x0, y0, s0), K(0.15, cx, cy, 0.4), K(0.4, cx, cy, 1.45, 12), K(0.5, cx, cy, 1.2, -8), K(0.6, cx, cy, 1.35, 5), K(0.85, cx, cy, 1.3, 0), K(1, cx, cy, 1.5, 0, 1, 1, 0)];
+      setTimeout(() => { for (let j = 0; j < 10; j++) { const an = (j / 10) * Math.PI * 2; funBit(j % 2 ? "🌸" : "✨", cx, cy, Math.cos(an) * 150, Math.sin(an) * 150, 900, 24); } }, 0.38 * D);
+      funSayAt(say, cx, cy - 130, 0.4 * D);
+    } else if (kind === "spin") {
+      keys = [K(0, x0, y0, s0), K(0.15, cx, cy, 1), K(0.45, cx, cy, 1.5, 720), K(0.55, cx, cy, 1.5, 720, 1.25, 0.8), K(0.63, cx, cy, 1.5, 720, 0.85, 1.2),
+              K(0.71, cx, cy, 1.5, 720, 1.12, 0.9), K(0.79, cx, cy, 1.5, 720, 0.95, 1.05), K(0.88, cx, cy, 1.4, 720), K(1, cx, cy, 0.2, 900, 1, 1, 0)];
+      setTimeout(() => { for (let j = 0; j < 8; j++) { const an = (j / 8) * Math.PI * 2; funBit("⭐", cx, cy, Math.cos(an) * 130, Math.sin(an) * 130, 800, 22); } }, 0.45 * D);
+      funSayAt(say, cx, cy - 140, 0.48 * D);
+    } else {   // dance
+      keys = [K(0, x0, y0, s0), K(0.15, cx, cy, 1.1), K(0.25, cx - 35, cy - 30, 1.1, -20), K(0.35, cx, cy, 1.1, 0, 1.15, 0.88), K(0.45, cx + 35, cy - 30, 1.1, 20),
+              K(0.55, cx, cy, 1.1, 0, 1.15, 0.88), K(0.65, cx - 35, cy - 30, 1.1, -20), K(0.75, cx, cy, 1.1, 0, 1.15, 0.88), K(0.87, cx, cy - 40, 1.15, 360), K(1, cx, cy - 40, 0.2, 360, 1, 1, 0)];
+      [0.2, 0.35, 0.5, 0.65].forEach((o, i) => setTimeout(() => funBit(i % 2 ? "🎶" : "🎵", cx + (i % 2 ? 60 : -60), cy - 40, (i % 2 ? 30 : -30), -110, 900, 28), o * D));
+      funSayAt(say, cx, cy - 120, 0.2 * D);
+    }
+    try {
+      a.animate(keys, { duration: D, easing: "ease-in-out", fill: "both" });
+    } catch (e) {
+      a.style.transform = `translate(${cx}px,${cy}px) translate(-50%,-50%)`;
+    }
+    setTimeout(() => a.remove(), D + 60);
+    return D;
+  }
+
+  // ── Stickers (1.10.0): every N words right on the first try earn a new sticker for this player's album ──
+  // Each sticker's id is its emoji, so the list can grow later. When the album is full, stickers come again as shiny ones.
+  const STICKERS = ["🦄", "🐉", "🦖", "🐙", "🦩", "🦥", "🐳", "🦋", "🐞", "🦊", "🐼", "🐨", "🦁", "🐯", "🐸", "🐵", "🦉", "🐧", "🦔", "🦒", "🐢", "🦜",
+    "🚀", "🛸", "🌈", "🌙", "🪐", "☄️", "⭐", "⚡", "🌋", "🏰", "🎡", "🎢", "🎠", "🍕", "🍩", "🧁", "🍦", "🍭", "🍉", "🍓",
+    "⚽", "🎸", "🥁", "🎨", "🧸", "🪁", "🏆", "👑", "💎", "🔮", "🪄", "🧩", "🛼", "🤖", "👽", "👻", "🎃", "🧚"];
+  const stickerEvery = () => Math.min(20, Math.max(2, +CFG.stickerEvery || 5));
+  function normStickers(v) {
+    const o = v && typeof v === "object" ? v : {};
+    const ids = (x) => (Array.isArray(x) ? x.filter((s, i, arr) => typeof s === "string" && s && arr.indexOf(s) === i) : []);
+    return { have: ids(o.have), shiny: ids(o.shiny), pts: Math.max(0, Math.floor(+o.pts || 0)) };
+  }
+  // A right first-try answer: one step towards the next sticker. Returns { id, shiny } when a sticker is earned.
+  function stickerStep(kid) {
+    const st = (kid.stickers = normStickers(kid.stickers));
+    st.pts++;
+    if (st.pts < stickerEvery()) return null;
+    st.pts = 0;
+    const fresh = STICKERS.filter((x) => st.have.indexOf(x) < 0);
+    if (fresh.length) {
+      const id = pickRand(fresh);
+      st.have.unshift(id);
+      return { id, shiny: false };
+    }
+    const dull = st.have.filter((x) => st.shiny.indexOf(x) < 0);
+    const id = pickRand(dull.length ? dull : st.have);
+    if (st.shiny.indexOf(id) < 0) st.shiny.unshift(id);
+    return { id, shiny: true };
+  }
+  const stkRot = (id) => { let h = 0; for (const c of id) h = (h * 31 + c.codePointAt(0)) % 997; return (h % 17) - 8; };
+  const stickerHTML = (id, kid, cls) => `<span class="stk ${cls || ""} ${kid && normStickers(kid.stickers).shiny.indexOf(id) >= 0 ? "shiny" : ""}" style="--rot:${stkRot(id)}deg">${id}</span>`;
+  function shelfHTML(kid) {
+    const st = normStickers(kid.stickers), every = stickerEvery();
+    return `<div class="shelf" id="shelf" data-action="album" role="button" aria-label="${esc(t("stickers"))}">
+      <div class="sh-prog" id="shprog" style="--p:${Math.round((st.pts / every) * 100)}"><span class="sh-gift">🎁</span><b>${st.pts}/${every}</b></div>
+      <div class="sh-strip" id="shstrip">${st.have.length ? st.have.map((id) => stickerHTML(id, kid)).join("") : `<span class="sh-empty">${esc(t("nextSticker", every - st.pts))}</span>`}</div>
+    </div>`;
+  }
+  function updateShelf(kid) {
+    const st = normStickers(kid.stickers), every = stickerEvery(), p = document.getElementById("shprog");
+    if (!p) return;
+    p.style.setProperty("--p", Math.round((st.pts / every) * 100));
+    p.querySelector("b").textContent = st.pts + "/" + every;
+    p.classList.remove("tick");
+    void p.offsetWidth;
+    p.classList.add("tick");
+  }
+  // The new sticker: it bursts out of a gift in the middle, then flies down to the shelf.
+  function stickerReveal(kid, got) {
+    const W = window.innerWidth, H = window.innerHeight, cx = W / 2, cy = H * 0.42;
+    const wrap = document.createElement("div");
+    wrap.className = "stk-rev" + (got.shiny ? " shiny" : "");
+    wrap.style.left = cx + "px";
+    wrap.style.top = cy + "px";
+    wrap.innerHTML = `<div class="stk-rays"></div><span class="stk big ${got.shiny ? "shiny" : ""}" style="--rot:${stkRot(got.id)}deg">${got.id}</span><div class="stk-label">${esc(got.shiny ? t("shinySticker") : t("newSticker"))}</div>`;
+    fx.appendChild(wrap);
+    sfx("sticker");
+    const big = wrap.querySelector(".stk.big"), D = 1750, rot = stkRot(got.id);
+    const strip = document.getElementById("shstrip");
+    const sr = strip ? strip.getBoundingClientRect() : { left: cx, top: H - 50, height: 40 };
+    const tx = sr.left + 24 - cx, ty = sr.top + sr.height / 2 - cy;
+    try {
+      big.animate([
+        { offset: 0, transform: "scale(0) rotate(-40deg)" }, { offset: 0.18, transform: "scale(1.35) rotate(10deg)" }, { offset: 0.28, transform: `scale(1) rotate(${rot}deg)` },
+        { offset: 0.62, transform: `scale(1.05) rotate(${rot}deg)` }, { offset: 1, transform: `translate(${tx}px,${ty}px) scale(.28) rotate(${rot}deg)` },
+      ], { duration: D, easing: "ease-in-out", fill: "both" });
+      wrap.querySelectorAll(".stk-rays,.stk-label").forEach((x) => x.animate([{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 1, offset: 0.6 }, { opacity: 0, offset: 0.75 }, { opacity: 0 }], { duration: D, fill: "both" }));
+    } catch (e) {}
+    for (let j = 0; j < 12; j++) { const an = (j / 12) * Math.PI * 2; funBit(got.shiny ? "✨" : pickRand(["⭐", "✨", "🌟"]), cx, cy, Math.cos(an) * 170, Math.sin(an) * 170, 900, 22, 200); }
+    setTimeout(() => {
+      wrap.remove();
+      const s2 = document.getElementById("shstrip");
+      if (!s2) return;
+      const old = s2.querySelector(".sh-empty");
+      if (old) old.remove();
+      if (got.shiny) { const ex = Array.from(s2.children).find((c) => c.textContent === got.id); if (ex) ex.remove(); }
+      s2.insertAdjacentHTML("afterbegin", stickerHTML(got.id, kid, "landed"));
+      s2.scrollLeft = 0;
+    }, D);
+    return D;
+  }
+  // The album: every sticker, the missing ones as dark shapes to guess
+  function openAlbum(kid) {
+    closeAlbum();
+    const st = normStickers(kid.stickers), all = STICKERS.concat(st.have.filter((x) => STICKERS.indexOf(x) < 0));
+    const done = all.every((x) => st.have.indexOf(x) >= 0);
+    const ov = document.createElement("div");
+    ov.id = "album";
+    ov.className = "albumov";
+    ov.setAttribute("data-action", "albumClose");
+    ov.innerHTML = `<div class="albumcard" data-action="noop" role="dialog" aria-label="${esc(t("stickers"))}">
+      <div class="al-head"><span class="ava sm" style="background:${avaBg(kid)}">${kid.avatar}</span><div class="al-t"><b>${esc(kid.name)}</b><small>${esc(t("stickerCount", st.have.length, all.length))}</small></div>
+        <button class="icon" data-action="albumClose" aria-label="${esc(t("close"))}">✕</button></div>
+      <div class="al-bar"><i style="width:${Math.round((st.have.length / all.length) * 100)}%"></i></div>
+      <p class="al-note">${esc(done ? t("stickersDone") : t("nextSticker", stickerEvery() - st.pts))}</p>
+      <div class="al-grid">${all.map((id) => (st.have.indexOf(id) >= 0 ? `<button class="al-cell" data-action="stkWiggle">${stickerHTML(id, kid, "big")}</button>` : `<div class="al-cell"><span class="stk big locked" style="--rot:${stkRot(id)}deg">${id}</span></div>`)).join("")}</div>
+    </div>`;
+    document.body.appendChild(ov);
+  }
+  function closeAlbum() {
+    const ov = document.getElementById("album");
+    if (ov) ov.remove();
+  }
+
   // ── Navigation ──
   const app = document.getElementById("app");
   let view = { name: "home" };
@@ -3093,6 +3422,8 @@ function webApp() {
   function render() {
     try {
       app.innerHTML = VIEWS[view.name]();
+      document.body.classList.toggle("shelf-on", view.name === "game");   // room for the sticker shelf
+      if (view.name !== "game") closeAlbum();
       if (view.name === "game") {
         fitWord();
         const kid = getKid(game.kidId);
@@ -3167,10 +3498,12 @@ function webApp() {
       learnDone(kid, game.cur.w, earned);
       const saidWord = game.cur.w;
       maybeAutoCoach(kid);
+      let got = null;
       if (earned) {
         kid.tokens++;
         kid.total++;
         game.streak++;
+        got = stickerStep(kid);   // a step towards the next sticker (a new one every N first-try words)
       }
       persist();
       usageEvent({ e: "round_finished", level: kid.level === "expert" ? "expert" : "beginner", correct: earned ? "1" : "0" });
@@ -3181,6 +3514,9 @@ function webApp() {
       const w = document.getElementById("word");
       if (w) w.classList.add("cheer");
       let chime = 0;
+      const funMs = funnyAnim(btn, opt.e);   // the picture jumps out and acts out its word
+      if (earned) updateShelf(kid);
+      if (got) setTimeout(() => stickerReveal(kid, got), Math.max(funMs - 150, 700));
       if (earned) {
         chime = sndWin();
         confetti(cx, cy, 90);
@@ -3202,7 +3538,7 @@ function webApp() {
           nextRound();
           render();
         }
-      }, earned ? 2100 : 2300);
+      }, (earned ? 2100 : 2300) + (got ? 1900 : 0));   // a new sticker gets time to fly to the shelf
     } else {
       if (game.wrong.has(i)) return;
       game.wrong.add(i);
@@ -3241,6 +3577,7 @@ function webApp() {
       <div class="stats"><span>🪙 ${k.tokens}</span><span>⭐ ${k.total}</span></div>
       ${k.rate > 0 ? `<div class="worth">= ${esc(money(valueCents(k)))}</div>` : ""}
       ${isShort(k) ? `<div class="warnchip">${esc(t("needTopUpShort"))}</div>` : ""}
+      ${k.stickers.have.length ? `<div class="kstk">${k.stickers.have.slice(0, 4).map((id) => stickerHTML(id, k)).join("")}${k.stickers.have.length > 4 ? `<small>+${k.stickers.have.length - 4}</small>` : ""}</div>` : ""}
     </button>`;
   }
 
@@ -3304,7 +3641,8 @@ function webApp() {
       <div class="wordcard"><div class="word" id="word">${wordHTML(game.cur.w)}</div></div>
       ${kid.speak !== "off" ? `<div class="hearrow"><button class="hear" data-action="hear" aria-label="${esc(t("hearWord"))}">🔊</button></div>` : ""}
       <div class="feedback" id="fb"></div>
-      <div class="gamefoot">${levelBadge(kid.level)}<button class="btn small ghost" data-action="skip">${esc(t("skip"))} ⏭</button></div>`;
+      <div class="gamefoot">${levelBadge(kid.level)}<button class="btn small ghost" data-action="skip">${esc(t("skip"))} ⏭</button></div>
+      ${shelfHTML(kid)}`;
   };
 
   VIEWS.board = () => {
@@ -3631,6 +3969,7 @@ function webApp() {
       <h3 class="sec">${esc(CT.game)}</h3>
       <div class="lk-row"><span class="lk-l">${esc(t("wordStyle"))}</span>${segRow("wordCase", [["cap", caseLabel("cap")], ["upper", caseLabel("upper")], ["lower", caseLabel("lower")]], s.wordCase, "set")}</div>
       <div class="srow"><div class="grow"><b>${esc(t("sound"))}</b></div><button class="switch ${s.sound ? "on" : ""}" data-act="toggle" data-v="sound" aria-label="${esc(t("sound"))}"></button></div>
+      <div class="srow"><div class="grow"><b>${esc(t("funny"))}</b><small>${esc(t("funnyHelp"))}</small></div><button class="switch ${s.fun !== false ? "on" : ""}" data-act="toggle" data-v="fun" aria-label="${esc(t("funny"))}"></button></div>
       <h3 class="sec">${esc(CT.money)}</h3>
       <div class="lk-row"><span class="lk-l">${esc(t("currency"))}</span>${segRow("currency", SET.currencies.map((c) => [c, c]), s.currency, "set")}</div>
       ${learningSecHTML()}
@@ -3659,7 +3998,7 @@ function webApp() {
     const hadKey = AIX.hasKey, prevMode = state.settings.bookMode;
     AIX.hasKey = !!st.hasKey;
     AIX.on = st.settings.ai !== false;
-    Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, currency: st.settings.currency, smart: st.settings.smart !== false, bookMode: st.settings.bookMode || "mix" });
+    Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, fun: st.settings.fun !== false, currency: st.settings.currency, smart: st.settings.smart !== false, bookMode: st.settings.bookMode || "mix" });
     const vk = ["speechEngine", "voiceRate", "voicePitch", "ttsModel", "ttsVoice", "ttsInstructions"];
     const before = JSON.stringify(vk.map((x) => state.settings[x]));
     vk.forEach((x) => { if (st.settings[x] !== undefined) state.settings[x] = st.settings[x]; });
@@ -3693,7 +4032,7 @@ function webApp() {
     }
     if (act === "look") { const val = k === "textSize" ? +v : v; LOOK[k] = val; applyLook(); renderCfg(); return sendCfg("set", { k, v: val }); }
     if (act === "set") { SET.settings[k] = v; renderCfg(); return sendCfg("set", { k, v }); }
-    if (act === "toggle") { SET.settings[v] = !SET.settings[v]; renderCfg(); return sendCfg("set", { k: v, v: SET.settings[v] }); }
+    if (act === "toggle") { SET.settings[v] = v === "fun" ? SET.settings[v] === false : !SET.settings[v]; renderCfg(); return sendCfg("set", { k: v, v: SET.settings[v] }); }
     if (act === "cfgreset") return sendCfg("cfg", { k, reset: 1 });
     if (act === "cfgstep") { const d = cfgItem(k), step = d.step || 1; SET.cfg[k] = Math.min(d.max, Math.max(d.min, Number(SET.cfg[k]) + step * +v)); renderCfg(); return sendCfg("cfg", { k, v: SET.cfg[k] }); }
     if (act === "cfgall") {
@@ -3795,6 +4134,21 @@ function webApp() {
     },
     pick(b) {
       pick(b);
+    },
+    album() {
+      const kid = game && getKid(game.kidId);
+      if (kid) openAlbum(kid);
+    },
+    albumClose() {
+      closeAlbum();
+    },
+    noop() {},
+    stkWiggle(b) {
+      const s = b.querySelector(".stk");
+      if (!s) return;
+      s.classList.remove("wiggle");
+      void s.offsetWidth;
+      s.classList.add("wiggle");
     },
     skip() {
       if (!game || game.locked) return;

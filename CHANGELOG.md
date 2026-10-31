@@ -2,6 +2,21 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.10.0 (2026-11-01): Funny pictures and stickers
+
+- 🎉 **Pictures come alive**: After each right answer the picture acts out its word: cars drive, fish swim.
+- 🎁 **Collect stickers**: Every 5 words right on the first try earn a new sticker.
+- 📒 **Always on the shelf**: Each kid's stickers stay at the bottom of the game. Tap for the album.
+
+**Changes**
+
+- Funny animations: the right picture leaves its tile and acts out its word (drive, fly, swim, chomp, hop, bloom; dance or spin otherwise) with a speech bubble in the game language; Web Animations, cleaned up after each round; a gentle pop with Reduce Motion
+- Settings › Game › Funny animations (on by default; settings.fun)
+- Stickers per player (kid.stickers = { have, shiny, pts }): every N first-try words earn a new sticker from 60; a full album gives shiny ones
+- Sticker shelf fixed at the bottom of the game with a progress ring; album with the missing stickers as silhouettes; the latest four on each home-screen card
+- Settings › Rounds › Words for a sticker (2–20, default 5; cfg.stickerEvery)
+- A new sticker bursts out, flies to the shelf with its own sound, and the next word waits until it has landed
+
 ## 1.9.1 (2026-11-01): Cheer first, then the word
 
 - 🎉 **The cheer always plays**: The success sound now plays every time, even with the silent switch on.
