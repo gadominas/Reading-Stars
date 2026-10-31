@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.12.0';
+const VERSION = '1.13.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -214,6 +214,7 @@ const settings = {
   voiceURIs: {}, voiceRate: 0.85, voicePitch: 1, voiceGender: "all",   // the iPhone voice per game language; kids hear words a little slower
   aiProvider: "anthropic",   // the provider marked "In use" (ai-configuration)
   ai: true,                  // background AI jobs on/off ("What AI does"): the AI coach
+  aiStickers: true,          // "What AI does": AI writes what a tapped sticker says (1.13.0)
   // model:  { anthropic: "…", openai: "…" }   set when the user picks a model
   // models: { anthropic: { at, list: [{ id, name }] }, openai: … }   cached model lists
   cfg: {},
@@ -276,7 +277,7 @@ const SET_KEYS = {
   font: (v) => ["sans", "serif"].includes(v), textSize: (v) => [0.92, 1, 1.12, 1.25].includes(+v),
   wordCase: (v) => ["cap", "upper", "lower"].includes(v), currency: (v) => CURRENCY_CODES.includes(v),
   sound: "bool", fun: "bool", tips: "bool", checkUpdates: "bool", shareUsage: "bool",
-  smart: "bool", bookMode: (v) => ["mix", "first", "off"].includes(v), ai: "bool",
+  smart: "bool", bookMode: (v) => ["mix", "first", "off"].includes(v), ai: "bool", aiStickers: "bool",
   speechEngine: (v) => ["device", "ai"].includes(v), voiceGender: (v) => ["all", "f", "m"].includes(v),
   voiceRate: (v) => [0.85, 1, 1.15, 1.3].includes(+v), voicePitch: (v) => [0.85, 1, 1.15].includes(+v),
   ttsModel: (v) => typeof v === "string" && /^[a-z0-9][a-z0-9.\-]{1,60}$/i.test(v), ttsVoice: (v) => typeof v === "string" && /^[a-z]{2,20}$/.test(v),
@@ -303,6 +304,7 @@ async function loadSettings() {
   settings.tips = settings.tips !== false;   // short tips and cheers while playing (1.11.0)
   settings.smart = settings.smart !== false;
   settings.ai = settings.ai !== false;
+  settings.aiStickers = settings.aiStickers !== false;
   if (!["mix", "first", "off"].includes(settings.bookMode)) settings.bookMode = "mix";
   if (!PROVIDERS[settings.aiProvider]) settings.aiProvider = "anthropic";
   const rd = { speechEngine: "device", voiceGender: "all", voiceRate: 0.85, voicePitch: 1, ttsModel: "gpt-4o-mini-tts", ttsVoice: "coral", ttsInstructions: "" };
@@ -577,6 +579,36 @@ async function aiSpeech(text, lang, kind) {
   const b64 = data.toBase64String();
   try { ttsFm.writeString(cachePath, b64); } catch (e) {}
   return b64;
+}
+
+// ── Talking stickers (1.13.0): AI writes a few greetings per sticker and language. The kid's name is never sent:
+// the lines carry a {NAME} placeholder that the page fills in. Kept for 2 days on this iPhone, shared by all kids.
+const STICKER_SYSTEM = "You write very short, playful lines for talking stickers in a children's reading game (ages 4 to 11). Reply with JSON only, no other text.";
+function stickerPrompt(id, lang, hint) {
+  return `A child taps the sticker ${id} in a reading game.
+Write 6 different short lines this sticker says, in ${LANG_NAMES[lang] || "Lithuanian"}.
+Each line:
+- starts by greeting the child, with the placeholder {NAME} exactly once where the child's name goes, as a direct address (the app puts the name in);
+- then, in character: if it is an animal or a thing that makes a sound, imitate that sound playfully; if it makes no sound, say something funny about itself;
+- at most 12 words, no emoji, nothing scary or mean, no questions about the child or their family.
+Example of the style: ${JSON.stringify(hint || "")}
+Return {"lines": ["...", "..."]}`;
+}
+const stickerLinesPath = () => ttsFm.joinPath(ttsFm.cacheDirectory(), APP_ID + "-sticker-lines.json");
+function readStickerLines() {
+  try { const f = stickerLinesPath(); if (ttsFm.fileExists(f)) return JSON.parse(ttsFm.readString(f)) || {}; } catch (e) {}
+  return {};
+}
+async function stickerLines(id, lang, hint) {
+  const key = lang + "|" + id, all = readStickerLines(), hit = all[key];
+  if (hit && Array.isArray(hit.lines) && hit.lines.length && Date.now() - (hit.at || 0) < 2 * 864e5) return hit.lines;
+  const out = parseJSON(await aiCall(STICKER_SYSTEM, stickerPrompt(id, lang, hint), 600, "stickers"));
+  const lines = ((out && out.lines) || []).filter((x) => typeof x === "string").map((x) => x.replace(/\s+/g, " ").trim())
+    .filter((x) => x.length >= 3 && x.length <= 140 && !/https?:|www\./i.test(x)).slice(0, 8);
+  if (!lines.length) throw new Error("No usable lines");
+  all[key] = { at: Date.now(), lines };
+  try { ttsFm.writeString(stickerLinesPath(), JSON.stringify(all)); } catch (e) {}
+  return lines;
 }
 
 const BOOK_SYSTEM = "You build vocabulary for a children's picture reading game. Reply with JSON only, no other text.";
@@ -864,6 +896,10 @@ h1{margin:2px 0 14px;font-family:var(--display);font-size:calc(36px * var(--ts))
   box-shadow:0 5px 0 rgba(36,38,74,.16),0 10px 26px rgba(36,38,74,.2);animation:sayUp .32s cubic-bezier(.3,1.6,.5,1) both}
 .stk-say::after{content:"";position:absolute;left:var(--tail,50%);bottom:-9px;margin-left:-9px;border:9px solid transparent;border-bottom:0;border-top-color:#fff}
 .stk-say.below{transform:none;animation-name:sayDown}
+.stk-say.thinking{padding:12px 16px;display:flex;gap:5px}
+.stk-say.thinking i{width:8px;height:8px;border-radius:50%;background:#24264A;opacity:.35;animation:dot 1s infinite}
+.stk-say.thinking i:nth-child(2){animation-delay:.15s}.stk-say.thinking i:nth-child(3){animation-delay:.3s}
+@keyframes dot{50%{opacity:1;transform:translateY(-3px)}}
 .stk-say.below::after{bottom:auto;top:-9px;border-top:0;border-bottom:9px solid #fff}
 @keyframes sayUp{from{opacity:0;transform:translateY(-80%) scale(.7)}}
 @keyframes sayDown{from{opacity:0;transform:translateY(-20%) scale(.7)}}
@@ -2082,7 +2118,7 @@ function webApp() {
   };
   if (!init.speakAfterDefault) state.kids.forEach((k) => { if (k.speak === "off") k.speak = "after"; });
   // AI flags (ai-configuration): is there a key, and is the background job (AI coach) on. Kept fresh by useState().
-  const AIX = { hasKey: !!(init.ai && init.ai.hasKey), on: !(init.ai && init.ai.on === false), hasOpenAI: !!(init.ai && init.ai.hasOpenAI) };
+  const AIX = { hasKey: !!(init.ai && init.ai.hasKey), on: !(init.ai && init.ai.on === false), hasOpenAI: !!(init.ai && init.ai.hasOpenAI), stickers: !(init.ai && init.ai.stickers === false) };
   function normalizeKid(k) {
     const num = (v) => (typeof v === "number" && isFinite(v) ? v : 0);
     const arr = (v) => (Array.isArray(v) ? v.filter((x) => x && typeof x === "object") : []);
@@ -2405,7 +2441,8 @@ function webApp() {
     const text = kind === "sticker" ? String(w) : String(w).replace(/-/g, "");   // sentences keep their hyphens (Ba-dum-tss!)
     const my = ++sayToken;
     try { if (SYN) SYN.cancel(); au.pause(); } catch (e) {}
-    if (state.settings.speechEngine === "ai" && AIX.hasOpenAI) {
+    const aiVoice = AIX.hasOpenAI && (state.settings.speechEngine === "ai" || (kind === "sticker" && AIX.stickers));
+    if (aiVoice) {
       const key = state.lang + "|" + (kind || "") + "|" + text;
       if (aiAudio[key]) return playMp3(aiAudio[key]);
       send("ttsaudio", { text, lang: state.lang, kind: kind || "" }, (ok, res) => {
@@ -2481,7 +2518,7 @@ function webApp() {
   let aiOpen = false, aiArmed = null;
   const aiLoading = new Set();
   const PN = { anthropic: "Claude", openai: "OpenAI" };
-  const FEAT = { books: "Words from book photos", coach: "AI coach", speech: "Read aloud", test: "Connection tests", other: "Other" };
+  const FEAT = { books: "Words from book photos", coach: "AI coach", stickers: "Talking stickers", speech: "Read aloud", test: "Connection tests", other: "Other" };
   const fmtN = (n) => n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "k" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n);
   function rel(ts) {
     const m = Math.round((Date.now() - ts) / 60000);
@@ -2544,7 +2581,10 @@ function webApp() {
       case "aimodels": aiLoading.add(v); renderAI(); sendAI("aimodels", { v }); break;
       case "airm": if (aiArmed === "rm" + v) { aiArmed = null; sendAI("airm", { v }); } else arm("rm" + v); break;
       case "usagereset": if (aiArmed === "reset") { aiArmed = null; sendAI("usagereset", {}); } else arm("reset"); break;
-      case "toggle": if (v === "ai") { SET.settings.ai = !SET.settings.ai; renderAI(); sendAI("set", { k: "ai", v: SET.settings.ai }); } break;
+      case "toggle":
+        if (v === "ai") { SET.settings.ai = !SET.settings.ai; renderAI(); sendAI("set", { k: "ai", v: SET.settings.ai }); }
+        if (v === "aiStickers") { SET.settings.aiStickers = SET.settings.aiStickers === false; renderAI(); sendAI("set", { k: "aiStickers", v: SET.settings.aiStickers }); }
+        break;
     }
   }
   function renderAI() {
@@ -2575,6 +2615,8 @@ function webApp() {
       <h3 class="sec">What AI does</h3>
       <div class="srow"><div class="grow"><b>AI coach</b><small class="muted">After every 40 words a kid answers, one request suggests their next practice words and a tip for you. Words from book photos run only when you take a photo.</small></div>
         <button class="switch ${S.settings.ai ? "on" : ""}" data-act="toggle" data-v="ai" aria-label="AI coach"></button></div>
+      <div class="srow"><div class="grow"><b>Talking stickers</b><small class="muted">When a kid taps a sticker, AI writes what it says (a few lines per sticker, kept for 2 days), and with an OpenAI key the AI voice says it. Lines are written without the kid's name: it is added on this iPhone. Off, or without a key: the built-in lines and the iPhone voice.</small></div>
+        <button class="switch ${S.settings.aiStickers ? "on" : ""}" data-act="toggle" data-v="aiStickers" aria-label="Talking stickers"></button></div>
       <h3 class="sec">Token usage</h3>
       ${used.length ? used.map((p) => usageBlock(p, A.usage.p[p])).join("") : `<p class="muted pad">No AI requests yet.</p>`}
       ${used.length ? `<div class="aic-btns"><span class="note">Counting since ${new Date(A.usage.since).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}</span>
@@ -3577,21 +3619,35 @@ function webApp() {
     for (const [re, to] of rules) if (re.test(n)) return n.replace(re, to);
     return n;
   }
-  function stickerLine(kid, id) {
-    const L = STICKER_TALK[id];
-    const say = L ? L[state.lang] || L.en : t("stkDefault");
-    return t("stkHello", kid.name) + " " + say.replace(/\{n\}/g, kid.name);
+  const builtInLine = (id) => { const L = STICKER_TALK[id]; return L ? L[state.lang] || L.en : t("stkDefault"); };
+  // An AI line (with {NAME}) or a built-in one, made ready to show: the name goes in on this iPhone
+  function fillLine(kid, line, ai) {
+    const name = state.lang === "lt" ? ltVocative(kid.name) : kid.name;
+    let x = String(line).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F]/gu, "").replace(/\s+/g, " ").trim();
+    if (ai) {
+      if (x.indexOf("{NAME}") < 0) x = t("stkHello", kid.name) + " " + x;   // no greeting in the line: add ours
+      return x.split("{NAME}").join(name).replace(/\{[A-Z]+\}/g, "").trim();
+    }
+    return t("stkHello", kid.name) + " " + x.replace(/\{n\}/g, kid.name);
   }
-  // A tapped sticker bounces as if talking, says hello in a bubble and out loud (when sounds are on)
-  function stickerHello(kid, id, el) {
-    const line = stickerLine(kid, id);
-    el.classList.remove("talk", "landed", "wiggle");
-    void el.offsetWidth;
-    el.classList.add("talk");
+  function stickerLine(kid, id) {
+    return fillLine(kid, builtInLine(id), false);
+  }
+  // AI-written lines: fetched once per sticker and language (the phone keeps them 2 days), then taken in turn
+  const aiLines = {};
+  let helloToken = 0;
+  function nextAILine(id) {
+    const pool = aiLines[state.lang + "|" + id];
+    if (!pool || !pool.lines.length) return null;
+    pool.i = (pool.i + 1) % pool.lines.length;
+    return pool.lines[pool.i];
+  }
+  function bubbleFor(el, text, thinking) {
     document.querySelectorAll(".stk-say").forEach((x) => x.remove());
     const b = document.createElement("div");
-    b.className = "stk-say";
-    b.textContent = line;
+    b.className = "stk-say" + (thinking ? " thinking" : "");
+    if (thinking) b.innerHTML = "<i></i><i></i><i></i>";
+    else b.textContent = text;
     document.body.appendChild(b);
     const r = el.getBoundingClientRect(), x = r.left + r.width / 2, w = b.offsetWidth;
     const left = Math.max(8, Math.min(window.innerWidth - w - 8, x - w / 2));
@@ -3600,9 +3656,42 @@ function webApp() {
     b.style.left = left + "px";
     b.style.top = (below ? r.bottom + 12 : r.top - 10) + "px";
     b.style.setProperty("--tail", Math.max(16, Math.min(w - 16, x - left)) + "px");
-    setTimeout(() => b.remove(), 2200 + line.length * 45);
-    if (state.settings.sound !== false) speakWord(line.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F]/gu, "").trim(), null, "sticker");
-    return line;
+    if (!thinking) setTimeout(() => b.remove(), 2200 + String(text).length * 45);
+    return b;
+  }
+  // A tapped sticker bounces as if talking and says hello: AI writes the line when it's on (built-in lines otherwise),
+  // and it is said in the AI voice with an OpenAI key, or the iPhone voice
+  function stickerHello(kid, id, el) {
+    const my = ++helloToken;
+    el.classList.remove("talk", "landed", "wiggle");
+    void el.offsetWidth;
+    el.classList.add("talk");
+    const say = (line) => {
+      if (my !== helloToken) return "";   // another sticker was tapped meanwhile
+      if (!document.body.contains(el)) { document.querySelectorAll(".stk-say").forEach((x) => x.remove()); return ""; }
+      bubbleFor(el, line);
+      if (state.settings.sound !== false) speakWord(line, null, "sticker");
+      return line;
+    };
+    if (!(AIX.hasKey && AIX.stickers)) return say(stickerLine(kid, id));
+    const ready = nextAILine(id);
+    if (ready) return say(fillLine(kid, ready, true));
+    bubbleFor(el, "", true);   // thinking…
+    let done = false;
+    const fallback = setTimeout(() => { if (!done) { done = true; say(stickerLine(kid, id)); } }, 8000);
+    send("stickerline", { id, lang: state.lang, hint: builtInLine(id).replace(/\{n\}/g, "{NAME}") }, (ok, res) => {
+      if (done) {   // too late for this tap: keep the lines for the next one
+        if (ok && Array.isArray(res) && res.length) aiLines[state.lang + "|" + id] = { lines: res, i: -1 };
+        return;
+      }
+      done = true;
+      clearTimeout(fallback);
+      if (ok && Array.isArray(res) && res.length) {
+        aiLines[state.lang + "|" + id] = { lines: res, i: -1 };
+        say(fillLine(kid, nextAILine(id), true));
+      } else say(stickerLine(kid, id));
+    });
+    return "";
   }
   const stickerEvery = () => Math.min(20, Math.max(2, +CFG.stickerEvery || 5));
   function normStickers(v) {
@@ -4317,10 +4406,11 @@ function webApp() {
   }
   function useState(st) {   // the game reads its settings from here
     SET = st;
-    S = { ai: st.ai, settings: { ai: st.settings.ai !== false, aiProvider: st.aiProvider, hasKey: !!st.hasKey } };   // the AI sheet's view
+    S = { ai: st.ai, settings: { ai: st.settings.ai !== false, aiStickers: st.settings.aiStickers !== false, aiProvider: st.aiProvider, hasKey: !!st.hasKey } };   // the AI sheet's view
     const hadKey = AIX.hasKey, prevMode = state.settings.bookMode;
     AIX.hasKey = !!st.hasKey;
     AIX.on = st.settings.ai !== false;
+    AIX.stickers = st.settings.aiStickers !== false;
     Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, fun: st.settings.fun !== false, tips: st.settings.tips !== false, currency: st.settings.currency, smart: st.settings.smart !== false, bookMode: st.settings.bookMode || "mix" });
     const vk = ["speechEngine", "voiceRate", "voicePitch", "ttsModel", "ttsVoice", "ttsInstructions"];
     const before = JSON.stringify(vk.map((x) => state.settings[x]));
@@ -5056,7 +5146,7 @@ const safeJSON = (x) => JSON.stringify(x === undefined ? null : x).replace(/</g,
 // The state the page starts from, handed over by bootApp() (never inlined in buildHTML): the game's save plus the settings it reads.
 function clientState() {
   return Object.assign({}, gameData || {}, { settings: gameSettings(), look: lookState(), cfg: cfgValues(), usageAsk: usageAvailable() && !settings.usageAsked && !settings.shareUsage,
-    ai: { hasKey: !!aiKey(), on: settings.ai !== false, hasOpenAI: !!keyFor("openai") } });
+    ai: { hasKey: !!aiKey(), on: settings.ai !== false, hasOpenAI: !!keyFor("openai"), stickers: settings.aiStickers !== false } });
 }
 
 // The page, without any data: the launch screen and a "Loading your players…" placeholder. Only settings are read here.
@@ -5196,6 +5286,13 @@ async function handleAction(head, p) {
         const out = parseJSON(await aiCall(COACH_SYSTEM, coachPrompt(m.summary || {}), 2000, "coach", pr));
         return answer(true, Object.assign({ by: PROVIDERS[pr], lang: (m.summary || {}).lang }, out));
       } catch (e) { return answer(false, String((e && e.message) || e)); }
+    }
+    case "stickerline": {   // what a tapped sticker says, written by AI (1.13.0); the page falls back to its own lines
+      if (!aiKey() || settings.aiStickers === false) return answer(false, "AI off");
+      const id = String(m.id || "").slice(0, 16), lang = ["lt", "en", "es"].includes(m.lang) ? m.lang : "lt";
+      if (!id) return answer(false, "No sticker");
+      try { return answer(true, await stickerLines(id, lang, String(m.hint || "").slice(0, 140))); }
+      catch (e) { return answer(false, String((e && e.message) || e)); }
     }
     case "ttsaudio":   // one word of AI speech, returned to the page as base64 MP3 (read-aloud)
       try { return answer(true, await aiSpeech(m.text, m.lang, m.kind === "sticker" ? "sticker" : "")); }

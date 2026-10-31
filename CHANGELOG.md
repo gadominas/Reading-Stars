@@ -2,6 +2,20 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.13.0 (2026-11-01): Stickers talk with AI
+
+- ✦ **Fresh lines from AI**: With an AI key, AI writes what each sticker says, new every couple of days.
+- 🔊 **Said in the AI voice**: With an OpenAI key the AI voice says it; otherwise the iPhone voice.
+- 🔒 **No names to AI**: Lines are written without the kid's name; it is added on the iPhone.
+
+**Changes**
+
+- Talking stickers: with an AI key and the new AI › What AI does › Talking stickers switch (on by default), a tapped sticker asks AI for 6 lines in the game's language (one request per sticker and language, kept on the iPhone for 2 days, shared by all kids) and takes them in turn
+- Lines use a {NAME} placeholder that the page fills in (Lithuanian vocative); the AI never gets the kid's name; links, empty and long lines are dropped
+- Voice: with an OpenAI key the line is said in the AI character voice (even when words use the iPhone voice); otherwise the iPhone voice
+- Falls back to the built-in line when AI is off, has no key, fails, or takes longer than 8 s (a late answer is kept for the next tap); a thinking bubble shows while the line is written
+- Token usage lists the new feature as Talking stickers
+
 ## 1.12.0 (2026-11-01): Stickers say hello
 
 - 🐸 **Tap a sticker**: It greets the kid by name and makes its sound: Hi, Ema! Ribbit ribbit!
