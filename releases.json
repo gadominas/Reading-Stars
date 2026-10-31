@@ -4,6 +4,65 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.9.1",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Cheer first, then the word",
+        "lt": "Pirma džiaugsmas, tada žodis",
+        "es": "Primero el aplauso, luego la palabra"
+      },
+      "highlights": [
+        {
+          "icon": "🎉",
+          "title": {
+            "en": "The cheer always plays",
+            "lt": "Džiugus garsas visada",
+            "es": "El aplauso siempre suena"
+          },
+          "text": {
+            "en": "The success sound now plays every time, even with the silent switch on.",
+            "lt": "Sėkmės garsas dabar skamba kiekvieną kartą, net įjungus tylųjį režimą.",
+            "es": "El sonido de acierto suena siempre, incluso con el modo silencio."
+          }
+        },
+        {
+          "icon": "🔊",
+          "title": {
+            "en": "Then the word",
+            "lt": "Tada žodis",
+            "es": "Luego la palabra"
+          },
+          "text": {
+            "en": "After a right answer the word is read once the success sound has finished.",
+            "lt": "Po teisingo atsakymo žodis ištariamas, kai sėkmės garsas baigiasi.",
+            "es": "Tras acertar, la palabra se lee cuando termina el sonido de acierto."
+          }
+        },
+        {
+          "icon": "👂",
+          "title": {
+            "en": "On by default",
+            "lt": "Įjungta iš karto",
+            "es": "Activado de serie"
+          },
+          "text": {
+            "en": "Every player hears the word after answering, unless you choose Off.",
+            "lt": "Kiekvienas žaidėjas išgirsta žodį po atsakymo, nebent pasirinksite „Ne“.",
+            "es": "Cada jugador oye la palabra tras responder, salvo que elijas No."
+          }
+        }
+      ],
+      "changes": [
+        "Sound effects (success, right after a miss, wrong, PIN keys) are rendered once as WAV and played through an <audio> element instead of Web Audio, which iOS mutes with the silent switch and can suspend",
+        "After answer: the word is spoken 150 ms after the success sound ends (with sounds off, straight away); the AI voice is requested only then too",
+        "Read aloud is After answer by default for new players; players still on Off are switched to After answer once (a parent's later choice of Off is kept)",
+        "Speech is primed silently inside the Play tap, so words spoken after the success sound aren't blocked by iOS"
+      ],
+      "fixes": [
+        "The success sound sometimes didn't play, and speech starting at the same moment could cut it off"
+      ]
+    },
+    {
       "version": "1.9.0",
       "date": "2026-11-01",
       "title": {
