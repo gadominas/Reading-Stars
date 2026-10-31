@@ -4,6 +4,64 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.8.1",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Book photos, fixed",
+        "lt": "Knygų nuotraukos veikia",
+        "es": "Fotos de libros, arregladas"
+      },
+      "highlights": [
+        {
+          "icon": "📷",
+          "title": {
+            "en": "Photos open again",
+            "lt": "Nuotraukos atsidaro",
+            "es": "Las fotos se abren"
+          },
+          "text": {
+            "en": "Take a photo and From photos open the iPhone's picker on top of the game.",
+            "lt": "„Fotografuoti“ ir „Iš nuotraukų“ atidaro iPhone pasirinkimą virš žaidimo.",
+            "es": "Hacer foto y De fotos abren el selector del iPhone sobre el juego."
+          }
+        },
+        {
+          "icon": "⭐",
+          "title": {
+            "en": "Books on top",
+            "lt": "Knygos viršuje",
+            "es": "Libros arriba"
+          },
+          "text": {
+            "en": "Words from books is the first card in the parent zone, highlighted with AI on.",
+            "lt": "„Žodžiai iš knygų“ – pirma tėvų zonos kortelė, paryškinta, kai DI įjungtas.",
+            "es": "Palabras de libros es la primera tarjeta de la zona de padres, resaltada con IA."
+          }
+        },
+        {
+          "icon": "🧠",
+          "title": {
+            "en": "Fairer word order",
+            "lt": "Teisingesnė tvarka",
+            "es": "Orden más justo"
+          },
+          "text": {
+            "en": "Skipped words no longer count as hard, so new words keep coming.",
+            "lt": "Praleisti žodžiai nebelaikomi sunkiais, todėl nauji žodžiai vis ateina.",
+            "es": "Las palabras saltadas ya no cuentan como difíciles, así llegan palabras nuevas."
+          }
+        }
+      ],
+      "changes": [
+        "Words from books is the first card in the parent zone; with an AI key it has an accent border and a ✦ AI badge",
+        "The book photo is now picked by the game page with the iPhone's own picker (camera for Take a photo, library for From photos), shrunk on the phone to 1568 px and handed to the Scriptable side directly instead of through Scriptable's photo picker"
+      ],
+      "fixes": [
+        "Take a photo and From photos did nothing: Scriptable's photo picker opened behind the full-screen game, out of reach",
+        "Smart word order: a word that was only skipped counts as a new word, not a hard one, so skipping doesn't crowd out new words or the really hard ones"
+      ]
+    },
+    {
       "version": "1.8.0",
       "date": "2026-10-31",
       "title": {
