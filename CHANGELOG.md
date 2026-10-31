@@ -2,6 +2,19 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.12.0 (2026-11-01): Stickers say hello
+
+- 🐸 **Tap a sticker**: It greets the kid by name and makes its sound: Hi, Ema! Ribbit ribbit!
+- 🌈 **Funny lines too**: Stickers without a sound say something funny: I'm every color at once!
+
+**Changes**
+
+- Every sticker on the shelf and in the album can be tapped: it bounces, shows a speech bubble and says it out loud (sounds on) in the game's voice
+- 60 sticker lines in EN, LT and ES: animal and object sounds (Kva kva!, RAWR!, Ba-dum-tss!) or a short funny line (🌈, 🏰, 🧩); the parrot repeats the kid's name
+- Lithuanian greetings use the vocative: Gediminas → Gediminai, Paulius → Pauliau, Gytis → Gyti, Eglė → Egle
+- AI voice: sticker lines get a cheerful character voice (ttsaudio kind "sticker"), each line fetched once and cached
+- The gift ring and the rest of the shelf still open the album; the album says that stickers talk
+
 ## 1.11.1 (2026-11-01): Nothing under the stickers
 
 - 📐 **Tips always visible**: Tips and cheers no longer slip under the sticker shelf.

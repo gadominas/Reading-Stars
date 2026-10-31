@@ -36,7 +36,7 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
 - **Tokens for first tries.** A correct first try earns +1 🪙 with confetti and a cheer; each wrong tap costs −1 🪙 (never below 0). The big wallet counts up or down as it happens.
 - **🎉 Pictures that act out their word.** After every right answer the picture jumps out of its tile: cars drive off, birds fly away, fish swim, food gets eaten, animals hop, flowers bloom, everything else dances or spins, each with a speech bubble (*Vroom vroom!*, *Nom nom!*, *Boing!*).
 - **👀 A little reading coach.** One short sentence under the word while playing: *Read the whole word first 👀* after a hasty wrong tap, *Read slowly: Na – mas* after two, *All start with N. Read to the end!*, and cheers like *3 in a row! 🔥* or *Great comeback! 💪*.
-- **🎁 Stickers to collect.** Every 5 words right on the first try earn a new sticker. Each kid's stickers are always on a shelf at the bottom of the game, and a tap opens their album: 60 stickers, the missing ones as dark shapes to guess. A full album starts again with shiny gold ones.
+- **🎁 Stickers to collect.** Every 5 words right on the first try earn a new sticker. Each kid's stickers are always on a shelf at the bottom of the game, and a tap opens their album: 60 stickers, the missing ones as dark shapes to guess. A full album starts again with shiny gold ones. Tap a sticker and it says hello: *Labas, Gediminai! Kva kva!*
 - **Real pocket money, set per kid.** Each kid has their own token value and a hidden budget. When the budget can't cover the tokens, the kid is asked to get a top-up, and nothing earned is lost.
 - **Parent zone behind a PIN.** Top up budgets, pay out tokens, edit or delete players and see every payout and top-up with its date.
 - **Leaderboard.** All-time stars with a podium for the top three. Payouts never lower it.
@@ -86,6 +86,7 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
   <img src="docs/screenshots/25-sticker-album.png" width="31%" alt="Ema's sticker album: 15 of 60 stickers, a progress bar, 5 more words for a sticker, collected stickers in colour and the rest as dark shapes.">
 </p>
 <p align="center">
+  <img src="docs/screenshots/27-sticker-hello.png" width="31%" alt="Gediminas taps the frog on the sticker shelf: it bounces and says Labas, Gediminai! Kva kva! in a speech bubble.">
   <img src="docs/screenshots/26-reading-tip.png" width="31%" alt="A wrong tap on the noodle bowl for Meš-ka: Oi! −1 Bandyk dar kartą, and the coach line Visi iš raidės M. Skaityk iki galo!">
 </p>
 
@@ -173,6 +174,8 @@ Every right answer, first try or not, ends with a short **funny animation**: the
 Cheers have a yellow bubble, tips a white one. **Settings › Game › Tips and cheers** switches them off.
 
 **🎁 Stickers.** Each word right on the first try fills the gift ring on the sticker shelf at the bottom of the game (*3/5*). The 5th one earns a new sticker: it bursts out in the middle of the screen with *New sticker!* and flies onto the shelf, and the next word waits until it has landed. The shelf always shows the kid's stickers, newest first; a tap opens the album with all 60 (animals, space, fair rides, treats, music and toys), the missing ones as dark shapes, and a tap on a sticker wiggles it. When the album is full, stickers come again as shiny gold ones. Mistakes and skips never take stickers away, payouts don't touch them, and the home screen shows each kid's latest four. How many words a sticker takes is in **Settings › Rounds** (2–20, 5 by default).
+
+**🐸 Talking stickers.** Tap any sticker on the shelf or in the album: it bounces, greets the kid by name and makes its sound, in a speech bubble and out loud (when sounds are on, in the game's voice). Animals and noisy things act out their sound (*Hi, Ema! Ribbit ribbit!*, *RAWR! My arms are tiny!*, *Ba-dum-tss!*); things without a sound say something funny (🌈 *I'm every color at once!*, 🧩 *I'm missing a piece… is it you?*), and the parrot repeats the kid's name. Lithuanian greetings call the kid in the vocative (*Labas, Gediminai!*, *Labas, Egle!*). With the ✦ AI voice, sticker lines get a cheerful character voice and are fetched once.
 
 The game screen stays put while playing: no scrolling, and everything fits on any iPhone from the SE up, because the pictures shrink a little on smaller screens. The top bar holds the player's name and level, the 🔥 streak and **Skip** ⏭.
 

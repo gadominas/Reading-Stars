@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.11.1';
+const VERSION = '1.12.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -548,14 +548,16 @@ function ttsCachePath(key) {
   if (!ttsFm.fileExists(dir)) ttsFm.createDirectory(dir, true);
   return ttsFm.joinPath(dir, (h >>> 0).toString(16) + "-" + key.length + ".b64");
 }
-async function aiSpeech(text, lang) {
+async function aiSpeech(text, lang, kind) {
   const key = keyFor("openai");
   if (!key) throw new Error("AI voices need an OpenAI key");
   const model = settings.ttsModel || "gpt-4o-mini-tts", legacy = /^tts-1/.test(model);
   let voice = settings.ttsVoice || "coral";
   if (legacy && !TTS_LEGACY_VOICES.includes(voice)) voice = "coral";
   const body = { model, voice, input: String(text).slice(0, 400), response_format: "mp3" };
-  if (!legacy) body.instructions = `${LANG_NAMES[lang] || "Lithuanian"} word. ` + String(settings.ttsInstructions || TTS_DEFAULT_STYLE).slice(0, 500);
+  if (!legacy) body.instructions = kind === "sticker"   // 1.12.0: a sticker greets the kid and acts out its sound
+    ? `${LANG_NAMES[lang] || "Lithuanian"}. A cheerful cartoon character greets a child by name; act out any animal or object sound playfully. Short, warm and funny.`
+    : `${LANG_NAMES[lang] || "Lithuanian"} word. ` + String(settings.ttsInstructions || TTS_DEFAULT_STYLE).slice(0, 500);
   const speed = Number(settings.voiceRate) || 1;
   if (speed !== 1) body.speed = speed;
   const cachePath = ttsCachePath(JSON.stringify([body.model, body.voice, body.instructions || "", body.speed || 1, body.input]));
@@ -853,6 +855,20 @@ h1{margin:2px 0 14px;font-family:var(--display);font-size:calc(36px * var(--ts))
 .stk.locked{filter:brightness(0);opacity:.13}
 .stk.landed{animation:stkLand .5s cubic-bezier(.3,1.7,.5,1)}
 .stk.wiggle{animation:stkWig .6s ease}
+.stk.talk{animation:stkTalk .9s ease}
+@keyframes stkTalk{0%,100%{transform:rotate(var(--rot)) scale(1)}15%{transform:rotate(-10deg) scale(1.3)}30%{transform:rotate(6deg) scale(1.15,1.3)}
+  45%{transform:rotate(-4deg) scale(1.3,1.15)}60%{transform:rotate(4deg) scale(1.15,1.3)}75%{transform:rotate(-2deg) scale(1.25,1.2)}}
+.shelf .stk[data-action]{cursor:pointer}
+.stk-say{position:fixed;z-index:95;transform:translateY(-100%);max-width:min(300px,86vw);box-sizing:border-box;background:#fff;color:#24264A;text-align:center;
+  font-weight:800;font-size:calc(17px * var(--ts));line-height:1.25;padding:9px 14px;border-radius:18px;pointer-events:none;
+  box-shadow:0 5px 0 rgba(36,38,74,.16),0 10px 26px rgba(36,38,74,.2);animation:sayUp .32s cubic-bezier(.3,1.6,.5,1) both}
+.stk-say::after{content:"";position:absolute;left:var(--tail,50%);bottom:-9px;margin-left:-9px;border:9px solid transparent;border-bottom:0;border-top-color:#fff}
+.stk-say.below{transform:none;animation-name:sayDown}
+.stk-say.below::after{bottom:auto;top:-9px;border-top:0;border-bottom:9px solid #fff}
+@keyframes sayUp{from{opacity:0;transform:translateY(-80%) scale(.7)}}
+@keyframes sayDown{from{opacity:0;transform:translateY(-20%) scale(.7)}}
+.al-note small{color:var(--muted);font-weight:700}
+@media (prefers-reduced-motion: reduce){.stk.talk{animation:none}.stk-say{animation:none}}
 @keyframes stkLand{0%{transform:scale(.3) rotate(var(--rot))}60%{transform:scale(1.35) rotate(var(--rot))}100%{transform:scale(1) rotate(var(--rot))}}
 @keyframes stkWig{0%,100%{transform:rotate(var(--rot)) scale(1)}25%{transform:rotate(-14deg) scale(1.2)}50%{transform:rotate(12deg) scale(1.2)}75%{transform:rotate(-6deg) scale(1.1)}}
 /* 1.10.1: the game screen is fixed to the screen; fitGame() sizes the pictures so nothing scrolls */
@@ -1411,6 +1427,9 @@ function webApp() {
       cheerGeneral: ["Great reading! 📖", "Sharp eyes! 👀", "Keep going, star! ⭐", "Better and better! 📈", "Reading is your superpower! 🦸"],
       funnyHelp: "The right picture acts out its word",
       stickers: "Stickers",
+      stkHello: (n) => `Hi, ${n}!`,
+      stkDefault: "Nice to see you!",
+      stkTapHint: "Tap a sticker, it will say hi!",
       newSticker: "New sticker!",
       shinySticker: "Shiny sticker! ✨",
       nextSticker: (n) => (n === 1 ? "1 more word for a sticker!" : `${n} more words for a sticker!`),
@@ -1608,6 +1627,9 @@ function webApp() {
       cheerGeneral: ["¡Qué bien lees! 📖", "¡Qué ojos tan atentos! 👀", "¡Sigue así, estrella! ⭐", "¡Cada vez mejor! 📈", "¡Leer es tu superpoder! 🦸"],
       funnyHelp: "La imagen correcta representa su palabra",
       stickers: "Pegatinas",
+      stkHello: (n) => `¡Hola, ${n}!`,
+      stkDefault: "¡Qué alegría verte!",
+      stkTapHint: "¡Toca una pegatina y te saludará!",
       newSticker: "¡Pegatina nueva!",
       shinySticker: "¡Pegatina brillante! ✨",
       nextSticker: (n) => (n === 1 ? "¡1 palabra más para una pegatina!" : `¡${n} palabras más para una pegatina!`),
@@ -1805,6 +1827,9 @@ function webApp() {
       cheerGeneral: ["Puikiai skaitai! 📖", "Akylos akys! 👀", "Taip ir toliau, žvaigžde! ⭐", "Vis geriau ir geriau! 📈", "Skaitymas – tavo supergalia! 🦸"],
       funnyHelp: "Teisingas paveikslėlis suvaidina savo žodį",
       stickers: "Lipdukai",
+      stkHello: (n) => `Labas, ${ltVocative(n)}!`,
+      stkDefault: "Smagu tave matyti!",
+      stkTapHint: "Paliesk lipduką – jis pasisveikins!",
       newSticker: "Naujas lipdukas!",
       shinySticker: "Blizgus lipdukas! ✨",
       nextSticker: (n) => (n === 1 ? "Dar 1 žodis iki lipduko!" : n < 10 ? `Dar ${n} žodžiai iki lipduko!` : `Dar ${n} žodžių iki lipduko!`),
@@ -2376,14 +2401,14 @@ function webApp() {
     if (pr && pr.catch) pr.catch(() => {});
   }
   // onFail: what to do if the AI voice can't speak (the game falls back to the iPhone voice; the Settings test says why)
-  function speakWord(w, onFail) {
-    const text = String(w).replace(/-/g, "");
+  function speakWord(w, onFail, kind) {
+    const text = kind === "sticker" ? String(w) : String(w).replace(/-/g, "");   // sentences keep their hyphens (Ba-dum-tss!)
     const my = ++sayToken;
     try { if (SYN) SYN.cancel(); au.pause(); } catch (e) {}
     if (state.settings.speechEngine === "ai" && AIX.hasOpenAI) {
-      const key = state.lang + "|" + text;
+      const key = state.lang + "|" + (kind || "") + "|" + text;
       if (aiAudio[key]) return playMp3(aiAudio[key]);
-      send("ttsaudio", { text, lang: state.lang }, (ok, res) => {
+      send("ttsaudio", { text, lang: state.lang, kind: kind || "" }, (ok, res) => {
         if (my !== sayToken) return;   // another word came meanwhile
         if (ok && res) {
           aiAudio[key] = res;
@@ -3482,6 +3507,103 @@ function webApp() {
   const STICKERS = ["🦄", "🐉", "🦖", "🐙", "🦩", "🦥", "🐳", "🦋", "🐞", "🦊", "🐼", "🐨", "🦁", "🐯", "🐸", "🐵", "🦉", "🐧", "🦔", "🦒", "🐢", "🦜",
     "🚀", "🛸", "🌈", "🌙", "🪐", "☄️", "⭐", "⚡", "🌋", "🏰", "🎡", "🎢", "🎠", "🍕", "🍩", "🧁", "🍦", "🍭", "🍉", "🍓",
     "⚽", "🎸", "🥁", "🎨", "🧸", "🪁", "🏆", "👑", "💎", "🔮", "🪄", "🧩", "🛼", "🤖", "👽", "👻", "🎃", "🧚"];
+  const STICKER_TALK = {
+    "🦄": { en: "Neeeigh! With sparkles!", lt: "Ihaha! Su blizgučiais!", es: "¡Iiiih! ¡Con purpurina!" },
+    "🐉": { en: "Roar! Achoo… oops, fire!", lt: "Rrrr! Apči… oi, ugnis!", es: "¡Grrroar! ¡Achís… uy, fuego!" },
+    "🦖": { en: "RAWR! My arms are tiny!", lt: "RRRAU! Mano rankutės mažytės!", es: "¡RAAAWR! ¡Mis bracitos son cortos!" },
+    "🐙": { en: "Eight hugs at once!", lt: "Aštuoni apkabinimai iškart!", es: "¡Ocho abrazos a la vez!" },
+    "🦩": { en: "Honk honk! I stand on one leg!", lt: "Gaga! Stoviu ant vienos kojos!", es: "¡Cuac cuac! ¡Sobre una pata!" },
+    "🦥": { en: "Zzz… I'm waving… slowly…", lt: "Zzz… mojuoju… lėtai…", es: "Zzz… saludo… despacito…" },
+    "🐳": { en: "Whooooo! Splash!", lt: "Uuuuu! Pliumpt!", es: "¡Uuuuuh! ¡Chof!" },
+    "🦋": { en: "Flutter flutter, I'm so light!", lt: "Plast plast, aš lengvutis!", es: "¡Aleteo, aleteo, qué ligera soy!" },
+    "🐞": { en: "I count my dots: one, two, seven!", lt: "Skaičiuoju taškiukus: vienas, du, septyni!", es: "¡Cuento mis puntos: uno, dos, siete!" },
+    "🦊": { en: "Yip yip! What does the fox say?", lt: "Jip jip! Ką sako lapė?", es: "¡Yip yip! ¿Qué dice el zorro?" },
+    "🐼": { en: "Munch munch, more bamboo!", lt: "Čiam čiam, dar bambuko!", es: "¡Ñam ñam, más bambú!" },
+    "🐨": { en: "Yawn… hug a tree with me!", lt: "Žiovau… apkabink medį su manim!", es: "¡Aaah… abraza un árbol conmigo!" },
+    "🦁": { en: "ROAR! I'm the king!", lt: "RRRAAU! Aš karalius!", es: "¡ROAAAR! ¡Soy el rey!" },
+    "🐯": { en: "Grrr! Purr purr…", lt: "Grrr! Murr murr…", es: "¡Grrr! Rrrrr…" },
+    "🐸": { en: "Ribbit ribbit!", lt: "Kva kva!", es: "¡Croac croac!" },
+    "🐵": { en: "Ooh ooh aah aah!", lt: "U u a a!", es: "¡Uh uh ah ah!" },
+    "🦉": { en: "Hoo hoo! I'm wise!", lt: "Ū-hū! Aš išmintinga!", es: "¡Uh-uh! ¡Soy sabia!" },
+    "🐧": { en: "Squawk! Waddle waddle!", lt: "Krykt! Tipent tipent!", es: "¡Cuac! ¡Contoneo, contoneo!" },
+    "🦔": { en: "Sniff sniff! Careful, I'm prickly!", lt: "Šnypšt! Atsargiai, aš dygus!", es: "¡Snif snif! ¡Cuidado, que pincho!" },
+    "🦒": { en: "I can see your house from here!", lt: "Iš čia matau tavo namus!", es: "¡Desde aquí veo tu casa!" },
+    "🐢": { en: "Sloooow and steady!", lt: "Lėėėtai, bet tikrai!", es: "¡Despacito y con buena letra!" },
+    "🦜": { en: "Squawk! {n}! {n}!", lt: "Krrr! {n}! {n}!", es: "¡Crua! ¡{n}! ¡{n}!" },
+    "🚀": { en: "3, 2, 1… WHOOOSH!", lt: "3, 2, 1… ŠŪŪŪ!", es: "¡3, 2, 1… FIUUUM!" },
+    "🛸": { en: "Beep boop! Take me to your teacher!", lt: "Pyp pyp! Vesk mane pas mokytoją!", es: "¡Bip bip! ¡Llévame con tu maestra!" },
+    "🌈": { en: "I'm every color at once!", lt: "Aš visų spalvų iškart!", es: "¡Soy de todos los colores!" },
+    "🌙": { en: "Shh! Time for a bedtime story.", lt: "Ššš! Laikas pasakai prieš miegą.", es: "¡Chist! Es la hora del cuento." },
+    "🪐": { en: "I wear a hula hoop all day!", lt: "Visą dieną sukuosi su lanku!", es: "¡Llevo un aro todo el día!" },
+    "☄️": { en: "Zoom! I have a sparkly tail!", lt: "Zzzium! Turiu žėrinčią uodegą!", es: "¡Zum! ¡Tengo la cola brillante!" },
+    "⭐": { en: "Twinkle twinkle, that's me!", lt: "Mirgu mirgu, čia aš!", es: "¡Brilla brilla, soy yo!" },
+    "⚡": { en: "Crackle… BOOM!", lt: "Trrrach… BUM!", es: "¡Crac… BUM!" },
+    "🌋": { en: "Rumble rumble… BLOP!", lt: "Bur bur… KABUM!", es: "¡Brrrum… BLOP!" },
+    "🏰": { en: "Knock knock! The princess is reading.", lt: "Tuk tuk! Princesė skaito.", es: "¡Toc toc! La princesa está leyendo." },
+    "🎡": { en: "Round and round, wheee!", lt: "Sukasi ir sukasi, valio!", es: "¡Vueltas y vueltas, yupi!" },
+    "🎢": { en: "Aaaah! Again, again!", lt: "Aaaa! Dar, dar!", es: "¡Aaaah! ¡Otra vez!" },
+    "🎠": { en: "Clip-clop, round we go!", lt: "Kaukšt kaukšt, sukamės!", es: "¡Clop clop, a dar vueltas!" },
+    "🍕": { en: "Extra cheese, please!", lt: "Daugiau sūrio, prašau!", es: "¡Más queso, por favor!" },
+    "🍩": { en: "I have a hole in my tummy!", lt: "Mano pilvuke skylė!", es: "¡Tengo un agujero en la barriga!" },
+    "🧁": { en: "Sprinkles make me happy!", lt: "Pabarstukai mane džiugina!", es: "¡Los confites me ponen contento!" },
+    "🍦": { en: "Lick me quick, I'm melting!", lt: "Laižyk greičiau, aš tirpstu!", es: "¡Lámeme rápido, que me derrito!" },
+    "🍭": { en: "I'm a sugar swirl!", lt: "Aš cukraus sūkurys!", es: "¡Soy un remolino de azúcar!" },
+    "🍉": { en: "Crunch! Spit the seeds!", lt: "Kriuokšt! Spjauk sėklas!", es: "¡Crunch! ¡Escupe las pepitas!" },
+    "🍓": { en: "I wear my seeds outside!", lt: "Sėklytes nešioju lauke!", es: "¡Llevo las semillas por fuera!" },
+    "⚽": { en: "Boing! Kick me to the goal!", lt: "Bum! Spirk mane į vartus!", es: "¡Bote! ¡Chútame a la portería!" },
+    "🎸": { en: "Strum strum, rock on!", lt: "Brin brin, rokas!", es: "¡Tran tran, a rockear!" },
+    "🥁": { en: "Ba-dum-tss!", lt: "Bum bum tsss!", es: "¡Pum pum chas!" },
+    "🎨": { en: "Let's paint your nose blue!", lt: "Nudažykim tau nosį mėlynai!", es: "¡Pintemos tu nariz de azul!" },
+    "🧸": { en: "Squeeze me! Big bear hug!", lt: "Apkabink mane stipriai!", es: "¡Abrázame fuerte!" },
+    "🪁": { en: "Whoosh! Hold my string!", lt: "Vuuu! Laikyk siūlą!", es: "¡Fiuu! ¡Agarra mi cuerda!" },
+    "🏆": { en: "Ta-daa! You won!", lt: "Ta-dam! Tu laimėjai!", es: "¡Tachán! ¡Ganaste!" },
+    "👑": { en: "Your Majesty, let's read!", lt: "Jūsų Didenybe, skaitome!", es: "¡Majestad, a leer!" },
+    "💎": { en: "Bling bling! Look how I shine!", lt: "Blizgu blizgu! Žiūrėk, kaip žėriu!", es: "¡Brilli brilli! ¡Mira cómo brillo!" },
+    "🔮": { en: "I see… lots of stickers ahead!", lt: "Matau… daug lipdukų ateityje!", es: "Veo… ¡muchas pegatinas en tu futuro!" },
+    "🪄": { en: "Abracadabra! Poof!", lt: "Abrakadabra! Pokšt!", es: "¡Abracadabra! ¡Puf!" },
+    "🧩": { en: "I'm missing a piece… is it you?", lt: "Trūksta dalies… gal tai tu?", es: "Me falta una pieza… ¿eres tú?" },
+    "🛼": { en: "Wheee! No brakes!", lt: "Valio! Be stabdžių!", es: "¡Yupi! ¡Sin frenos!" },
+    "🤖": { en: "Beep boop. Reading mode: ON.", lt: "Pyp pyp. Skaitymas: ĮJUNGTAS.", es: "Bip bup. Modo lectura: ACTIVADO." },
+    "👽": { en: "Ack ack! Earth words are fun!", lt: "Ak ak! Žemės žodžiai linksmi!", es: "¡Ack ack! ¡Las palabras de la Tierra molan!" },
+    "👻": { en: "Boo! Did I scare you?", lt: "Bū! Išsigandai?", es: "¡Bu! ¿Te he asustado?" },
+    "🎃": { en: "Hee hee! Trick or treat!", lt: "Cha cha! Saldainių ar išdaigų?", es: "¡Ji ji! ¿Truco o trato?" },
+    "🧚": { en: "Tinkle tinkle! A wish for you!", lt: "Dzin dzin! Noras tau!", es: "¡Tilín tilín! ¡Un deseo para ti!" },
+  };
+  // Lithuanian names are called in the vocative: Gediminas → Gediminai, Paulius → Pauliau, Gytis → Gyti, Eglė → Egle
+  function ltVocative(name) {
+    const n = String(name || "").trim();
+    if (n.length < 3 || !/^[A-Za-zĄČĘĖĮŠŲŪŽąčęėįšųūž]+$/.test(n)) return n;   // nicknames, two words, other alphabets: as written
+    const rules = [[/ius$/, "iau"], [/jas$/, "jau"], [/ias$/, "iau"], [/us$/, "au"], [/as$/, "ai"], [/ys$/, "y"], [/is$/, "i"], [/ė$/, "e"]];
+    for (const [re, to] of rules) if (re.test(n)) return n.replace(re, to);
+    return n;
+  }
+  function stickerLine(kid, id) {
+    const L = STICKER_TALK[id];
+    const say = L ? L[state.lang] || L.en : t("stkDefault");
+    return t("stkHello", kid.name) + " " + say.replace(/\{n\}/g, kid.name);
+  }
+  // A tapped sticker bounces as if talking, says hello in a bubble and out loud (when sounds are on)
+  function stickerHello(kid, id, el) {
+    const line = stickerLine(kid, id);
+    el.classList.remove("talk", "landed", "wiggle");
+    void el.offsetWidth;
+    el.classList.add("talk");
+    document.querySelectorAll(".stk-say").forEach((x) => x.remove());
+    const b = document.createElement("div");
+    b.className = "stk-say";
+    b.textContent = line;
+    document.body.appendChild(b);
+    const r = el.getBoundingClientRect(), x = r.left + r.width / 2, w = b.offsetWidth;
+    const left = Math.max(8, Math.min(window.innerWidth - w - 8, x - w / 2));
+    const below = r.top - b.offsetHeight - 16 < 8;   // no room above: speak downwards
+    b.classList.toggle("below", below);
+    b.style.left = left + "px";
+    b.style.top = (below ? r.bottom + 12 : r.top - 10) + "px";
+    b.style.setProperty("--tail", Math.max(16, Math.min(w - 16, x - left)) + "px");
+    setTimeout(() => b.remove(), 2200 + line.length * 45);
+    if (state.settings.sound !== false) speakWord(line.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F]/gu, "").trim(), null, "sticker");
+    return line;
+  }
   const stickerEvery = () => Math.min(20, Math.max(2, +CFG.stickerEvery || 5));
   function normStickers(v) {
     const o = v && typeof v === "object" ? v : {};
@@ -3506,12 +3628,12 @@ function webApp() {
     return { id, shiny: true };
   }
   const stkRot = (id) => { let h = 0; for (const c of id) h = (h * 31 + c.codePointAt(0)) % 997; return (h % 17) - 8; };
-  const stickerHTML = (id, kid, cls) => `<span class="stk ${cls || ""} ${kid && normStickers(kid.stickers).shiny.indexOf(id) >= 0 ? "shiny" : ""}" style="--rot:${stkRot(id)}deg">${id}</span>`;
+  const stickerHTML = (id, kid, cls, tap) => `<span class="stk ${cls || ""} ${kid && normStickers(kid.stickers).shiny.indexOf(id) >= 0 ? "shiny" : ""}" style="--rot:${stkRot(id)}deg"${tap ? ` data-action="stkHello" data-id="${id}" role="button"` : ""}>${id}</span>`;
   function shelfHTML(kid) {
     const st = normStickers(kid.stickers), every = stickerEvery();
     return `<div class="shelf" id="shelf" data-action="album" role="button" aria-label="${esc(t("stickers"))}">
       <div class="sh-prog" id="shprog" style="--p:${Math.round((st.pts / every) * 100)}"><span class="sh-gift">🎁</span><b>${st.pts}/${every}</b></div>
-      <div class="sh-strip" id="shstrip">${st.have.length ? st.have.map((id) => stickerHTML(id, kid)).join("") : `<span class="sh-empty">${esc(t("nextSticker", every - st.pts))}</span>`}</div>
+      <div class="sh-strip" id="shstrip">${st.have.length ? st.have.map((id) => stickerHTML(id, kid, "", true)).join("") : `<span class="sh-empty">${esc(t("nextSticker", every - st.pts))}</span>`}</div>
     </div>`;
   }
   function updateShelf(kid) {
@@ -3552,7 +3674,7 @@ function webApp() {
       const old = s2.querySelector(".sh-empty");
       if (old) old.remove();
       if (got.shiny) { const ex = Array.from(s2.children).find((c) => c.textContent === got.id); if (ex) ex.remove(); }
-      s2.insertAdjacentHTML("afterbegin", stickerHTML(got.id, kid, "landed"));
+      s2.insertAdjacentHTML("afterbegin", stickerHTML(got.id, kid, "landed", true));
       s2.scrollLeft = 0;
     }, D);
     return D;
@@ -3570,8 +3692,8 @@ function webApp() {
       <div class="al-head"><span class="ava sm" style="background:${avaBg(kid)}">${kid.avatar}</span><div class="al-t"><b>${esc(kid.name)}</b><small>${esc(t("stickerCount", st.have.length, all.length))}</small></div>
         <button class="icon" data-action="albumClose" aria-label="${esc(t("close"))}">✕</button></div>
       <div class="al-bar"><i style="width:${Math.round((st.have.length / all.length) * 100)}%"></i></div>
-      <p class="al-note">${esc(done ? t("stickersDone") : t("nextSticker", stickerEvery() - st.pts))}</p>
-      <div class="al-grid">${all.map((id) => (st.have.indexOf(id) >= 0 ? `<button class="al-cell" data-action="stkWiggle">${stickerHTML(id, kid, "big")}</button>` : `<div class="al-cell"><span class="stk big locked" style="--rot:${stkRot(id)}deg">${id}</span></div>`)).join("")}</div>
+      <p class="al-note">${esc(done ? t("stickersDone") : t("nextSticker", stickerEvery() - st.pts))}${st.have.length ? `<br><small>${esc(t("stkTapHint"))}</small>` : ""}</p>
+      <div class="al-grid">${all.map((id) => (st.have.indexOf(id) >= 0 ? `<button class="al-cell" data-action="stkHello" data-id="${id}">${stickerHTML(id, kid, "big")}</button>` : `<div class="al-cell"><span class="stk big locked" style="--rot:${stkRot(id)}deg">${id}</span></div>`)).join("")}</div>
     </div>`;
     document.body.appendChild(ov);
   }
@@ -4342,8 +4464,13 @@ function webApp() {
     },
     albumClose() {
       closeAlbum();
+      document.querySelectorAll(".stk-say").forEach((x) => x.remove());
     },
     noop() {},
+    stkHello(b) {
+      const kid = game && getKid(game.kidId), el = b.classList.contains("stk") ? b : b.querySelector(".stk");
+      if (kid && el) stickerHello(kid, b.dataset.id || el.textContent, el);
+    },
     stkWiggle(b) {
       const s = b.querySelector(".stk");
       if (!s) return;
@@ -5071,7 +5198,7 @@ async function handleAction(head, p) {
       } catch (e) { return answer(false, String((e && e.message) || e)); }
     }
     case "ttsaudio":   // one word of AI speech, returned to the page as base64 MP3 (read-aloud)
-      try { return answer(true, await aiSpeech(m.text, m.lang)); }
+      try { return answer(true, await aiSpeech(m.text, m.lang, m.kind === "sticker" ? "sticker" : "")); }
       catch (e) { return answer(false, String((e && e.message) || e)); }
     case "say":   // fallback voice when the page has no Web Speech
       try { Speech.speak(String(m.text || "")); } catch (e) {}
