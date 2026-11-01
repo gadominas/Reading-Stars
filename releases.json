@@ -4,6 +4,50 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.18.0",
+      "date": "2026-11-01",
+      "title": {
+        "en": "A trophy for a golden album",
+        "lt": "Trofėjus už auksinį albumą",
+        "es": "Un trofeo por un álbum dorado"
+      },
+      "highlights": [
+        {
+          "icon": "🏆",
+          "title": {
+            "en": "Golden album, big trophy",
+            "lt": "Auksinis albumas – didelis trofėjus",
+            "es": "Álbum dorado, gran trofeo"
+          },
+          "text": {
+            "en": "Make every sticker gold to win a trophy, with a big celebration.",
+            "lt": "Paverskite visus lipdukus auksiniais ir laimėkite trofėjų su didele švente.",
+            "es": "Haz doradas todas las pegatinas y gana un trofeo con gran celebración."
+          }
+        },
+        {
+          "icon": "📒",
+          "title": {
+            "en": "Then a new album",
+            "lt": "Tada naujas albumas",
+            "es": "Luego un álbum nuevo"
+          },
+          "text": {
+            "en": "Trophies stay forever; a fresh album starts so collecting never ends.",
+            "lt": "Trofėjai lieka visam laikui; prasideda naujas albumas, rinkti galima toliau.",
+            "es": "Los trofeos se quedan; empieza un álbum nuevo para seguir coleccionando."
+          }
+        }
+      ],
+      "changes": [
+        "When the last sticker turns gold, a trophy celebration follows its reveal: rays, gold confetti, 'Golden album complete!', 'Trophy #N', and a spoken cheer with the kid's name (Lithuanian vocative); a tap closes it, the next word waits for it",
+        "Trophies (dates) are kept per player (stickers.trophies); the album then starts afresh as Album #N+1",
+        "🏆 count on the sticker shelf, a trophy row in the album, 🏆 on the home card",
+        "A full album shows gold progress (30 of 60 gold, a gold bar) and the goal: make them all gold for a trophy"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.17.1",
       "date": "2026-11-01",
       "title": {
