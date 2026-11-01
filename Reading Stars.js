@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.15.0';
+const VERSION = '1.16.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -277,7 +277,7 @@ const SET_KEYS = {
   font: (v) => ["sans", "serif"].includes(v), textSize: (v) => [0.92, 1, 1.12, 1.25].includes(+v),
   wordCase: (v) => ["cap", "upper", "lower"].includes(v), currency: (v) => CURRENCY_CODES.includes(v),
   sound: "bool", fun: "bool", tips: "bool", checkUpdates: "bool", shareUsage: "bool",
-  smart: "bool", bookMode: (v) => ["mix", "first", "only", "off"].includes(v), ai: "bool", aiStickers: "bool",
+  smart: "bool", bookMode: (v) => ["mix", "first", "off"].includes(v), onlyMine: "bool", ai: "bool", aiStickers: "bool",
   speechEngine: (v) => ["device", "ai"].includes(v), voiceGender: (v) => ["all", "f", "m"].includes(v),
   voiceRate: (v) => [0.85, 1, 1.15, 1.3].includes(+v), voicePitch: (v) => [0.85, 1, 1.15].includes(+v),
   ttsModel: (v) => typeof v === "string" && /^[a-z0-9][a-z0-9.\-]{1,60}$/i.test(v), ttsVoice: (v) => typeof v === "string" && /^[a-z]{2,20}$/.test(v),
@@ -305,7 +305,9 @@ async function loadSettings() {
   settings.smart = settings.smart !== false;
   settings.ai = settings.ai !== false;
   settings.aiStickers = settings.aiStickers !== false;
-  if (!["mix", "first", "only", "off"].includes(settings.bookMode)) settings.bookMode = "mix";   // "only" (1.15.0): only your words are read
+  if (settings.bookMode === "only") { settings.bookMode = "mix"; settings.onlyMine = true; }   // 1.15.0's "Only mine" is a switch since 1.16.0
+  if (!["mix", "first", "off"].includes(settings.bookMode)) settings.bookMode = "mix";
+  settings.onlyMine = settings.onlyMine === true;   // only your words are read: off by default
   if (!PROVIDERS[settings.aiProvider]) settings.aiProvider = "anthropic";
   const rd = { speechEngine: "device", voiceGender: "all", voiceRate: 0.85, voicePitch: 1, ttsModel: "gpt-4o-mini-tts", ttsVoice: "coral", ttsInstructions: "" };
   for (const k of Object.keys(rd)) if (!setSetting(k, settings[k])) settings[k] = rd[k];
@@ -379,7 +381,7 @@ function lookState() {
            shown: settings.theme === "auto" ? (Device.isUsingDarkAppearance() ? "night" : "ink") : settings.theme };
 }
 // What the game reads from settings, and what the Settings sheet shows.
-const gameSettings = () => ({ wordCase: settings.wordCase, sound: settings.sound, fun: settings.fun, tips: settings.tips, currency: settings.currency, smart: settings.smart, bookMode: settings.bookMode,
+const gameSettings = () => ({ wordCase: settings.wordCase, sound: settings.sound, fun: settings.fun, tips: settings.tips, onlyMine: settings.onlyMine, currency: settings.currency, smart: settings.smart, bookMode: settings.bookMode,
   speechEngine: settings.speechEngine, voiceURIs: settings.voiceURIs, voiceRate: settings.voiceRate, voicePitch: settings.voicePitch,
   ttsModel: settings.ttsModel, ttsVoice: settings.ttsVoice, ttsInstructions: settings.ttsInstructions });
 function settingsState() {
@@ -1394,6 +1396,18 @@ body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 .vcounts small{font-weight:700;color:var(--ink-2)}
 .vcounts small.warn{color:var(--danger)}
 .bkacts{display:flex;align-items:center;gap:8px;flex:none}
+.seg3{grid-template-columns:repeat(3,1fr)}
+.vrow{display:flex;align-items:center;gap:12px}
+.vrow .grow{flex:1;display:flex;flex-direction:column;gap:2px}
+.vrow small{font-weight:700;color:var(--muted);font-size:calc(13px * var(--ts))}
+.vrow .switch,.bkopt .switch{width:46px;height:28px;border-radius:14px;background:var(--rule);position:relative;flex:none;transition:background .2s}
+.vrow .switch::after,.bkopt .switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
+.vrow .switch.on,.bkopt .switch.on{background:var(--grass)}
+.vrow .switch.on::after,.bkopt .switch.on::after{transform:translateX(18px)}
+.bkopts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:2px 0 8px}
+.bkopt{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--chipbg);border-radius:14px;padding:8px 10px}
+.bkopt span{display:flex;flex-direction:column;font-weight:800;font-size:calc(14px * var(--ts));line-height:1.2}
+.bkopt small{font-weight:700;color:var(--muted);font-size:calc(11.5px * var(--ts))}
 .bkacts .switch{width:46px;height:28px;border-radius:14px;background:var(--rule);position:relative;flex:none;transition:background .2s}
 .bkacts .switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
 .bkacts .switch.on{background:var(--grass)}
@@ -1601,7 +1615,11 @@ function webApp() {
       modeMix: "Mixed in",
       modeFirst: "First",
       modeOff: "Off",
-      modeOnly: "Only mine",
+      onlyMine: "Only my words",
+      onlyMineHint: "Rounds read only your words; built-in words just fill the other pictures.",
+      byLevel: "By level",
+      byLevelOn: "word length per level",
+      byLevelOff: "every word, any length",
       vocabTitle: "Words to read",
       vocabHint_mix: "Your words and the built-in words, mixed.",
       vocabHint_first: "Your words come up more often than the built-in ones.",
@@ -1837,7 +1855,11 @@ function webApp() {
       modeMix: "Mezcladas",
       modeFirst: "Primero",
       modeOff: "No",
-      modeOnly: "Solo míos",
+      onlyMine: "Solo mis palabras",
+      onlyMineHint: "Las rondas leen solo tus palabras; las del juego solo completan las otras imágenes.",
+      byLevel: "Por nivel",
+      byLevelOn: "largo según el nivel",
+      byLevelOff: "todas las palabras, de cualquier largo",
       vocabTitle: "Palabras para leer",
       vocabHint_mix: "Tus palabras y las del juego, mezcladas.",
       vocabHint_first: "Tus palabras salen más a menudo que las del juego.",
@@ -2073,7 +2095,11 @@ function webApp() {
       modeMix: "Kartu",
       modeFirst: "Pirmiausia",
       modeOff: "Išjungta",
-      modeOnly: "Tik mano",
+      onlyMine: "Tik mano žodžiai",
+      onlyMineHint: "Skaitomi tik jūsų žodžiai; žaidimo žodžiai tik užpildo kitus paveikslėlius.",
+      byLevel: "Pagal lygį",
+      byLevelOn: "ilgis pagal lygį",
+      byLevelOff: "visi žodžiai, bet kokio ilgio",
       vocabTitle: "Skaitomi žodžiai",
       vocabHint_mix: "Jūsų ir žaidimo žodžiai kartu.",
       vocabHint_first: "Jūsų žodžiai pasirodo dažniau nei žaidimo.",
@@ -2257,7 +2283,7 @@ function webApp() {
     version: 1,
     lang: LANGS[init.lang] ? init.lang : detectLang(),
     pinHash: init.pinHash || null,
-    settings: Object.assign({ wordCase: "cap", sound: true, fun: true, tips: true, currency: "EUR", smart: true, bookMode: "mix" }, init.settings || {}),
+    settings: Object.assign({ wordCase: "cap", sound: true, fun: true, tips: true, onlyMine: false, currency: "EUR", smart: true, bookMode: "mix" }, init.settings || {}),
     kids: (Array.isArray(init.kids) ? init.kids : []).filter((k) => k && typeof k === "object").map(normalizeKid),
     // Words added from book photos and by the AI coach: [{ id, lang, title, at, by, coachKid?, words: [{ w, e }] }]
     books: (Array.isArray(init.books) ? init.books : []).filter((b) => b && LANGS[b.lang] && Array.isArray(b.words)),
@@ -2914,7 +2940,7 @@ function webApp() {
     sg.innerHTML = known && known.e !== s.e ? `<button class="btn small ghost" data-action="weUseEmoji" data-v="${esc(known.e)}">${esc(t("useEmoji", known.e))}</button>` : "";
     sv.disabled = !s.ok;
     if (!s.p.w) { pv.innerHTML = s.err ? `<p class="bknote blocked">${esc(s.err)}</p>` : ""; return; }
-    const x = { w: s.p.w, e: s.e, n: s.p.n, k: firstLetter(E.lang, s.p.w) };
+    const x = { w: s.p.w, e: s.e, n: s.p.n, k: firstLetter(E.lang, s.p.w), anyLen: E.anyLen !== false };
     const ns = wordNotes(x, E.lang);
     pv.innerHTML = `<div class="weword"><span class="bke">${s.emojiOk ? esc(s.e) : "🖼️"}</span><b>${esc(caseWord(s.p.w))}</b></div>
       <p class="note">${esc(t("sylRange", s.p.n, s.p.n))} · ${levelIcons(x)}${s.p.auto ? " · " + esc(t("autoSplit")) : ""}</p>
@@ -2931,7 +2957,7 @@ function webApp() {
   function wordNotes(x, lang, extra) {
     const notes = [];
     const lvl = levelOfWord(x);
-    if (state.settings.bookMode === "off") notes.push({ k: "off", block: true, text: t("stOff") });
+    if (state.settings.bookMode === "off" && !state.settings.onlyMine) notes.push({ k: "off", block: true, text: t("stOff") });
     if (lang !== state.lang) notes.push({ k: "lang", block: true, text: t("stLang", t("langNames")[lang]) });
     if (lvl === "none") notes.push({ k: "level", block: true, text: t("stNoLevel") });
     else if (!state.kids.some((k) => k.level === lvl)) notes.push({ k: "level", block: true, text: t(lvl === "expert" ? "stOnlyExpert" : "stOnlyBeginner") });
@@ -2944,7 +2970,7 @@ function webApp() {
   }
   const noteIcon = { off: "⏸", lang: "🌐", level: "👤", near: "🔤" };
   function bookStats(b) {
-    const words = b.words.map((x) => ({ w: x.w, e: x.e, n: x.w.split("-").length, k: firstLetter(b.lang, x.w) }));
+    const words = b.words.map((x) => ({ w: x.w, e: x.e, n: x.w.split("-").length, k: firstLetter(b.lang, x.w), anyLen: !followsLevel(b) }));
     const notes = words.map((x) => (b.off ? [{ k: "off", block: true, text: t("srcPaused") }] : wordNotes(x, b.lang)));
     return { words, notes, playing: notes.filter((ns) => !ns.some((n) => n.block)).length };
   }
@@ -2979,7 +3005,7 @@ function webApp() {
     }
     const fresh = book.words.filter((x) => !x.known);
     const on = fresh.filter((x) => x.on).length, noPic = fresh.filter((x) => x.noPic).length;
-    const chosen = fresh.filter((x) => x.on).map((x) => ({ w: x.w, e: x.e, n: x.n, k: firstLetter(book.lang, x.w) }));
+    const chosen = fresh.filter((x) => x.on).map((x) => ({ w: x.w, e: x.e, n: x.n, k: firstLetter(book.lang, x.w), anyLen: true }));
     const known = book.words.length - fresh.length;
     el.innerHTML = `<div class="bkp">
       <div class="bkhead">${book.manual ? `<span class="badge-ai manual">✍️ ${esc(t("myWords"))}</span>` : `<span class="badge-ai">✦ AI by ${esc(book.by || "")}</span>`}<span class="bkflag">${LANGS[book.lang].flag}</span></div>
@@ -3076,7 +3102,7 @@ function webApp() {
         toast(t("langUnsupported"));
         return;
       }
-      const words = cleanAiWords(out.words, lang).map((x) => Object.assign(x, { on: !x.noPic }));
+      const words = cleanAiWords(out.words, lang).map((x) => Object.assign(x, { on: !x.noPic, anyLen: true }));   // a new collection plays at any length (its "By level" starts off)
       book = { lang, title: String(out.title || "").slice(0, 40), text: String(out.text || "").slice(0, 2500), by: out.by, words };
       renderBook();
     });
@@ -3364,6 +3390,9 @@ function webApp() {
     booksRev++;
     wordCache = {};
   }
+  // A collection's "By level" switch (1.16.0): off = every word plays for every player, whatever its length;
+  // on = the level's syllable range applies. Your scans and lists start off, AI-coach lists (made per level) start on.
+  const followsLevel = (b) => (b.lvl === undefined ? !!b.coachKid : !!b.lvl);
   // Every word of a language: built-in, then book and AI-coach words (book words leave out when "Off").
   function wordsFor(lang, all) {
     const key = lang + (all ? ":all" : "");
@@ -3372,11 +3401,11 @@ function webApp() {
       const have = new Set(base.map((x) => x.w));
       const extra = [];
       state.books.forEach((b) => {
-        if (b.lang !== lang || (!all && (b.off || (!b.coachKid && state.settings.bookMode === "off")))) return;   // b.off: paused by the parent
+        if (b.lang !== lang || (!all && (b.off || (!b.coachKid && state.settings.bookMode === "off" && !state.settings.onlyMine)))) return;   // b.off: paused by the parent
         b.words.forEach((x) => {
           if (!x || !x.w || !x.e || have.has(x.w)) return;
           have.add(x.w);
-          extra.push({ w: x.w, e: x.e, n: x.w.split("-").length, k: firstLetter(lang, x.w), src: b.id, coachKid: b.coachKid || null });
+          extra.push({ w: x.w, e: x.e, n: x.w.split("-").length, k: firstLetter(lang, x.w), src: b.id, coachKid: b.coachKid || null, anyLen: !followsLevel(b) });
         });
       });
       wordCache[key] = base.concat(extra);
@@ -3415,7 +3444,7 @@ function webApp() {
     if (!def && level === "expert" && b >= 7) b = 99;   // 1.14.0: Expert's "No limit"
     return [Math.min(a, b), Math.max(a, b)];
   }
-  const fitsLevel = (level, w, def) => { const [lo, hi] = sylRange(level, def); return w.n >= lo && w.n <= hi; };
+  const fitsLevel = (level, w, def) => { if (w.anyLen) return true; const [lo, hi] = sylRange(level, def); return w.n >= lo && w.n <= hi; };   // anyLen: a collection set to any length
   const sylText = (level) => { const [lo, hi] = sylRange(level); return hi >= 99 ? t("sylFrom", lo) : t("sylRange", lo, hi); };
   // Built-in words need enough same-letter partners; words you added from books (and the AI coach) always play:
   // when their letter is short of partners, the other pictures come from the nearest letters.
@@ -3427,7 +3456,7 @@ function webApp() {
     return list.length ? list : wordsFor(state.lang).filter((w) => mine(w) && fitsLevel(kid.level, w, true));
   }
   function poolForN(kid, n) {
-    if (state.settings.bookMode === "only") { const own = ownPool(kid); if (own.length) return own; }
+    if (state.settings.onlyMine) { const own = ownPool(kid); if (own.length) return own; }
     const pick = (def) => wordsFor(state.lang).filter((w) => fitsLevel(kid.level, w, def) && (w.src || sameLetter(w).length >= n - 1));
     const list = pick(false);
     return list.length ? list : pick(true);   // a range with no words at all falls back to the level's original one
@@ -4170,7 +4199,7 @@ function webApp() {
     // ✦ shown on the word card when the AI coach chose it: a word it asked to practise, or a word it added for this kid
     const coach = kid.coach && kid.coach.lang === state.lang ? kid.coach : null;
     game.aiWhy = word.coachKid === kid.id ? "new" : coach && (coach.focus || []).indexOf(word.w) >= 0 && state.settings.smart !== false ? "focus" : "";
-    if (state.settings.bookMode === "only" && !word.src && !game.onlyNoted) {   // "only", but none of your words fit this kid
+    if (state.settings.onlyMine && !word.src && !game.onlyNoted) {   // only your words, but none fit this kid
       game.onlyNoted = true;
       game.pendingTip = t("onlyEmpty");
     }
@@ -4466,15 +4495,18 @@ function webApp() {
   // Which words are read (1.15.0): the same choice as Settings › Learning › Book words in the game, right here,
   // and with "Only your words", how many of each player's words fit their level.
   function vocabHTML() {
-    const m = state.settings.bookMode || "mix";
-    const opts = [["mix", t("modeMix")], ["first", t("modeFirst")], ["only", t("modeOnly")], ["off", t("modeOff")]];
-    const counts = m === "only" ? state.kids.map((k) => {
+    const m = state.settings.bookMode || "mix", only = !!state.settings.onlyMine;
+    const opts = [["mix", t("modeMix")], ["first", t("modeFirst")], ["off", t("modeOff")]];
+    const counts = only ? state.kids.map((k) => {
       const n = wordsFor(state.lang).filter((w) => mineFor(k)(w) && fitsLevel(k.level, w)).length;
       return `<small class="${n ? "" : "warn"}">${k.avatar} ${esc(k.name)}: ${esc(n ? t("onlyCount", n) : t("onlyNone"))}</small>`;
     }).join("") : "";
     return `<div class="vocab"><b>📚 ${esc(t("vocabTitle"))}</b>
-      <div class="seg4">${opts.map(([v, l]) => `<button class="${m === v ? "on" : ""}" data-action="vocabMode" data-v="${v}">${esc(l)}</button>`).join("")}</div>
-      <small class="mhint">${esc(t("vocabHint_" + m))}</small>${counts ? `<div class="vcounts">${counts}</div>` : ""}</div>`;
+      <div class="vrow"><div class="grow"><b>${esc(t("onlyMine"))}</b><small>${esc(t("onlyMineHint"))}</small></div>
+        <button class="switch ${only ? "on" : ""}" data-action="onlyMine" aria-label="${esc(t("onlyMine"))}"></button></div>
+      ${counts ? `<div class="vcounts">${counts}</div>` : ""}
+      ${only ? "" : `<div class="seg4 seg3">${opts.map(([v, l]) => `<button class="${m === v ? "on" : ""}" data-action="vocabMode" data-v="${v}">${esc(l)}</button>`).join("")}</div>
+      <small class="mhint">${esc(t("vocabHint_" + m))}</small>`}</div>`;
   }
   // Parent zone: words from books (photo buttons only with an AI key; sources stay usable without one).
   function booksPanelHTML() {
@@ -4483,8 +4515,11 @@ function webApp() {
       const all = st.playing === st.words.length && !b.off;
       return `<div class="bksrcbox"><div class="hist bksrc">
         <span class="${b.off ? "paused" : ""}">${LANGS[b.lang].flag} <b>${esc(b.title || "—")}</b><br><small class="${all ? "" : "warn"}">${b.off ? "⏸ " + esc(t("srcPaused")) + " · " : ""}${esc(t("inRounds", b.off ? 0 : st.playing, st.words.length))} · ${esc(fmtDate(b.at))}${b.by ? " · ✦ " + esc(b.by) : ""}</small></span>
-        <span class="bkacts"><button class="switch ${b.off ? "" : "on"}" data-action="srcToggle" data-id="${b.id}" aria-label="${esc(t("inGame"))}" title="${esc(t("inGame"))}"></button>
-        <button class="btn small ${bookArmed === b.id ? "danger" : "ghost"}" data-action="bookDel" data-id="${b.id}">${bookArmed === b.id ? esc(t("confirm")) : "🗑️"}</button></span></div>
+        <span class="bkacts"><button class="btn small ${bookArmed === b.id ? "danger" : "ghost"}" data-action="bookDel" data-id="${b.id}">${bookArmed === b.id ? esc(t("confirm")) : "🗑️"}</button></span></div>
+        <div class="bkopts">
+          <label class="bkopt"><span>${esc(t("inGame"))}</span><button class="switch ${b.off ? "" : "on"}" data-action="srcToggle" data-id="${b.id}" aria-label="${esc(t("inGame"))}"></button></label>
+          <label class="bkopt"><span>${esc(t("byLevel"))}<small>${esc(followsLevel(b) ? t("byLevelOn") : t("byLevelOff"))}</small></span><button class="switch ${followsLevel(b) ? "on" : ""}" data-action="srcLevel" data-id="${b.id}" aria-label="${esc(t("byLevel"))}"></button></label>
+        </div>
         <details class="bkdetail" ${openSrc === b.id ? "open" : ""}><summary>${esc(t("showWords"))}</summary>
         ${st.words.map((x, i) => {
           const ns = st.notes[i], block = ns.some((n) => n.block);
@@ -4516,7 +4551,9 @@ function webApp() {
         <button class="sm ${SET.hasKey ? "" : "primary"}" data-act="aiopen">${esc(t("aiSettings"))}</button></div>
       <div class="srow"><div class="grow"><b>${esc(t("smartOrder"))}</b><small>${esc(t("smartOrderHint"))}</small></div>
         <button class="switch ${sv.smart ? "on" : ""}" data-act="toggle" data-v="smart" aria-label="${esc(t("smartOrder"))}"></button></div>
-      <div class="lk-row"><span class="lk-l">${esc(t("bookMode"))}</span>${segRow("bookMode", [["mix", t("modeMix")], ["first", t("modeFirst")], ["only", t("modeOnly")], ["off", t("modeOff")]], sv.bookMode, "set")}</div>
+      <div class="lk-row"><span class="lk-l">${esc(t("bookMode"))}</span>${segRow("bookMode", [["mix", t("modeMix")], ["first", t("modeFirst")], ["off", t("modeOff")]], sv.bookMode, "set")}</div>
+      <div class="srow"><div class="grow"><b>${esc(t("onlyMine"))}</b><small>${esc(t("onlyMineHint"))}</small></div>
+        <button class="switch ${sv.onlyMine ? "on" : ""}" data-act="toggle" data-v="onlyMine" aria-label="${esc(t("onlyMine"))}"></button></div>
 `;
   }
   VIEWS.parent = () => `
@@ -4723,7 +4760,7 @@ function webApp() {
     AIX.hasKey = !!st.hasKey;
     AIX.on = st.settings.ai !== false;
     AIX.stickers = st.settings.aiStickers !== false;
-    Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, fun: st.settings.fun !== false, tips: st.settings.tips !== false, currency: st.settings.currency, smart: st.settings.smart !== false, bookMode: st.settings.bookMode || "mix" });
+    Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, fun: st.settings.fun !== false, tips: st.settings.tips !== false, onlyMine: st.settings.onlyMine === true, currency: st.settings.currency, smart: st.settings.smart !== false, bookMode: st.settings.bookMode || "mix" });
     const vk = ["speechEngine", "voiceRate", "voicePitch", "ttsModel", "ttsVoice", "ttsInstructions"];
     const before = JSON.stringify(vk.map((x) => state.settings[x]));
     vk.forEach((x) => { if (st.settings[x] !== undefined) state.settings[x] = st.settings[x]; });
@@ -5031,7 +5068,7 @@ function webApp() {
       openWordEditor({
         lang: book.lang, w: x.w, e: x.e || "",
         dupCheck: (plain) => book.words.some((o, j) => j !== i && plainOf(o.w) === plain) || inGame(book.lang, plain),
-        onSave: (w, e, n) => { Object.assign(x, { w, e, n, noPic: false, on: true, known: false }); renderBook(); },
+        onSave: (w, e, n) => { Object.assign(x, { w, e, n, noPic: false, on: true, known: false, anyLen: true }); renderBook(); },
         onRemove: () => { book.words.splice(i, 1); renderBook(); },
       });
     },
@@ -5041,7 +5078,7 @@ function webApp() {
       openWordEditor({
         lang: book.lang, isNew: true,
         dupCheck: (plain) => book.words.some((o) => plainOf(o.w) === plain) || inGame(book.lang, plain),
-        onSave: (w, e, n) => { book.words.push({ w, e, n, on: true, known: false }); renderBook(); },
+        onSave: (w, e, n) => { book.words.push({ w, e, n, on: true, known: false, anyLen: true }); renderBook(); },
       });
     },
     addWordsSelf() {   // the parent's own list, no photo or AI needed
@@ -5057,7 +5094,7 @@ function webApp() {
       const own = plainOf(x.w);
       openSrc = src.id;
       openWordEditor({
-        lang: src.lang, w: x.w, e: x.e,
+        lang: src.lang, w: x.w, e: x.e, anyLen: !followsLevel(src),
         dupCheck: (plain) => plain !== own && inGame(src.lang, plain),
         onSave: (w, e) => { src.words[i] = { w, e }; booksChanged(); persist(); toast(t("wordSaved")); render(); },
         onRemove: () => {
@@ -5073,7 +5110,7 @@ function webApp() {
       if (!src) return;
       openSrc = src.id;
       openWordEditor({
-        lang: src.lang, isNew: true,
+        lang: src.lang, isNew: true, anyLen: !followsLevel(src),
         dupCheck: (plain) => inGame(src.lang, plain),
         onSave: (w, e) => { src.words.push({ w, e }); booksChanged(); persist(); toast(t("wordsAdded", 1)); render(); },
       });
@@ -5097,11 +5134,29 @@ function webApp() {
     vocabMode(b) {
       if (!requireParent()) return;
       const v = b.dataset.v;
-      if (["mix", "first", "only", "off"].indexOf(v) < 0) return;
+      if (["mix", "first", "off"].indexOf(v) < 0) return;
       state.settings.bookMode = v;
       if (SET && SET.settings) SET.settings.bookMode = v;
       booksChanged();
       send("set", { k: "bookMode", v });
+      render();
+    },
+    onlyMine() {
+      if (!requireParent()) return;
+      const v = !state.settings.onlyMine;
+      state.settings.onlyMine = v;
+      if (SET && SET.settings) SET.settings.onlyMine = v;
+      booksChanged();
+      send("set", { k: "onlyMine", v });
+      render();
+    },
+    srcLevel(b) {
+      if (!requireParent()) return;
+      const src = state.books.find((q) => q.id === b.dataset.id);
+      if (!src) return;
+      src.lvl = !followsLevel(src);
+      booksChanged();
+      persist();
       render();
     },
     srcToggle(b) {

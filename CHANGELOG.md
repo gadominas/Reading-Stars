@@ -2,6 +2,17 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.16.0 (2026-11-01): Learn exactly these words
+
+- 📚 **Only my words: a switch**: Its own switch now, off until you turn it on.
+- 📏 **By level, per collection**: Off: every word plays for every child. On: each level's word length.
+
+**Changes**
+
+- Only my words is a switch of its own (settings.onlyMine), off by default, in the Words from books card and Settings › Learning; Book words in the game is back to Mixed in, First, Off. Families on 1.15's Only mine keep it on
+- Each collection has a By level switch next to In the game: off = every word plays for every player at any length; on = the level's syllable range from Settings › Rounds. Your scans and lists start off, AI-coach lists start on
+- With Only my words on, the card lists how many of each player's words fit, and the mode choice steps aside
+
 ## 1.15.0 (2026-11-01): Your words only
 
 - 📚 **Only your words**: Read only your scanned and added words; built-in words just fill the pictures.
