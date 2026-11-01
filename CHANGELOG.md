@@ -2,6 +2,23 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.17.0 (2026-11-01): Words in Settings, a shortcut up front
+
+- 📚 **New words, one tap away**: The parent zone opens with a card to scan a page or type words.
+- ⚙️ **Collections in Settings**: All word collections now live in Settings › Learning.
+- ✦ **AI badge in full view**: The ✦ AI badge now sits on top of the word card, never cut off.
+
+**Changes**
+
+- The Words from books section (scan buttons, collections with In the game and By level, word lists, ✏️ and ➕) moved to Settings › Learning, under Only my words
+- The parent zone starts with a call to action: New words to read! with 📷 Take a photo, 🖼️ From photos (with an AI key) and ✍️ Add words yourself, plus Word collections & settings › (with a summary) that opens Settings at the collections
+- The ✦ AI badge sits on a wrapper above the word card (the card clips its lined paper), straddling its top edge: whole, on top, clear of the word
+- Taps in the Settings sheet's word collections run the game's own actions; the review and word editor open above the sheet, and the sheet keeps its place
+
+**Fixes**
+
+- The ✦ AI badge was cut off by the word card
+
 ## 1.16.0 (2026-11-01): Learn exactly these words
 
 - 📚 **Only my words: a switch**: Its own switch now, off until you turn it on.

@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.16.0';
+const VERSION = '1.17.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -1385,6 +1385,28 @@ body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 .bkwrow{grid-template-columns:30px auto 1fr auto}
 .bkwrow small{grid-column:1/-1}
 .bkaddone{margin-top:8px}
+.wordscta{border:2px solid var(--signal);background:linear-gradient(150deg,var(--signal-wash) 0%,var(--sheet) 65%);box-shadow:0 6px 0 rgba(36,38,74,.12),0 0 0 4px color-mix(in srgb,var(--signal) 16%,transparent)}
+.cta-head{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.cta-head h3{margin:0 0 4px;font-size:calc(22px * var(--ts));line-height:1.15}
+.cta-head p{margin:0;color:var(--ink-2);font-weight:700;font-size:calc(14.5px * var(--ts));line-height:1.35}
+.cta-ico{flex:none;width:58px;height:58px;border-radius:18px;display:grid;place-items:center;font-size:32px;background:var(--sheet);box-shadow:0 4px 0 rgba(36,38,74,.12);animation:ctaBob 3s ease-in-out infinite}
+@keyframes ctaBob{50%{transform:translateY(-3px) rotate(-4deg)}}
+.cta-link{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px;padding:12px 14px;border-radius:16px;background:var(--chipbg);text-align:left;font-weight:800;font-size:calc(16px * var(--ts));color:var(--ink)}
+.cta-link span{display:flex;flex-direction:column;gap:2px}
+.cta-link small{font-weight:700;color:var(--muted);font-size:calc(13px * var(--ts))}
+.cta-link b{font-size:26px;color:var(--signal);line-height:1}
+.wordscta .bkbtns{margin-bottom:12px}
+#cfgsheet .cfgbooks{margin-top:12px}
+/* the sheet resets every button; the word collections keep the game's own buttons */
+#cfgsheet .cfgbooks .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 14px;border-radius:16px;font-weight:800;font-size:calc(16px * var(--ts));text-align:center;background:var(--sheet);box-shadow:0 5px 0 rgba(36,38,74,.18)}
+#cfgsheet .cfgbooks .btn.go{background:var(--grass);color:#fff;box-shadow:0 5px 0 #1E8E52}
+#cfgsheet .cfgbooks .btn.danger{background:var(--tomato);color:#fff;box-shadow:0 5px 0 #D9483A}
+#cfgsheet .cfgbooks .btn.small{font-size:calc(14px * var(--ts));padding:8px 12px;border-radius:12px}
+#cfgsheet .cfgbooks .btn:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(36,38,74,.18)}
+#cfgsheet .cfgbooks .bkwe{padding:8px;border-radius:10px}
+#cfgsheet .cfgbooks .bkdetail summary{list-style:revert}
+#cfgsheet .cfgbooks .bkpanel{margin:0;box-shadow:none;border:1px solid var(--rule);padding:16px}
+@media (prefers-reduced-motion: reduce){.cta-ico{animation:none}}
 .bkbtns{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:6px 0 16px}
 .bkbtns .btn{min-width:0}
 .bkbtns .wide,.bkbtns .btn:only-child{grid-column:1/-1}
@@ -1414,7 +1436,8 @@ body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 .bkacts .switch.on::after{transform:translateX(18px)}
 .bksrc .paused{opacity:.55}
 .wordcard{position:relative}
-.aiwhy{position:absolute;top:-13px;right:14px;z-index:2;background:var(--signal);color:#fff;font-weight:900;font-size:13px;line-height:1;padding:6px 10px;border-radius:999px;box-shadow:0 3px 0 rgba(36,38,74,.2)}
+.wordwrap{position:relative}
+.aiwhy{position:absolute;top:-12px;right:16px;z-index:3;background:var(--signal);color:#fff;font-weight:900;font-size:13px;line-height:1;padding:6px 10px;border-radius:999px;box-shadow:0 3px 0 rgba(36,38,74,.2)}
 body.pin-fixed{position:fixed;inset:0;overflow:hidden;overscroll-behavior:none;touch-action:none}
 body.pin-fixed #app{height:100%;box-sizing:border-box;overflow:hidden}
 body.pin-fixed .key{height:min(66px,8.5vh)}
@@ -1616,6 +1639,11 @@ function webApp() {
       modeFirst: "First",
       modeOff: "Off",
       onlyMine: "Only my words",
+      ctaTitle: "New words to read!",
+      ctaSub: "Snap a book page and AI picks the words, or type your own.",
+      ctaSubNoAI: "Type the words you want your kids to read.",
+      ctaManage: "Word collections & settings",
+      ctaSummary: (n, w) => `${n} collection${n === 1 ? "" : "s"} · ${w} word${w === 1 ? "" : "s"}`,
       onlyMineHint: "Rounds read only your words; built-in words just fill the other pictures.",
       byLevel: "By level",
       byLevelOn: "word length per level",
@@ -1856,6 +1884,11 @@ function webApp() {
       modeFirst: "Primero",
       modeOff: "No",
       onlyMine: "Solo mis palabras",
+      ctaTitle: "¡Palabras nuevas para leer!",
+      ctaSub: "Fotografía una página y la IA elige las palabras, o escribe las tuyas.",
+      ctaSubNoAI: "Escribe las palabras que quieres que lean tus hijos.",
+      ctaManage: "Colecciones y ajustes de palabras",
+      ctaSummary: (n, w) => `${n} colecci${n === 1 ? "ón" : "ones"} · ${w} palabra${w === 1 ? "" : "s"}`,
       onlyMineHint: "Las rondas leen solo tus palabras; las del juego solo completan las otras imágenes.",
       byLevel: "Por nivel",
       byLevelOn: "largo según el nivel",
@@ -2096,6 +2129,11 @@ function webApp() {
       modeFirst: "Pirmiausia",
       modeOff: "Išjungta",
       onlyMine: "Tik mano žodžiai",
+      ctaTitle: "Nauji žodžiai skaitymui!",
+      ctaSub: "Nufotografuokite knygos puslapį – DI išrinks žodžius, arba įrašykite savo.",
+      ctaSubNoAI: "Įrašykite žodžius, kuriuos vaikai turėtų skaityti.",
+      ctaManage: "Žodžių rinkiniai ir nustatymai",
+      ctaSummary: (n, w) => `rinkinių: ${n} · žodžių: ${w}`,
       onlyMineHint: "Skaitomi tik jūsų žodžiai; žaidimo žodžiai tik užpildo kitus paveikslėlius.",
       byLevel: "Pagal lygį",
       byLevelOn: "ilgis pagal lygį",
@@ -4133,6 +4171,10 @@ function webApp() {
   }
   function render() {
     try {
+      try {   // Settings open on the word collections: redraw them too, keeping the scroll position
+        const cb = cfgIsOpen && document.getElementById("cfgBooks");
+        if (cb) { const sh = cfgSheet(), keep = sh.scrollTop; cb.innerHTML = booksPanelHTML(true); sh.scrollTop = keep; }
+      } catch (e) {}
       app.innerHTML = VIEWS[view.name]();
       document.body.classList.toggle("shelf-on", view.name === "game");   // room for the sticker shelf
       document.body.classList.toggle("game-fixed", view.name === "game");   // the game screen never scrolls (1.10.1)
@@ -4374,7 +4416,7 @@ function webApp() {
       <div class="pics">${game.options
         .map((o, i) => `<button class="pic ${game.wrong.has(i) ? "wrong" : ""}" style="background:${PIC_BG[i]}" data-action="pick" data-i="${i}"><span class="emo">${o.e}</span></button>`)
         .join("")}</div>
-      <div class="wordcard">${game.aiWhy ? `<button class="aiwhy" data-action="aiWhy" aria-label="${esc(t(game.aiWhy === "new" ? "aiWhyNew" : "aiWhyFocus"))}">✦ ${esc(t("aiShort"))}</button>` : ""}<div class="word" id="word">${wordHTML(game.cur.w)}</div></div>
+      <div class="wordwrap">${game.aiWhy ? `<button class="aiwhy" data-action="aiWhy" aria-label="${esc(t(game.aiWhy === "new" ? "aiWhyNew" : "aiWhyFocus"))}">✦ ${esc(t("aiShort"))}</button>` : ""}<div class="wordcard"><div class="word" id="word">${wordHTML(game.cur.w)}</div></div></div>
       ${kid.speak !== "off" ? `<div class="hearrow"><button class="hear" data-action="hear" aria-label="${esc(t("hearWord"))}">🔊</button></div>` : ""}
       <div class="feedback" id="fb"></div>
       ${shelfHTML(kid)}`;
@@ -4494,6 +4536,26 @@ function webApp() {
 
   // Which words are read (1.15.0): the same choice as Settings › Learning › Book words in the game, right here,
   // and with "Only your words", how many of each player's words fit their level.
+  // In Settings the mode and the switch are rows of their own; the section only adds each player's count.
+  function vocabCounts() {
+    if (!state.settings.onlyMine) return "";
+    return `<div class="vcounts">${state.kids.map((k) => {
+      const n = wordsFor(state.lang).filter((w) => mineFor(k)(w) && fitsLevel(k.level, w)).length;
+      return `<small class="${n ? "" : "warn"}">${k.avatar} ${esc(k.name)}: ${esc(n ? t("onlyCount", n) : t("onlyNone"))}</small>`;
+    }).join("")}</div>`;
+  }
+  // The parent zone's call to action (1.17.0): add words straight away, or open the collections in Settings.
+  function wordsCtaHTML() {
+    const lang = state.lang, mine = state.books.filter((b) => b.lang === lang);
+    const nWords = mine.reduce((n, b) => n + b.words.length, 0);
+    const summary = t("ctaSummary", mine.length, nWords) + (state.settings.onlyMine ? " · " + t("onlyMine") : "");
+    return `<div class="panel wordscta ${AIX.hasKey ? "ai" : ""}">
+      <div class="cta-head"><span class="cta-ico" aria-hidden="true">📚</span><div><h3>${esc(t("ctaTitle"))}</h3><p>${esc(t(AIX.hasKey ? "ctaSub" : "ctaSubNoAI"))}</p></div></div>
+      <div class="bkbtns">${AIX.hasKey ? `<button class="btn go" data-action="bookCamera">📷 ${esc(t("takePhoto"))}</button><button class="btn ghost" data-action="bookLibrary">🖼️ ${esc(t("fromPhotos"))}</button>` : ""}
+        <button class="btn ${AIX.hasKey ? "ghost" : "go"} wide" data-action="addWordsSelf">✍️ ${esc(t("addWordsSelf"))}</button></div>
+      <button class="cta-link" data-action="openWordsSettings"><span>⚙️ ${esc(t("ctaManage"))}<small>${esc(summary)}</small></span><b aria-hidden="true">›</b></button>
+    </div>`;
+  }
   function vocabHTML() {
     const m = state.settings.bookMode || "mix", only = !!state.settings.onlyMine;
     const opts = [["mix", t("modeMix")], ["first", t("modeFirst")], ["off", t("modeOff")]];
@@ -4509,7 +4571,7 @@ function webApp() {
       <small class="mhint">${esc(t("vocabHint_" + m))}</small>`}</div>`;
   }
   // Parent zone: words from books (photo buttons only with an AI key; sources stay usable without one).
-  function booksPanelHTML() {
+  function booksPanelHTML(inSettings) {
     const srcs = state.books.slice().sort((a, b) => b.at - a.at).map((b) => {
       const st = bookStats(b);
       const all = st.playing === st.words.length && !b.off;
@@ -4534,7 +4596,7 @@ function webApp() {
       <p class="note">${esc(t(AIX.hasKey ? "bookHint" : "bookHintNoAI"))}</p>
       <div class="bkbtns">${AIX.hasKey ? `<button class="btn go" data-action="bookCamera">📷 ${esc(t("takePhoto"))}</button><button class="btn ghost" data-action="bookLibrary">🖼️ ${esc(t("fromPhotos"))}</button>` : ""}
         <button class="btn ghost wide" data-action="addWordsSelf">✍️ ${esc(t("addWordsSelf"))}</button></div>
-      ${vocabHTML()}
+      ${inSettings ? vocabCounts() : vocabHTML()}
       ${srcs || `<p class="note">${esc(t("noBooks"))}</p>`}
     </div>`;
   }
@@ -4554,13 +4616,14 @@ function webApp() {
       <div class="lk-row"><span class="lk-l">${esc(t("bookMode"))}</span>${segRow("bookMode", [["mix", t("modeMix")], ["first", t("modeFirst")], ["off", t("modeOff")]], sv.bookMode, "set")}</div>
       <div class="srow"><div class="grow"><b>${esc(t("onlyMine"))}</b><small>${esc(t("onlyMineHint"))}</small></div>
         <button class="switch ${sv.onlyMine ? "on" : ""}" data-act="toggle" data-v="onlyMine" aria-label="${esc(t("onlyMine"))}"></button></div>
+      <div id="cfgBooks" class="cfgbooks">${booksPanelHTML(true)}</div>
 `;
   }
   VIEWS.parent = () => `
       <div class="bar"><button class="icon" data-action="lockParent" aria-label="${esc(t("parents"))}">⬅</button><h2>👨‍👩‍👧 ${esc(t("parentArea"))}</h2><button class="icon" data-action="openSettings" aria-label="${esc(CT.title)}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button></div>
       ${usageAsk ? `<section id="usageask" class="panel" aria-label="${esc(CT.uaTitle)}"><b>${esc(CT.uaTitle)}</b><p>${esc(CT.uaText)}</p><div class="uabtns"><button class="btn" data-action="usageAnswer" data-v="1">${esc(CT.uaYes)}</button><button class="btn ghost" data-action="usageAnswer" data-v="0">${esc(CT.uaNo)}</button></div></section>` : ""}
       ${state.kids.length ? "" : `<p class="empty">${esc(t("noKids"))}</p>`}
-      ${booksPanelHTML()}
+      ${wordsCtaHTML()}
       ${state.kids.map(parentKid).join("")}`;
 
   // ── PIN handling ──
@@ -4761,6 +4824,7 @@ function webApp() {
     AIX.on = st.settings.ai !== false;
     AIX.stickers = st.settings.aiStickers !== false;
     Object.assign(state.settings, { wordCase: st.settings.wordCase, sound: st.settings.sound, fun: st.settings.fun !== false, tips: st.settings.tips !== false, onlyMine: st.settings.onlyMine === true, currency: st.settings.currency, smart: st.settings.smart !== false, bookMode: st.settings.bookMode || "mix" });
+    booksChanged();   // the mode or Only my words may have changed from Settings: words are worked out again
     const vk = ["speechEngine", "voiceRate", "voicePitch", "ttsModel", "ttsVoice", "ttsInstructions"];
     const before = JSON.stringify(vk.map((x) => state.settings[x]));
     vk.forEach((x) => { if (st.settings[x] !== undefined) state.settings[x] = st.settings[x]; });
@@ -4780,6 +4844,11 @@ function webApp() {
   function closeSettings() { cfgIsOpen = false; cfgArmed = false; aiOpen = false; renderAI(); renderCfg(); render(); }
   function cfgClick(e) {
     e.stopPropagation();   // the sheet's taps never reach the game's own click handler
+    const ab = e.target.closest("[data-action]");   // …except the word collections' own buttons, run here (1.17.0)
+    if (ab && !ab.disabled && A[ab.dataset.action] && !e.target.closest("select, option, input, textarea")) {
+      try { const r = A[ab.dataset.action](ab, e); if (r && typeof r.catch === "function") r.catch(showError); } catch (err) { showError(err); }
+      return;
+    }
     if (e.target.closest("select, option, input, textarea")) return;
     const el = e.target.closest("[data-act]"); if (!el || el.disabled) return;
     const act = el.dataset.act, v = el.dataset.v, k = el.dataset.k;
@@ -5028,6 +5097,17 @@ function webApp() {
     },
     rowToggle(el) {   // Tiny layout: a player's line opens to show the details
       (el.closest(".panel") || el).classList.toggle("open");
+    },
+    openWordsSettings() {   // the parent zone's shortcut: Settings, scrolled to the word collections
+      if (!requireParent()) return;
+      openSettings();
+      let tries = 0;
+      const go = () => {
+        const el = document.getElementById("cfgBooks");
+        if (el && cfgIsOpen) { const sh = cfgSheet(); sh.scrollTop = Math.max(0, el.offsetTop - 70); return; }
+        if (++tries < 40) setTimeout(go, 50);
+      };
+      setTimeout(go, 50);
     },
     openSettings() {
       if (!requireParent()) return;
