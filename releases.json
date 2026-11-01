@@ -4,6 +4,65 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.17.0",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Words in Settings, a shortcut up front",
+        "lt": "Žodžiai nustatymuose, nuoroda priekyje",
+        "es": "Palabras en Ajustes, atajo delante"
+      },
+      "highlights": [
+        {
+          "icon": "📚",
+          "title": {
+            "en": "New words, one tap away",
+            "lt": "Nauji žodžiai – vienu paspaudimu",
+            "es": "Palabras nuevas, a un toque"
+          },
+          "text": {
+            "en": "The parent zone opens with a card to scan a page or type words.",
+            "lt": "Tėvų zona prasideda kortele: nufotografuokite puslapį arba įrašykite žodžius.",
+            "es": "La zona de padres empieza con una tarjeta para escanear o escribir palabras."
+          }
+        },
+        {
+          "icon": "⚙️",
+          "title": {
+            "en": "Collections in Settings",
+            "lt": "Rinkiniai nustatymuose",
+            "es": "Colecciones en Ajustes"
+          },
+          "text": {
+            "en": "All word collections now live in Settings › Learning.",
+            "lt": "Visi žodžių rinkiniai dabar – Nustatymai › Mokymasis.",
+            "es": "Todas las colecciones están ahora en Ajustes › Aprendizaje."
+          }
+        },
+        {
+          "icon": "✦",
+          "title": {
+            "en": "AI badge in full view",
+            "lt": "DI ženkliukas matomas visas",
+            "es": "Insignia IA bien visible"
+          },
+          "text": {
+            "en": "The ✦ AI badge now sits on top of the word card, never cut off.",
+            "lt": "✦ DI ženkliukas dabar ant kortelės viršaus ir nebenukerpamas.",
+            "es": "La insignia ✦ IA está sobre la tarjeta y ya no se corta."
+          }
+        }
+      ],
+      "changes": [
+        "The Words from books section (scan buttons, collections with In the game and By level, word lists, ✏️ and ➕) moved to Settings › Learning, under Only my words",
+        "The parent zone starts with a call to action: New words to read! with 📷 Take a photo, 🖼️ From photos (with an AI key) and ✍️ Add words yourself, plus Word collections & settings › (with a summary) that opens Settings at the collections",
+        "The ✦ AI badge sits on a wrapper above the word card (the card clips its lined paper), straddling its top edge: whole, on top, clear of the word",
+        "Taps in the Settings sheet's word collections run the game's own actions; the review and word editor open above the sheet, and the sheet keeps its place"
+      ],
+      "fixes": [
+        "The ✦ AI badge was cut off by the word card"
+      ]
+    },
+    {
       "version": "1.16.0",
       "date": "2026-11-01",
       "title": {
