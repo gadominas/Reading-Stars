@@ -4,6 +4,49 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.16.0",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Learn exactly these words",
+        "lt": "Mokykitės būtent šių žodžių",
+        "es": "Aprende justo estas palabras"
+      },
+      "highlights": [
+        {
+          "icon": "📚",
+          "title": {
+            "en": "Only my words: a switch",
+            "lt": "Tik mano žodžiai – jungiklis",
+            "es": "Solo mis palabras: un interruptor"
+          },
+          "text": {
+            "en": "Its own switch now, off until you turn it on.",
+            "lt": "Dabar atskiras jungiklis, išjungtas, kol neįjungsite.",
+            "es": "Ahora es un interruptor propio, apagado hasta que lo enciendas."
+          }
+        },
+        {
+          "icon": "📏",
+          "title": {
+            "en": "By level, per collection",
+            "lt": "Pagal lygį – kiekvienam rinkiniui",
+            "es": "Por nivel, en cada colección"
+          },
+          "text": {
+            "en": "Off: every word plays for every child. On: each level's word length.",
+            "lt": "Išjungta: visi žodžiai visiems vaikams. Įjungta: ilgis pagal lygį.",
+            "es": "Apagado: todas las palabras para todos. Encendido: largo según el nivel."
+          }
+        }
+      ],
+      "changes": [
+        "Only my words is a switch of its own (settings.onlyMine), off by default, in the Words from books card and Settings › Learning; Book words in the game is back to Mixed in, First, Off. Families on 1.15's Only mine keep it on",
+        "Each collection has a By level switch next to In the game: off = every word plays for every player at any length; on = the level's syllable range from Settings › Rounds. Your scans and lists start off, AI-coach lists start on",
+        "With Only my words on, the card lists how many of each player's words fit, and the mode choice steps aside"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.15.0",
       "date": "2026-11-01",
       "title": {
