@@ -2,6 +2,20 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.17.1 (2026-11-01): Bubbles stay with their sticker
+
+- 💬 **Follows when you scroll**: A sticker's speech bubble now moves with it when the album or shelf scrolls.
+
+**Changes**
+
+- A sticker's speech bubble (and the AI thinking bubble) is re-placed on every scroll of the album, the sticker shelf or the page, and on resize
+- While its sticker is scrolled out of view the bubble hides, and it comes back when the sticker does
+- The bubble's listeners are removed with it
+
+**Fixes**
+
+- The speech bubble stayed where the sticker was when the album was scrolled
+
 ## 1.17.0 (2026-11-01): Words in Settings, a shortcut up front
 
 - 📚 **New words, one tap away**: The parent zone opens with a card to scan a page or type words.

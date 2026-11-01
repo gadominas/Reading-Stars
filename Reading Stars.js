@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.17.0';
+const VERSION = '1.17.1';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -3995,21 +3995,39 @@ function webApp() {
     pool.i = (pool.i + 1) % pool.lines.length;
     return pool.lines[pool.i];
   }
+  // 1.17.1: a bubble follows its sticker while the album, the shelf or the page scrolls, and hides while the sticker
+  // is scrolled out of view (it comes back when the sticker does).
+  function clearSay() {
+    document.querySelectorAll(".stk-say").forEach((x) => { if (x._off) x._off(); x.remove(); });
+  }
+  function placeBubble(b, el) {
+    if (!document.body.contains(el)) { if (b._off) b._off(); b.remove(); return; }
+    const r = el.getBoundingClientRect(), x = r.left + r.width / 2, w = b.offsetWidth;
+    const box = el.closest(".albumcard, .sh-strip");
+    const vr = box ? box.getBoundingClientRect() : { top: 0, bottom: window.innerHeight, left: 0, right: window.innerWidth };
+    const cy = r.top + r.height / 2;
+    b.style.visibility = x >= vr.left && x <= vr.right && cy >= vr.top && cy <= vr.bottom ? "" : "hidden";
+    const left = Math.max(8, Math.min(window.innerWidth - w - 8, x - w / 2));
+    const below = r.top - b.offsetHeight - 16 < 8;   // no room above: speak downwards
+    if (b.classList.contains("below") !== below) b.classList.toggle("below", below);
+    b.style.left = left + "px";
+    b.style.top = (below ? r.bottom + 12 : r.top - 10) + "px";
+    b.style.setProperty("--tail", Math.max(16, Math.min(w - 16, x - left)) + "px");
+  }
   function bubbleFor(el, text, thinking) {
-    document.querySelectorAll(".stk-say").forEach((x) => x.remove());
+    clearSay();
     const b = document.createElement("div");
     b.className = "stk-say" + (thinking ? " thinking" : "");
     if (thinking) b.innerHTML = "<i></i><i></i><i></i>";
     else b.textContent = text;
     document.body.appendChild(b);
-    const r = el.getBoundingClientRect(), x = r.left + r.width / 2, w = b.offsetWidth;
-    const left = Math.max(8, Math.min(window.innerWidth - w - 8, x - w / 2));
-    const below = r.top - b.offsetHeight - 16 < 8;   // no room above: speak downwards
-    b.classList.toggle("below", below);
-    b.style.left = left + "px";
-    b.style.top = (below ? r.bottom + 12 : r.top - 10) + "px";
-    b.style.setProperty("--tail", Math.max(16, Math.min(w - 16, x - left)) + "px");
-    if (!thinking) setTimeout(() => b.remove(), 2200 + String(text).length * 45);
+    placeBubble(b, el);
+    let raf = 0;
+    const follow = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; placeBubble(b, el); }); };
+    document.addEventListener("scroll", follow, true);   // capture: the album's and the shelf's own scrolling too
+    window.addEventListener("resize", follow);
+    b._off = () => { document.removeEventListener("scroll", follow, true); window.removeEventListener("resize", follow); if (raf) cancelAnimationFrame(raf); b._off = null; };
+    if (!thinking) setTimeout(() => { if (b._off) b._off(); b.remove(); }, 2200 + String(text).length * 45);
     return b;
   }
   // A tapped sticker bounces as if talking and says hello: AI writes the line when it's on (built-in lines otherwise),
@@ -4021,7 +4039,7 @@ function webApp() {
     el.classList.add("talk");
     const say = (line) => {
       if (my !== helloToken) return "";   // another sticker was tapped meanwhile
-      if (!document.body.contains(el)) { document.querySelectorAll(".stk-say").forEach((x) => x.remove()); return ""; }
+      if (!document.body.contains(el)) { clearSay(); return ""; }
       bubbleFor(el, line);
       if (state.settings.sound !== false) speakWord(line, null, "sticker");
       return line;
@@ -4972,7 +4990,7 @@ function webApp() {
     },
     albumClose() {
       closeAlbum();
-      document.querySelectorAll(".stk-say").forEach((x) => x.remove());
+      clearSay();
     },
     noop() {},
     stkHello(b) {
