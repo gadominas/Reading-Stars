@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.14.0';
+const VERSION = '1.15.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -277,7 +277,7 @@ const SET_KEYS = {
   font: (v) => ["sans", "serif"].includes(v), textSize: (v) => [0.92, 1, 1.12, 1.25].includes(+v),
   wordCase: (v) => ["cap", "upper", "lower"].includes(v), currency: (v) => CURRENCY_CODES.includes(v),
   sound: "bool", fun: "bool", tips: "bool", checkUpdates: "bool", shareUsage: "bool",
-  smart: "bool", bookMode: (v) => ["mix", "first", "off"].includes(v), ai: "bool", aiStickers: "bool",
+  smart: "bool", bookMode: (v) => ["mix", "first", "only", "off"].includes(v), ai: "bool", aiStickers: "bool",
   speechEngine: (v) => ["device", "ai"].includes(v), voiceGender: (v) => ["all", "f", "m"].includes(v),
   voiceRate: (v) => [0.85, 1, 1.15, 1.3].includes(+v), voicePitch: (v) => [0.85, 1, 1.15].includes(+v),
   ttsModel: (v) => typeof v === "string" && /^[a-z0-9][a-z0-9.\-]{1,60}$/i.test(v), ttsVoice: (v) => typeof v === "string" && /^[a-z]{2,20}$/.test(v),
@@ -305,7 +305,7 @@ async function loadSettings() {
   settings.smart = settings.smart !== false;
   settings.ai = settings.ai !== false;
   settings.aiStickers = settings.aiStickers !== false;
-  if (!["mix", "first", "off"].includes(settings.bookMode)) settings.bookMode = "mix";
+  if (!["mix", "first", "only", "off"].includes(settings.bookMode)) settings.bookMode = "mix";   // "only" (1.15.0): only your words are read
   if (!PROVIDERS[settings.aiProvider]) settings.aiProvider = "anthropic";
   const rd = { speechEngine: "device", voiceGender: "all", voiceRate: 0.85, voicePitch: 1, ttsModel: "gpt-4o-mini-tts", ttsVoice: "coral", ttsInstructions: "" };
   for (const k of Object.keys(rd)) if (!setSetting(k, settings[k])) settings[k] = rd[k];
@@ -1383,6 +1383,27 @@ body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 .bkwrow{grid-template-columns:30px auto 1fr auto}
 .bkwrow small{grid-column:1/-1}
 .bkaddone{margin-top:8px}
+.bkbtns{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:6px 0 16px}
+.bkbtns .btn{min-width:0}
+.bkbtns .wide,.bkbtns .btn:only-child{grid-column:1/-1}
+.vocab{display:flex;flex-direction:column;gap:8px;padding:12px 0 14px;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin-bottom:6px}
+.seg4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg4 button{padding:10px 4px;border-radius:12px;background:var(--chipbg);font-weight:800;font-size:calc(14px * var(--ts));line-height:1.15;box-shadow:0 3px 0 rgba(36,38,74,.1)}
+.seg4 button.on{background:var(--signal);color:#fff}
+.vcounts{display:flex;flex-direction:column;gap:2px}
+.vcounts small{font-weight:700;color:var(--ink-2)}
+.vcounts small.warn{color:var(--danger)}
+.bkacts{display:flex;align-items:center;gap:8px;flex:none}
+.bkacts .switch{width:46px;height:28px;border-radius:14px;background:var(--rule);position:relative;flex:none;transition:background .2s}
+.bkacts .switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
+.bkacts .switch.on{background:var(--grass)}
+.bkacts .switch.on::after{transform:translateX(18px)}
+.bksrc .paused{opacity:.55}
+.wordcard{position:relative}
+.aiwhy{position:absolute;top:-13px;right:14px;z-index:2;background:var(--signal);color:#fff;font-weight:900;font-size:13px;line-height:1;padding:6px 10px;border-radius:999px;box-shadow:0 3px 0 rgba(36,38,74,.2)}
+body.pin-fixed{position:fixed;inset:0;overflow:hidden;overscroll-behavior:none;touch-action:none}
+body.pin-fixed #app{height:100%;box-sizing:border-box;overflow:hidden}
+body.pin-fixed .key{height:min(66px,8.5vh)}
 .badge-ai.manual{background:var(--grass)}
 #wordsheet{position:fixed;inset:0;z-index:58;background:rgba(36,38,74,.55);display:none;align-items:flex-end}
 #wordsheet.open{display:flex;animation:fade .2s}
@@ -1580,6 +1601,20 @@ function webApp() {
       modeMix: "Mixed in",
       modeFirst: "First",
       modeOff: "Off",
+      modeOnly: "Only mine",
+      vocabTitle: "Words to read",
+      vocabHint_mix: "Your words and the built-in words, mixed.",
+      vocabHint_first: "Your words come up more often than the built-in ones.",
+      vocabHint_only: "Only your words are read. Built-in words just fill the other pictures.",
+      vocabHint_off: "Only the built-in words (the AI coach's words still come up).",
+      onlyCount: (n) => `${n} of your words fit`,
+      onlyNone: "none of your words fit this level yet: built-in words are used",
+      onlyEmpty: "No words of yours at this level yet, so built-in words are used.",
+      inGame: "In the game",
+      srcPaused: "paused",
+      aiShort: "AI",
+      aiWhyFocus: "✦ The AI coach picked this word to practise.",
+      aiWhyNew: "✦ The AI coach added this word for you.",
       sourceWords: (n) => `${n} words`,
       noBooks: "No book words yet.",
       sylFrom: (a) => `${a}+ syllables`,
@@ -1802,6 +1837,20 @@ function webApp() {
       modeMix: "Mezcladas",
       modeFirst: "Primero",
       modeOff: "No",
+      modeOnly: "Solo míos",
+      vocabTitle: "Palabras para leer",
+      vocabHint_mix: "Tus palabras y las del juego, mezcladas.",
+      vocabHint_first: "Tus palabras salen más a menudo que las del juego.",
+      vocabHint_only: "Solo se leen tus palabras. Las del juego solo completan las otras imágenes.",
+      vocabHint_off: "Solo las palabras del juego (las del entrenador IA siguen saliendo).",
+      onlyCount: (n) => `encajan ${n} de tus palabras`,
+      onlyNone: "aún no encaja ninguna de tus palabras: se usan las del juego",
+      onlyEmpty: "Aún no hay palabras tuyas para este nivel: se usan las del juego.",
+      inGame: "En el juego",
+      srcPaused: "en pausa",
+      aiShort: "IA",
+      aiWhyFocus: "✦ El entrenador IA eligió esta palabra para practicar.",
+      aiWhyNew: "✦ El entrenador IA añadió esta palabra para ti.",
       sourceWords: (n) => `${n} palabras`,
       noBooks: "Aún no hay palabras de libros.",
       sylFrom: (a) => `${a}+ sílabas`,
@@ -2024,6 +2073,20 @@ function webApp() {
       modeMix: "Kartu",
       modeFirst: "Pirmiausia",
       modeOff: "Išjungta",
+      modeOnly: "Tik mano",
+      vocabTitle: "Skaitomi žodžiai",
+      vocabHint_mix: "Jūsų ir žaidimo žodžiai kartu.",
+      vocabHint_first: "Jūsų žodžiai pasirodo dažniau nei žaidimo.",
+      vocabHint_only: "Skaitomi tik jūsų žodžiai. Žaidimo žodžiai tik užpildo kitus paveikslėlius.",
+      vocabHint_off: "Tik žaidimo žodžiai (DI trenerio žodžiai vis tiek pasirodo).",
+      onlyCount: (n) => `tinka jūsų žodžių: ${n}`,
+      onlyNone: "jūsų žodžių šiam lygiui dar nėra: naudojami žaidimo žodžiai",
+      onlyEmpty: "Tavo lygiui savų žodžių dar nėra, todėl skaitome žaidimo žodžius.",
+      inGame: "Žaidime",
+      srcPaused: "pristabdyta",
+      aiShort: "DI",
+      aiWhyFocus: "✦ Šį žodį pakartoti parinko DI treneris.",
+      aiWhyNew: "✦ Šį žodį tau pridėjo DI treneris.",
       sourceWords: (n) => `žodžiai: ${n}`,
       noBooks: "Knygų žodžių dar nėra.",
       sylFrom: (a) => `${a}+ skiemenys`,
@@ -2882,7 +2945,7 @@ function webApp() {
   const noteIcon = { off: "⏸", lang: "🌐", level: "👤", near: "🔤" };
   function bookStats(b) {
     const words = b.words.map((x) => ({ w: x.w, e: x.e, n: x.w.split("-").length, k: firstLetter(b.lang, x.w) }));
-    const notes = words.map((x) => wordNotes(x, b.lang));
+    const notes = words.map((x) => (b.off ? [{ k: "off", block: true, text: t("srcPaused") }] : wordNotes(x, b.lang)));
     return { words, notes, playing: notes.filter((ns) => !ns.some((n) => n.block)).length };
   }
   window.__bookReading = function () {
@@ -3309,7 +3372,7 @@ function webApp() {
       const have = new Set(base.map((x) => x.w));
       const extra = [];
       state.books.forEach((b) => {
-        if (b.lang !== lang || (!all && !b.coachKid && state.settings.bookMode === "off")) return;
+        if (b.lang !== lang || (!all && (b.off || (!b.coachKid && state.settings.bookMode === "off")))) return;   // b.off: paused by the parent
         b.words.forEach((x) => {
           if (!x || !x.w || !x.e || have.has(x.w)) return;
           have.add(x.w);
@@ -3356,7 +3419,15 @@ function webApp() {
   const sylText = (level) => { const [lo, hi] = sylRange(level); return hi >= 99 ? t("sylFrom", lo) : t("sylRange", lo, hi); };
   // Built-in words need enough same-letter partners; words you added from books (and the AI coach) always play:
   // when their letter is short of partners, the other pictures come from the nearest letters.
+  // 1.15.0 "Only your words": only words from your books, your own list and this kid's AI coach are read; the
+  // built-in words just fill the other pictures. With none at the kid's level, the round falls back to all words.
+  const mineFor = (kid) => (w) => !!w.src && (!w.coachKid || w.coachKid === kid.id);
+  function ownPool(kid) {
+    const mine = mineFor(kid), list = wordsFor(state.lang).filter((w) => mine(w) && fitsLevel(kid.level, w));
+    return list.length ? list : wordsFor(state.lang).filter((w) => mine(w) && fitsLevel(kid.level, w, true));
+  }
   function poolForN(kid, n) {
+    if (state.settings.bookMode === "only") { const own = ownPool(kid); if (own.length) return own; }
     const pick = (def) => wordsFor(state.lang).filter((w) => fitsLevel(kid.level, w, def) && (w.src || sameLetter(w).length >= n - 1));
     const list = pick(false);
     return list.length ? list : pick(true);   // a range with no words at all falls back to the level's original one
@@ -4036,6 +4107,8 @@ function webApp() {
       app.innerHTML = VIEWS[view.name]();
       document.body.classList.toggle("shelf-on", view.name === "game");   // room for the sticker shelf
       document.body.classList.toggle("game-fixed", view.name === "game");   // the game screen never scrolls (1.10.1)
+      document.body.classList.toggle("pin-fixed", view.name === "pin");     // nor does the PIN screen (1.15.0)
+      if (view.name === "pin") window.scrollTo(0, 0);
       if (view.name !== "game") { closeAlbum(); document.body.classList.remove("tight-shelf"); app.style.height = ""; }
       if (view.name === "game") {
         fitWord();
@@ -4094,6 +4167,13 @@ function webApp() {
       if (o.e !== word.e && !picks.some((p) => p.e === o.e)) picks.push(o);
     }
     game.cur = word;
+    // ✦ shown on the word card when the AI coach chose it: a word it asked to practise, or a word it added for this kid
+    const coach = kid.coach && kid.coach.lang === state.lang ? kid.coach : null;
+    game.aiWhy = word.coachKid === kid.id ? "new" : coach && (coach.focus || []).indexOf(word.w) >= 0 && state.settings.smart !== false ? "focus" : "";
+    if (state.settings.bookMode === "only" && !word.src && !game.onlyNoted) {   // "only", but none of your words fit this kid
+      game.onlyNoted = true;
+      game.pendingTip = t("onlyEmpty");
+    }
     game.options = shuffle([word].concat(picks));
     game.missed = false;
     game.locked = false;
@@ -4265,7 +4345,7 @@ function webApp() {
       <div class="pics">${game.options
         .map((o, i) => `<button class="pic ${game.wrong.has(i) ? "wrong" : ""}" style="background:${PIC_BG[i]}" data-action="pick" data-i="${i}"><span class="emo">${o.e}</span></button>`)
         .join("")}</div>
-      <div class="wordcard"><div class="word" id="word">${wordHTML(game.cur.w)}</div></div>
+      <div class="wordcard">${game.aiWhy ? `<button class="aiwhy" data-action="aiWhy" aria-label="${esc(t(game.aiWhy === "new" ? "aiWhyNew" : "aiWhyFocus"))}">✦ ${esc(t("aiShort"))}</button>` : ""}<div class="word" id="word">${wordHTML(game.cur.w)}</div></div>
       ${kid.speak !== "off" ? `<div class="hearrow"><button class="hear" data-action="hear" aria-label="${esc(t("hearWord"))}">🔊</button></div>` : ""}
       <div class="feedback" id="fb"></div>
       ${shelfHTML(kid)}`;
@@ -4383,14 +4463,28 @@ function webApp() {
     </div>`;
   }
 
+  // Which words are read (1.15.0): the same choice as Settings › Learning › Book words in the game, right here,
+  // and with "Only your words", how many of each player's words fit their level.
+  function vocabHTML() {
+    const m = state.settings.bookMode || "mix";
+    const opts = [["mix", t("modeMix")], ["first", t("modeFirst")], ["only", t("modeOnly")], ["off", t("modeOff")]];
+    const counts = m === "only" ? state.kids.map((k) => {
+      const n = wordsFor(state.lang).filter((w) => mineFor(k)(w) && fitsLevel(k.level, w)).length;
+      return `<small class="${n ? "" : "warn"}">${k.avatar} ${esc(k.name)}: ${esc(n ? t("onlyCount", n) : t("onlyNone"))}</small>`;
+    }).join("") : "";
+    return `<div class="vocab"><b>📚 ${esc(t("vocabTitle"))}</b>
+      <div class="seg4">${opts.map(([v, l]) => `<button class="${m === v ? "on" : ""}" data-action="vocabMode" data-v="${v}">${esc(l)}</button>`).join("")}</div>
+      <small class="mhint">${esc(t("vocabHint_" + m))}</small>${counts ? `<div class="vcounts">${counts}</div>` : ""}</div>`;
+  }
   // Parent zone: words from books (photo buttons only with an AI key; sources stay usable without one).
   function booksPanelHTML() {
     const srcs = state.books.slice().sort((a, b) => b.at - a.at).map((b) => {
       const st = bookStats(b);
-      const all = st.playing === st.words.length;
+      const all = st.playing === st.words.length && !b.off;
       return `<div class="bksrcbox"><div class="hist bksrc">
-        <span>${LANGS[b.lang].flag} <b>${esc(b.title || "—")}</b><br><small class="${all ? "" : "warn"}">${esc(t("inRounds", st.playing, st.words.length))} · ${esc(fmtDate(b.at))}${b.by ? " · ✦ " + esc(b.by) : ""}</small></span>
-        <button class="btn small ${bookArmed === b.id ? "danger" : "ghost"}" data-action="bookDel" data-id="${b.id}">${bookArmed === b.id ? esc(t("confirm")) : "🗑️"}</button></div>
+        <span class="${b.off ? "paused" : ""}">${LANGS[b.lang].flag} <b>${esc(b.title || "—")}</b><br><small class="${all ? "" : "warn"}">${b.off ? "⏸ " + esc(t("srcPaused")) + " · " : ""}${esc(t("inRounds", b.off ? 0 : st.playing, st.words.length))} · ${esc(fmtDate(b.at))}${b.by ? " · ✦ " + esc(b.by) : ""}</small></span>
+        <span class="bkacts"><button class="switch ${b.off ? "" : "on"}" data-action="srcToggle" data-id="${b.id}" aria-label="${esc(t("inGame"))}" title="${esc(t("inGame"))}"></button>
+        <button class="btn small ${bookArmed === b.id ? "danger" : "ghost"}" data-action="bookDel" data-id="${b.id}">${bookArmed === b.id ? esc(t("confirm")) : "🗑️"}</button></span></div>
         <details class="bkdetail" ${openSrc === b.id ? "open" : ""}><summary>${esc(t("showWords"))}</summary>
         ${st.words.map((x, i) => {
           const ns = st.notes[i], block = ns.some((n) => n.block);
@@ -4402,10 +4496,10 @@ function webApp() {
     }).join("");
     return `<div class="panel bkpanel ${AIX.hasKey ? "ai" : ""}">
       <h3>📷 ${esc(t("bookWords"))}${AIX.hasKey ? ` <span class="badge-ai">${esc(t("aiBadge"))}</span>` : ""}</h3>
-      ${AIX.hasKey ? `<p class="note">${esc(t("bookHint"))}</p>
-        <div class="row"><button class="btn go" data-action="bookCamera">📷 ${esc(t("takePhoto"))}</button><button class="btn ghost" data-action="bookLibrary">🖼️ ${esc(t("fromPhotos"))}</button></div>`
-        : `<p class="note">${esc(t("bookHintNoAI"))}</p>`}
-      <div class="row"><button class="btn ghost" data-action="addWordsSelf">✍️ ${esc(t("addWordsSelf"))}</button></div>
+      <p class="note">${esc(t(AIX.hasKey ? "bookHint" : "bookHintNoAI"))}</p>
+      <div class="bkbtns">${AIX.hasKey ? `<button class="btn go" data-action="bookCamera">📷 ${esc(t("takePhoto"))}</button><button class="btn ghost" data-action="bookLibrary">🖼️ ${esc(t("fromPhotos"))}</button>` : ""}
+        <button class="btn ghost wide" data-action="addWordsSelf">✍️ ${esc(t("addWordsSelf"))}</button></div>
+      ${vocabHTML()}
       ${srcs || `<p class="note">${esc(t("noBooks"))}</p>`}
     </div>`;
   }
@@ -4422,7 +4516,7 @@ function webApp() {
         <button class="sm ${SET.hasKey ? "" : "primary"}" data-act="aiopen">${esc(t("aiSettings"))}</button></div>
       <div class="srow"><div class="grow"><b>${esc(t("smartOrder"))}</b><small>${esc(t("smartOrderHint"))}</small></div>
         <button class="switch ${sv.smart ? "on" : ""}" data-act="toggle" data-v="smart" aria-label="${esc(t("smartOrder"))}"></button></div>
-      <div class="lk-row"><span class="lk-l">${esc(t("bookMode"))}</span>${segRow("bookMode", [["mix", t("modeMix")], ["first", t("modeFirst")], ["off", t("modeOff")]], sv.bookMode, "set")}</div>
+      <div class="lk-row"><span class="lk-l">${esc(t("bookMode"))}</span>${segRow("bookMode", [["mix", t("modeMix")], ["first", t("modeFirst")], ["only", t("modeOnly")], ["off", t("modeOff")]], sv.bookMode, "set")}</div>
 `;
   }
   VIEWS.parent = () => `
@@ -4999,6 +5093,28 @@ function webApp() {
       const E = wordEdit;
       closeWordEditor();
       E.onRemove();
+    },
+    vocabMode(b) {
+      if (!requireParent()) return;
+      const v = b.dataset.v;
+      if (["mix", "first", "only", "off"].indexOf(v) < 0) return;
+      state.settings.bookMode = v;
+      if (SET && SET.settings) SET.settings.bookMode = v;
+      booksChanged();
+      send("set", { k: "bookMode", v });
+      render();
+    },
+    srcToggle(b) {
+      if (!requireParent()) return;
+      const src = state.books.find((q) => q.id === b.dataset.id);
+      if (!src) return;
+      src.off = !src.off;
+      booksChanged();
+      persist();
+      render();
+    },
+    aiWhy() {
+      if (game && game.aiWhy) feedback("", "", t(game.aiWhy === "new" ? "aiWhyNew" : "aiWhyFocus"));
     },
     bookCancel() {
       book = null;

@@ -2,6 +2,26 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.15.0 (2026-11-01): Your words only
+
+- 📚 **Only your words**: Read only your scanned and added words; built-in words just fill the pictures.
+- ⏸ **Pause any book**: A switch on each book takes its words out of the game and back.
+- ✦ **See when AI chose**: A small ✦ AI badge on the word when the AI coach picked it.
+
+**Changes**
+
+- A fourth choice for book words, Only mine (Tik mano, Solo míos): rounds read only words from your books, your own list and this kid's AI coach; built-in words only fill the other pictures; when none of a kid's words fit their level, built-in words are read with a one-time note
+- The Words from books card has the choice too (Skaitomi žodžiai), with how many of each player's words fit; also in Settings › Learning
+- Each book has an In the game switch: a paused book's words leave rounds and pictures, and it shows paused · 0 of N
+- ✦ AI badge on the word card when the AI coach chose the word (a focus word it asked to practise, or a word it added); tap it to see why
+- The PIN screen is locked in place (no scrolling) and fits small iPhones
+- The Words from books card's buttons sit in one grid with room for their shadows (✍️ no longer overlaps the photo buttons)
+
+**Fixes**
+
+- ✍️ Add words yourself overlapped the photo buttons
+- The PIN screen could scroll
+
 ## 1.14.0 (2026-11-01): Every word, your way
 
 - 🦉 **Expert: no length limit**: Expert words can now be as long as they come.
