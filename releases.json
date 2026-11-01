@@ -4,6 +4,65 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.14.0",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Every word, your way",
+        "lt": "Visi žodžiai – kaip norite",
+        "es": "Todas las palabras, a tu manera"
+      },
+      "highlights": [
+        {
+          "icon": "🦉",
+          "title": {
+            "en": "Expert: no length limit",
+            "lt": "Ekspertams – be ilgio ribos",
+            "es": "Experto: sin límite de largo"
+          },
+          "text": {
+            "en": "Expert words can now be as long as they come.",
+            "lt": "Ekspertų žodžiai dabar gali būti bet kokio ilgio.",
+            "es": "Las palabras de Experto pueden ser tan largas como sean."
+          }
+        },
+        {
+          "icon": "📷",
+          "title": {
+            "en": "Scans keep every word",
+            "lt": "Nuskaitoma viskas",
+            "es": "Se guardan todas"
+          },
+          "text": {
+            "en": "A book photo now brings every word; ones without a picture wait for one.",
+            "lt": "Nuotrauka atneša visus žodžius; be paveikslėlio laukia, kol pasirinksite.",
+            "es": "La foto trae todas las palabras; las que no tienen imagen esperan una."
+          }
+        },
+        {
+          "icon": "✏️",
+          "title": {
+            "en": "Fix or add words",
+            "lt": "Taisykite ir pridėkite",
+            "es": "Corrige o añade"
+          },
+          "text": {
+            "en": "Correct any word or its picture, or add your own words, AI or not.",
+            "lt": "Pataisykite bet kurį žodį ar paveikslėlį arba pridėkite savo – su DI ar be.",
+            "es": "Corrige cualquier palabra o su imagen, o añade las tuyas, con IA o sin ella."
+          }
+        }
+      ],
+      "changes": [
+        "Settings › Rounds › Longest word, Expert: a new top step, No limit (Be ribos, Sin límite), now the default; Expert level cards read 3+ syllables",
+        "Book scans: the AI is asked for every word a child could read (nouns, verbs, adjectives; no cap, any length), with the closest emoji or none; the page keeps all of them (up to 12 syllables), and words without a picture are shown unticked until one is chosen",
+        "Word editor (✏️) in the scan review and in the parent zone's word lists: fix the spelling, the syllables (type - between them, or they are split automatically for Lithuanian, English and Spanish), the picture, or remove the word; duplicates and non-letters are refused",
+        "➕ Add a word in the review and in each book's list; ✍️ Add words yourself in the parent zone, without AI or a photo (a My words source)",
+        "The Words from books card is always in the parent zone; without an AI key it offers adding words by hand",
+        "Book photo answers get 8000 tokens (room for every word) and keep up to 2500 characters of the page text"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.13.0",
       "date": "2026-11-01",
       "title": {
