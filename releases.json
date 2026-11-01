@@ -4,6 +4,38 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.17.1",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Bubbles stay with their sticker",
+        "lt": "Burbulas lieka prie lipduko",
+        "es": "La burbuja sigue a su pegatina"
+      },
+      "highlights": [
+        {
+          "icon": "💬",
+          "title": {
+            "en": "Follows when you scroll",
+            "lt": "Seka slenkant",
+            "es": "Sigue al desplazar"
+          },
+          "text": {
+            "en": "A sticker's speech bubble now moves with it when the album or shelf scrolls.",
+            "lt": "Lipduko burbulas dabar juda kartu su juo, kai slenkate albumą ar lentyną.",
+            "es": "La burbuja de una pegatina ahora se mueve con ella al desplazar."
+          }
+        }
+      ],
+      "changes": [
+        "A sticker's speech bubble (and the AI thinking bubble) is re-placed on every scroll of the album, the sticker shelf or the page, and on resize",
+        "While its sticker is scrolled out of view the bubble hides, and it comes back when the sticker does",
+        "The bubble's listeners are removed with it"
+      ],
+      "fixes": [
+        "The speech bubble stayed where the sticker was when the album was scrolled"
+      ]
+    },
+    {
       "version": "1.17.0",
       "date": "2026-11-01",
       "title": {
