@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.13.0';
+const VERSION = '1.14.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -326,8 +326,8 @@ const CONFIG = [
       en: { label: "Longest word, Beginner", unit: "syllables" }, lt: { label: "Ilgiausias žodis, pradedantiesiems", unit: "skiem." }, es: { label: "Palabra más larga, Principiante", unit: "sílabas" } },
     { k: "expertMinSyl", def: 3, min: 1, max: 6, step: 1,
       en: { label: "Shortest word, Expert", unit: "syllables" }, lt: { label: "Trumpiausias žodis, ekspertams", unit: "skiem." }, es: { label: "Palabra más corta, Experto", unit: "sílabas" } },
-    { k: "expertMaxSyl", def: 6, min: 1, max: 6, step: 1,
-      en: { label: "Longest word, Expert", unit: "syllables" }, lt: { label: "Ilgiausias žodis, ekspertams", unit: "skiem." }, es: { label: "Palabra más larga, Experto", unit: "sílabas" } },
+    { k: "expertMaxSyl", def: 7, min: 1, max: 7, step: 1,   // 7 = no limit (1.14.0)
+      en: { label: "Longest word, Expert", unit: "syllables", inf: "No limit" }, lt: { label: "Ilgiausias žodis, ekspertams", unit: "skiem.", inf: "Be ribos" }, es: { label: "Palabra más larga, Experto", unit: "sílabas", inf: "Sin límite" } },
     { k: "stickerEvery", def: 5, min: 2, max: 20, step: 1,
       en: { label: "Words for a sticker", help: "Right on the first try", unit: "words" },
       lt: { label: "Žodžių lipdukui gauti", help: "Atspėtų iš pirmo karto", unit: "žodž." },
@@ -614,14 +614,14 @@ async function stickerLines(id, lang, hint) {
 const BOOK_SYSTEM = "You build vocabulary for a children's picture reading game. Reply with JSON only, no other text.";
 function bookPrompt(gameLang) {
   return `Read the text in this photo of a book or page.
-Return JSON: {"lang": "lt" | "en" | "es" | "other", "title": "the book or page title if visible, else a 2-4 word description", "text": "the recognised text, at most 1200 characters", "words": [{"word": "na-mas", "emoji": "🏠"}]}
+Return JSON: {"lang": "lt" | "en" | "es" | "other", "title": "the book or page title if visible, else a 2-4 word description", "text": "the recognised text, at most 2500 characters", "words": [{"word": "na-mas", "emoji": "🏠"}]}
 Rules for "words":
-- Up to 30 concrete nouns from the text that a child can recognise in a picture (animals, food, objects, places, vehicles, nature, body parts).
-- In the language of the text. Dictionary form: Lithuanian nominative singular; Spanish and English singular unless the thing is normally plural.
-- Lowercase. Skip names of people and places, abstract words, verbs and adjectives.
-- Split into syllables with "-" following that language's hyphenation rules, 1 to 6 syllables.
-- Exactly one emoji that clearly shows the thing. Skip a word if no emoji shows it clearly.
-- No duplicates.
+- EVERY word in the text a child could read and match to a picture: all nouns (concrete and abstract), verbs and adjectives. There is no limit: do not shorten the list and do not skip words. Leave out only articles, prepositions, conjunctions, pronouns, particles and numbers.
+- In the language of the text. Dictionary form: Lithuanian nouns nominative singular, verbs infinitive, adjectives masculine nominative singular; Spanish and English nouns singular unless the thing is normally plural, verbs infinitive (English without "to").
+- Lowercase.
+- Split into syllables with "-" following that language's hyphenation rules, as many syllables as the word has.
+- Exactly one emoji: the one that best shows the word. If no emoji fits at all, use "" (the parent will choose one). Do not drop the word.
+- Each word once.
 If the text is not Lithuanian, English or Spanish, set "lang" to "other" and leave "words" empty. The game is currently in ${LANG_NAMES[gameLang] || "Lithuanian"}.`;
 }
 
@@ -1374,7 +1374,25 @@ body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 .bkhead{display:flex;justify-content:space-between;align-items:center}
 .bkflag{font-size:26px}
 .bkwords{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
-.bkw{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:14px;background:var(--chipbg);border:2px solid var(--hair);font-weight:900;font-size:16px;opacity:.45;text-decoration:line-through}
+.bkw{display:flex;align-items:center;gap:2px;padding:2px 2px 2px 10px;border-radius:14px;background:var(--chipbg);border:2px solid var(--hair);font-weight:900;font-size:16px}
+.bkwt{display:flex;align-items:center;gap:6px;padding:6px 0;background:none;border:0;font:inherit;color:inherit;cursor:pointer;opacity:.45;text-decoration:line-through}
+.bkw.on .bkwt,.bkw.nopic .bkwt{opacity:1;text-decoration:none}
+.bkw.nopic{border-color:var(--danger);border-style:dashed}
+.bkw.nopic .bklvl{color:var(--danger);font-weight:800}
+.bkwe{flex:none;background:none;border:0;font-size:15px;line-height:1;padding:8px 8px;border-radius:10px;cursor:pointer}
+.bkwrow{grid-template-columns:30px auto 1fr auto}
+.bkwrow small{grid-column:1/-1}
+.bkaddone{margin-top:8px}
+.badge-ai.manual{background:var(--grass)}
+#wordsheet{position:fixed;inset:0;z-index:58;background:rgba(36,38,74,.55);display:none;align-items:flex-end}
+#wordsheet.open{display:flex;animation:fade .2s}
+.werow{display:flex;gap:10px;align-items:center}
+.weemo{width:96px;flex:none;text-align:center;font-size:30px;padding:10px}
+.weprev{min-height:40px}
+.weword{display:flex;align-items:center;gap:10px;font-size:calc(26px * var(--ts));margin:8px 0 2px}
+.weword .bke{font-size:34px}
+.wedel{color:var(--danger)}
+#weSave:disabled{opacity:.4}
 .bkw.on{opacity:1;text-decoration:none;border-color:var(--grass);background:#E6F8EE}
 .bke{font-size:24px}
 .bktext{margin:4px 0 8px}
@@ -1564,6 +1582,28 @@ function webApp() {
       modeOff: "Off",
       sourceWords: (n) => `${n} words`,
       noBooks: "No book words yet.",
+      sylFrom: (a) => `${a}+ syllables`,
+      bookHintNoAI: "Add your own words here. With an AI key you can also take a photo of a book page.",
+      addWordsSelf: "Add words yourself",
+      myWords: "My words",
+      manualHint: "Add the words you want the kids to read.",
+      editHint: "✏️ fixes a word or its picture.",
+      addWord: "Add a word",
+      newWord: "New word",
+      editWord: "Edit word",
+      removeWord: "Remove",
+      wordLabel: "Word — put - between syllables",
+      wordPh: "e.g. ap-ple",
+      picLabel: "Picture (one emoji)",
+      picHint: "Tap 🌐 or 😀 on the keyboard to type an emoji.",
+      autoSplit: "split automatically, type - to change it",
+      useEmoji: (e) => `Use ${e}`,
+      needPic: "pick a picture",
+      needPics: (n) => (n === 1 ? "1 word has no picture yet: tap it to choose one." : `${n} words have no picture yet: tap one to choose.`),
+      errWord: "Letters only, at least 2.",
+      errPic: "Add one emoji as the picture.",
+      errDup: "This word is already in the game.",
+      wordSaved: "✅ Word saved",
       reviewTitle: "New words from the page",
       reviewHint: "Tap a word to leave it out.",
       addWords: (n) => `Add ${n} words`,
@@ -1764,6 +1804,28 @@ function webApp() {
       modeOff: "No",
       sourceWords: (n) => `${n} palabras`,
       noBooks: "Aún no hay palabras de libros.",
+      sylFrom: (a) => `${a}+ sílabas`,
+      bookHintNoAI: "Añade aquí tus propias palabras. Con una clave de IA también puedes fotografiar una página.",
+      addWordsSelf: "Añadir palabras a mano",
+      myWords: "Mis palabras",
+      manualHint: "Añade las palabras que quieres que lean los niños.",
+      editHint: "✏️ corrige una palabra o su imagen.",
+      addWord: "Añadir palabra",
+      newWord: "Palabra nueva",
+      editWord: "Editar palabra",
+      removeWord: "Quitar",
+      wordLabel: "Palabra: separa las sílabas con -",
+      wordPh: "p. ej. man-za-na",
+      picLabel: "Imagen (un emoji)",
+      picHint: "Toca 🌐 o 😀 en el teclado para escribir un emoji.",
+      autoSplit: "dividida automáticamente, usa - para cambiarla",
+      useEmoji: (e) => `Usar ${e}`,
+      needPic: "elige imagen",
+      needPics: (n) => (n === 1 ? "1 palabra aún no tiene imagen: tócala para elegir una." : `${n} palabras aún no tienen imagen: toca una para elegir.`),
+      errWord: "Solo letras, al menos 2.",
+      errPic: "Pon un emoji como imagen.",
+      errDup: "Esta palabra ya está en el juego.",
+      wordSaved: "✅ Palabra guardada",
       reviewTitle: "Palabras nuevas de la página",
       reviewHint: "Toca una palabra para quitarla.",
       addWords: (n) => `Añadir ${n} palabras`,
@@ -1964,6 +2026,28 @@ function webApp() {
       modeOff: "Išjungta",
       sourceWords: (n) => `žodžiai: ${n}`,
       noBooks: "Knygų žodžių dar nėra.",
+      sylFrom: (a) => `${a}+ skiemenys`,
+      bookHintNoAI: "Čia galite pridėti savo žodžių. Su DI raktu galima ir nufotografuoti knygos puslapį.",
+      addWordsSelf: "Pridėti žodžių patiems",
+      myWords: "Mano žodžiai",
+      manualHint: "Pridėkite žodžius, kuriuos vaikai turėtų skaityti.",
+      editHint: "✏️ – pataisyti žodį ar jo paveikslėlį.",
+      addWord: "Pridėti žodį",
+      newWord: "Naujas žodis",
+      editWord: "Taisyti žodį",
+      removeWord: "Pašalinti",
+      wordLabel: "Žodis – skiemenis atskirkite brūkšneliu -",
+      wordPh: "pvz. na-mas",
+      picLabel: "Paveikslėlis (vienas jaustukas)",
+      picHint: "Jaustukui įvesti klaviatūroje paspauskite 🌐 arba 😀.",
+      autoSplit: "suskirstyta automatiškai, pataisykite brūkšneliu -",
+      useEmoji: (e) => `Naudoti ${e}`,
+      needPic: "pasirinkite paveikslėlį",
+      needPics: (n) => (n === 1 ? "1 žodis dar be paveikslėlio: palieskite ir pasirinkite." : `Žodžių be paveikslėlio: ${n}. Palieskite žodį ir pasirinkite.`),
+      errWord: "Tik raidės, bent 2.",
+      errPic: "Įdėkite vieną jaustuką kaip paveikslėlį.",
+      errDup: "Šis žodis jau yra žaidime.",
+      wordSaved: "✅ Žodis išsaugotas",
       reviewTitle: "Nauji žodžiai iš puslapio",
       reviewHint: "Paspauskite žodį, kad jo nepridėtumėte.",
       addWords: (n) => `Pridėti žodžius (${n})`,
@@ -2105,7 +2189,7 @@ function webApp() {
   const LOOK = Object.assign({ theme: "ink", density: "comfortable", font: "sans", textSize: 1 }, init.look || {});
   let usageAsk = !!init.usageAsk;   // the one-time usage question, for a parent only (usage-analytics)
   const usageEvent = (params) => send("usage-event", params);
-  const CFG = Object.assign({ beginnerPics: 3, expertPics: 5, beginnerMinSyl: 1, beginnerMaxSyl: 2, expertMinSyl: 3, expertMaxSyl: 6, stickerEvery: 5 }, init.cfg || {});
+  const CFG = Object.assign({ beginnerPics: 3, expertPics: 5, beginnerMinSyl: 1, beginnerMaxSyl: 2, expertMinSyl: 3, expertMaxSyl: 7, stickerEvery: 5 }, init.cfg || {});
   const state = {
     version: 1,
     lang: LANGS[init.lang] ? init.lang : detectLang(),
@@ -2629,6 +2713,7 @@ function webApp() {
   let book = null; // { busy, lang, title, text, by, words: [{ w, e, n, known, on }] }
   let bookArmed = null;
   const EMOJI_RE = /\p{Extended_Pictographic}/u;
+  function goodEmoji(e) { return !!e && EMOJI_RE.test(e) && !/[\p{L}\d]/u.test(e.replace(/[\u20E3\uFE0F]/g, "")) && [...e].length <= 8; }
   // Checks AI words: letters and "-" only, 1–6 syllables, one emoji; marks words the game already has.
   function cleanAiWords(list, lang) {
     const loc = LANGS[lang] ? LANGS[lang].locale : "en";
@@ -2638,16 +2723,143 @@ function webApp() {
       if (!x) return;
       const w = String(x.word || "").trim().toLocaleLowerCase(loc).replace(/[·‧–—]/g, "-").replace(/\s+/g, "");
       const segs = w.split("-");
-      if (segs.length < 1 || segs.length > 6 || segs.some((sg) => !/^\p{L}+$/u.test(sg))) return;
+      if (segs.length < 1 || segs.length > 12 || segs.some((sg) => !/^\p{L}+$/u.test(sg))) return;   // 1.14.0: any length
       const plain = segs.join("");
       if (plain.length < 2 || seen.has(plain)) return;
-      const e = String(x.emoji || "").trim();
-      if (!e || !EMOJI_RE.test(e) || /[\p{L}\d]/u.test(e.replace(/[\u20E3\uFE0F]/g, "")) || [...e].length > 8) return;
+      const e = String(x.emoji || "").trim(), pic = goodEmoji(e);
       seen.add(plain);
-      out.push({ w: segs.join("-"), e, n: segs.length, known: have.has(plain) });
+      out.push({ w: segs.join("-"), e: pic ? e : "", n: segs.length, known: have.has(plain), noPic: !pic });   // no picture: kept, the parent picks one
     });
     return out;
   }
+  // ── Words by hand (1.14.0): correct any book word or add your own, with or without AI ──
+  // A word typed without "-" is split into syllables here: one vowel (or diphthong) per syllable, one consonant
+  // starts the next syllable (na-mas), clusters split before their last consonant (mo-kyk-la), Spanish and English
+  // keep pr, bl, tr… together (ti-gre, ta-ble). The parent sees the split and can type "-" to change it.
+  const VOWELS = { lt: "aąeęėiįyouųū", en: "aeiouy", es: "aeiouáéíóúü" };
+  const DIGRAPHS = { lt: ["dž", "dz", "ch"], en: ["ch", "sh", "th", "ph", "wh", "ck"], es: ["ch", "ll", "rr"] };
+  const ONSETS2 = ["pl", "pr", "bl", "br", "cl", "cr", "gl", "gr", "tr", "dr", "fl", "fr"];
+  function autoSyl(word, lang) {
+    const L = VOWELS[lang] ? lang : "lt", V = VOWELS[L];
+    const s = String(word || "").toLocaleLowerCase(LANGS[L].locale).replace(/[^\p{L}]/gu, "");
+    const n = s.length;
+    const isV = (i) => {
+      const c = s[i];
+      if (!c || V.indexOf(c) < 0) return false;
+      return !(L === "en" && c === "y" && (i === 0 || V.indexOf(s[i + 1] || "#") >= 0));   // y: a consonant first and before a vowel
+    };
+    const joins = (i, j) => {   // two vowels in one syllable?
+      const a = s[i], b = s[j];
+      if (L === "lt") return ["ai", "au", "ei", "ui", "ie", "uo"].indexOf(a + b) >= 0 || (a === "i" && i > 0 && V.indexOf(s[i - 1]) < 0);   // kiau-lė
+      if (L === "es") { if ("íú".indexOf(a) >= 0 || "íú".indexOf(b) >= 0) return false; const strong = "aeoáéó"; return !(strong.indexOf(a) >= 0 && strong.indexOf(b) >= 0); }
+      return true;
+    };
+    const nuc = [];
+    for (let i = 0; i < n; ) {
+      if (!isV(i)) { i++; continue; }
+      let j = i + 1;
+      while (j < n && isV(j) && joins(j - 1, j)) j++;
+      nuc.push([i, j]);
+      i = j;
+    }
+    const leEnd = L === "en" && n >= 3 && s.slice(-2) === "le" && !isV(n - 3);   // ta-ble, lit-tle
+    if (L === "en" && nuc.length > 1 && nuc[nuc.length - 1][0] === n - 1 && s[n - 1] === "e" && !leEnd) nuc.pop();   // silent e: cake
+    if (nuc.length < 2) return s;
+    const units = (str) => { const out = []; for (let i = 0; i < str.length; ) { const d = DIGRAPHS[L].find((g) => str.startsWith(g, i)); out.push(d || str[i]); i += d ? d.length : 1; } return out; };
+    const cuts = [];
+    for (let q = 0; q < nuc.length - 1; q++) {
+      const a = nuc[q][1], b = nuc[q + 1][0], cons = units(s.slice(a, b));
+      let take = cons.length ? 1 : 0;
+      if (L !== "lt" && cons.length >= 2 && ONSETS2.indexOf(cons[cons.length - 2] + cons[cons.length - 1]) >= 0) take = 2;
+      if (L === "en" && cons.length === 1 && (cons[0] === "ck" || cons[0] === "x")) take = 0;   // chick-en
+      if (leEnd && q === nuc.length - 2 && cons.length >= 2) take = 2;
+      let pos = b;
+      for (let z = 0; z < take; z++) pos -= cons[cons.length - 1 - z].length;
+      cuts.push(pos);
+    }
+    let out = "", last = 0;
+    cuts.forEach((c) => { out += s.slice(last, c) + "-"; last = c; });
+    return out + s.slice(last);
+  }
+  // What the parent typed → { w: "na-mas", n, auto } or { err }
+  function parseWord(text, lang) {
+    const L = LANGS[lang] ? lang : "lt";
+    const raw = String(text || "").trim().toLocaleLowerCase(LANGS[L].locale).replace(/[·‧–—\s]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    if (!raw) return { err: "" };
+    if (!/^[\p{L}-]+$/u.test(raw)) return { err: t("errWord") };
+    const auto = raw.indexOf("-") < 0;
+    const w = auto ? autoSyl(raw, L) : raw;
+    const segs = w.split("-");
+    if (segs.join("").length < 2 || segs.length > 12 || segs.some((sg) => !sg)) return { err: t("errWord") };
+    return { w, n: segs.length, auto };
+  }
+  const plainOf = (w) => String(w || "").replace(/-/g, "");
+  const inGame = (lang, plain) => wordsFor(lang, true).some((x) => plainOf(x.w) === plain);
+
+  // The word editor: a sheet over everything (book review, parent zone)
+  let wordEdit = null;   // { lang, w, e, isNew, dupCheck(plain), onSave(w, e, n), onRemove() }
+  function openWordEditor(o) {
+    wordEdit = Object.assign({ w: "", e: "" }, o);
+    renderWordEditor();
+    if (!wordEdit.w) setTimeout(() => { const i = document.getElementById("weWord"); if (i) i.focus(); }, 60);
+  }
+  function closeWordEditor() {
+    wordEdit = null;
+    renderWordEditor();
+  }
+  function renderWordEditor() {
+    let el = document.getElementById("wordsheet");
+    if (!el) {
+      el = document.createElement("div"); el.id = "wordsheet"; el.setAttribute("role", "dialog");
+      document.body.appendChild(el);
+    }
+    el.classList.toggle("open", !!wordEdit);
+    if (!wordEdit) { el.innerHTML = ""; return; }
+    const E = wordEdit;
+    el.innerHTML = `<div class="bkp wep">
+      <h2 class="updt">${E.isNew ? "➕ " + esc(t("newWord")) : "✏️ " + esc(t("editWord"))} <span class="bkflag">${LANGS[E.lang].flag}</span></h2>
+      <label class="lbl" for="weWord">${esc(t("wordLabel"))}</label>
+      <input id="weWord" class="input" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" maxlength="40" value="${esc(E.w)}" placeholder="${esc(t("wordPh"))}">
+      <label class="lbl" for="weEmoji">${esc(t("picLabel"))}</label>
+      <div class="werow"><input id="weEmoji" class="input weemo" autocomplete="off" maxlength="16" value="${esc(E.e)}" placeholder="🙂"><span id="weSuggest"></span></div>
+      <p class="note">${esc(t("picHint"))}</p>
+      <div id="wePreview" class="weprev"></div>
+      <div class="row">
+        ${E.onRemove ? `<button class="btn ghost wedel" data-action="weRemove">🗑️ ${esc(t("removeWord"))}</button>` : ""}
+        <button class="btn ghost" data-action="weCancel">${esc(t("cancel"))}</button>
+        <button class="btn go" id="weSave" data-action="weSave">${esc(t("save"))}</button>
+      </div></div>`;
+    el.querySelector("#weWord").addEventListener("input", updateWordPreview);
+    el.querySelector("#weEmoji").addEventListener("input", updateWordPreview);
+    updateWordPreview();
+  }
+  function wordEditState() {
+    const E = wordEdit, wIn = document.getElementById("weWord"), eIn = document.getElementById("weEmoji");
+    const p = parseWord(wIn ? wIn.value : "", E.lang), e = (eIn ? eIn.value : "").trim();
+    let err = p.err || "";
+    if (!err && p.w && E.dupCheck && E.dupCheck(plainOf(p.w))) err = t("errDup");
+    const emojiOk = goodEmoji(e);
+    return { p, err, e, emojiOk, ok: !!p.w && !err && emojiOk };
+  }
+  function updateWordPreview() {
+    if (!wordEdit) return;
+    const E = wordEdit, s = wordEditState();
+    const pv = document.getElementById("wePreview"), sv = document.getElementById("weSave"), sg = document.getElementById("weSuggest");
+    if (!pv || !sv || !sg) return;
+    const plain = s.p.w ? plainOf(s.p.w) : "";
+    const known = plain ? builtinWords(E.lang).concat(wordsFor(E.lang, true)).find((x) => x.e && plainOf(x.w) === plain) : null;   // the game's own picture
+    sg.innerHTML = known && known.e !== s.e ? `<button class="btn small ghost" data-action="weUseEmoji" data-v="${esc(known.e)}">${esc(t("useEmoji", known.e))}</button>` : "";
+    sv.disabled = !s.ok;
+    if (!s.p.w) { pv.innerHTML = s.err ? `<p class="bknote blocked">${esc(s.err)}</p>` : ""; return; }
+    const x = { w: s.p.w, e: s.e, n: s.p.n, k: firstLetter(E.lang, s.p.w) };
+    const ns = wordNotes(x, E.lang);
+    pv.innerHTML = `<div class="weword"><span class="bke">${s.emojiOk ? esc(s.e) : "🖼️"}</span><b>${esc(caseWord(s.p.w))}</b></div>
+      <p class="note">${esc(t("sylRange", s.p.n, s.p.n))} · ${levelIcons(x)}${s.p.auto ? " · " + esc(t("autoSplit")) : ""}</p>
+      ${s.err ? `<p class="bknote blocked">${esc(s.err)}</p>` : !s.emojiOk ? `<p class="bknote blocked">${esc(t("errPic"))}</p>` : ""}
+      ${ns.length ? `<p class="bknote ${ns.some((q) => q.block) ? "blocked" : ""}">${ns.map((q) => noteIcon[q.k] + " " + esc(q.text)).join("; ")}</p>` : ""}`;
+  }
+  const keepBookTitle = () => { const inp = document.getElementById("bookTitle"); if (inp && book) book.title = inp.value; };
+  let openSrc = null;   // the parent zone keeps this source's word list open after an edit
   // Why a book word is (or isn't) in rounds right now. Blocking: book words Off, another language, no player at its
   // level. Informational: few words share its letter, so some pictures come from nearby letters.
   const levelsOfWord = (x) => ["beginner", "expert"].filter((l) => fitsLevel(l, x));
@@ -2703,23 +2915,25 @@ function webApp() {
       return;
     }
     const fresh = book.words.filter((x) => !x.known);
-    const on = fresh.filter((x) => x.on).length;
+    const on = fresh.filter((x) => x.on).length, noPic = fresh.filter((x) => x.noPic).length;
     const chosen = fresh.filter((x) => x.on).map((x) => ({ w: x.w, e: x.e, n: x.n, k: firstLetter(book.lang, x.w) }));
     const known = book.words.length - fresh.length;
     el.innerHTML = `<div class="bkp">
-      <div class="bkhead"><span class="badge-ai">✦ AI by ${esc(book.by || "")}</span><span class="bkflag">${LANGS[book.lang].flag}</span></div>
+      <div class="bkhead">${book.manual ? `<span class="badge-ai manual">✍️ ${esc(t("myWords"))}</span>` : `<span class="badge-ai">✦ AI by ${esc(book.by || "")}</span>`}<span class="bkflag">${LANGS[book.lang].flag}</span></div>
       <h2 class="updt">${esc(t("reviewTitle"))}</h2>
       <label class="lbl" for="bookTitle">${esc(t("sourceName"))}</label>
       <input id="bookTitle" class="input" maxlength="40" value="${esc(book.title || "")}" autocomplete="off">
-      ${fresh.length ? `<p class="upds">${esc(t("reviewHint"))}${known ? " · " + esc(t("alreadyKnown", known)) : ""}</p>
+      ${fresh.length ? `<p class="upds">${esc(book.manual ? t("manualHint") : t("reviewHint"))} ${esc(t("editHint"))}${known ? " · " + esc(t("alreadyKnown", known)) : ""}</p>
+      ${noPic ? `<p class="bknote blocked">🖼️ ${esc(t("needPics", noPic))}</p>` : ""}
       <div class="bkwords">${book.words.map((x, i) => {
         if (x.known) return "";
-        const ns = wordNotes(x, book.lang, chosen);
+        const ns = x.noPic ? [] : wordNotes(x, book.lang, chosen);
         const icons = ns.map((n) => noteIcon[n.k]).join("");
-        return `<button class="bkw ${x.on ? "on" : ""} ${ns.some((n) => n.block) ? "blocked" : ""}" data-action="bookToggle" data-i="${i}"><span class="bke">${x.e}</span><span>${esc(x.w)}</span><span class="bklvl">${levelIcons(x)}${icons}</span></button>`;
+        return `<div class="bkw ${x.on ? "on" : ""} ${ns.some((n) => n.block) ? "blocked" : ""} ${x.noPic ? "nopic" : ""}"><button class="bkwt" data-action="bookToggle" data-i="${i}"><span class="bke">${x.noPic ? "🖼️" : x.e}</span><span>${esc(x.w)}</span><span class="bklvl">${x.noPic ? esc(t("needPic")) : levelIcons(x) + icons}</span></button><button class="bkwe" data-action="bookEdit" data-i="${i}" aria-label="${esc(t("editWord"))}">✏️</button></div>`;
       }).join("")}</div>
       ${reviewNotesHTML(fresh.filter((x) => x.on), chosen)}`
-        : `<p class="upds">${esc(t("noNewWords"))}</p>`}
+        : `<p class="upds">${esc(book.manual ? t("manualHint") : t("noNewWords"))}</p>`}
+      <div><button class="btn small ghost" data-action="bookNewWord">➕ ${esc(t("addWord"))}</button></div>
       ${book.text ? `<details class="bktext"><summary>${esc(t("recognized"))}</summary><p>${esc(book.text)}</p></details>` : ""}
       <div class="row">
         <button class="btn ghost" data-action="bookCancel">${esc(t("cancel"))}</button>
@@ -2799,8 +3013,8 @@ function webApp() {
         toast(t("langUnsupported"));
         return;
       }
-      const words = cleanAiWords(out.words, lang).map((x) => Object.assign(x, { on: true }));
-      book = { lang, title: String(out.title || "").slice(0, 40), text: String(out.text || "").slice(0, 1200), by: out.by, words };
+      const words = cleanAiWords(out.words, lang).map((x) => Object.assign(x, { on: !x.noPic }));
+      book = { lang, title: String(out.title || "").slice(0, 40), text: String(out.text || "").slice(0, 2500), by: out.by, words };
       renderBook();
     });
   }
@@ -2828,7 +3042,7 @@ function webApp() {
     const first = entries.reduce((n, [, st]) => n + st.c, 0);
     return {
       lang, uiLang: state.lang, level: kid.level,
-      ages: kid.level === "expert" ? "9-11" : "4-6", syllables: sylRange(kid.level).join(" to "),
+      ages: kid.level === "expert" ? "9-11" : "4-6", syllables: ((r) => (r[1] >= 99 ? r[0] + " or more" : r.join(" to ")))(sylRange(kid.level)),
       answered: seen, firstTryRate: seen ? Math.round((first / seen) * 100) : 0,
       hard, masteredCount: mastered.length, masteredSample: mastered.slice(-12), weakLetters,
       vocabulary: wordsFor(lang, true).filter((x) => fitsLevel(kid.level, x)).map((x) => plain(x.w)),
@@ -2837,7 +3051,7 @@ function webApp() {
   function applyCoach(kid, res) {
     const lang = LANGS[res.lang] ? res.lang : state.lang;
     const fits = (x) => fitsLevel(kid.level, x);
-    const words = cleanAiWords(res.words, lang).filter((x) => !x.known && fits(x));
+    const words = cleanAiWords(res.words, lang).filter((x) => !x.known && !x.noPic && fits(x));
     let src = state.books.find((b) => b.coachKid === kid.id && b.lang === lang);
     if (words.length) {
       if (!src) {
@@ -3134,11 +3348,12 @@ function webApp() {
   // Word length per level, in syllables (Settings › Rounds); a range set backwards still works.
   function sylRange(level, def) {
     const a = def ? (level === "expert" ? 3 : 1) : +(level === "expert" ? CFG.expertMinSyl : CFG.beginnerMinSyl) || 1;
-    const b = def ? (level === "expert" ? 6 : 2) : +(level === "expert" ? CFG.expertMaxSyl : CFG.beginnerMaxSyl) || 6;
+    let b = def ? (level === "expert" ? 6 : 2) : +(level === "expert" ? CFG.expertMaxSyl : CFG.beginnerMaxSyl) || 6;
+    if (!def && level === "expert" && b >= 7) b = 99;   // 1.14.0: Expert's "No limit"
     return [Math.min(a, b), Math.max(a, b)];
   }
   const fitsLevel = (level, w, def) => { const [lo, hi] = sylRange(level, def); return w.n >= lo && w.n <= hi; };
-  const sylText = (level) => { const [lo, hi] = sylRange(level); return t("sylRange", lo, hi); };
+  const sylText = (level) => { const [lo, hi] = sylRange(level); return hi >= 99 ? t("sylFrom", lo) : t("sylRange", lo, hi); };
   // Built-in words need enough same-letter partners; words you added from books (and the AI coach) always play:
   // when their letter is short of partners, the other pictures come from the nearest letters.
   function poolForN(kid, n) {
@@ -4170,24 +4385,27 @@ function webApp() {
 
   // Parent zone: words from books (photo buttons only with an AI key; sources stay usable without one).
   function booksPanelHTML() {
-    if (!AIX.hasKey && !state.books.length) return "";
     const srcs = state.books.slice().sort((a, b) => b.at - a.at).map((b) => {
       const st = bookStats(b);
       const all = st.playing === st.words.length;
       return `<div class="bksrcbox"><div class="hist bksrc">
         <span>${LANGS[b.lang].flag} <b>${esc(b.title || "—")}</b><br><small class="${all ? "" : "warn"}">${esc(t("inRounds", st.playing, st.words.length))} · ${esc(fmtDate(b.at))}${b.by ? " · ✦ " + esc(b.by) : ""}</small></span>
         <button class="btn small ${bookArmed === b.id ? "danger" : "ghost"}" data-action="bookDel" data-id="${b.id}">${bookArmed === b.id ? esc(t("confirm")) : "🗑️"}</button></div>
-        <details class="bkdetail"><summary>${esc(t("showWords"))}</summary>
+        <details class="bkdetail" ${openSrc === b.id ? "open" : ""}><summary>${esc(t("showWords"))}</summary>
         ${st.words.map((x, i) => {
           const ns = st.notes[i], block = ns.some((n) => n.block);
           return `<div class="bkwrow ${block ? "blocked" : ""}"><span class="bke">${x.e}</span><b>${esc(x.w)}</b><span class="bklvl">${levelIcons(x)}</span>
+            <button class="bkwe" data-action="srcWordEdit" data-id="${b.id}" data-i="${i}" aria-label="${esc(t("editWord"))}">✏️</button>
             <small>${ns.length ? ns.map((n) => noteIcon[n.k] + " " + esc(n.text)).join("; ") : "✅ " + esc(t("stOk"))}</small></div>`;
-        }).join("")}</details></div>`;
+        }).join("")}
+        <button class="btn small ghost bkaddone" data-action="srcWordAdd" data-id="${b.id}">➕ ${esc(t("addWord"))}</button></details></div>`;
     }).join("");
     return `<div class="panel bkpanel ${AIX.hasKey ? "ai" : ""}">
       <h3>📷 ${esc(t("bookWords"))}${AIX.hasKey ? ` <span class="badge-ai">${esc(t("aiBadge"))}</span>` : ""}</h3>
       ${AIX.hasKey ? `<p class="note">${esc(t("bookHint"))}</p>
-        <div class="row"><button class="btn go" data-action="bookCamera">📷 ${esc(t("takePhoto"))}</button><button class="btn ghost" data-action="bookLibrary">🖼️ ${esc(t("fromPhotos"))}</button></div>` : ""}
+        <div class="row"><button class="btn go" data-action="bookCamera">📷 ${esc(t("takePhoto"))}</button><button class="btn ghost" data-action="bookLibrary">🖼️ ${esc(t("fromPhotos"))}</button></div>`
+        : `<p class="note">${esc(t("bookHintNoAI"))}</p>`}
+      <div class="row"><button class="btn ghost" data-action="addWordsSelf">✍️ ${esc(t("addWordsSelf"))}</button></div>
       ${srcs || `<p class="note">${esc(t("noBooks"))}</p>`}
     </div>`;
   }
@@ -4326,7 +4544,7 @@ function webApp() {
   const loc = (d) => Object.assign({}, d, d[state.lang] || d.en);
   const cfgItem = (k) => { for (const sec of SET.cfgSchema) for (const d of sec.items) if (d.k === k) return loc(d); return null; };
   const cfgChanged = (k) => { const d = cfgItem(k); return !!d && JSON.stringify(SET.cfg[k]) !== JSON.stringify(d.def); };
-  const fmtCfg = (d, v) => (d.step && d.step < 1 ? Number(v).toFixed(String(d.step).split(".")[1].length) : String(v));
+  const fmtCfg = (d, v) => (d.inf && +v >= d.max ? d.inf : d.step && d.step < 1 ? Number(v).toFixed(String(d.step).split(".")[1].length) : String(v));   // the top step can mean "No limit"
   const segRow = (k, opts, cur, act) => `<div class="seg wide">${opts.map(([v, l]) => `<button class="${String(cur) === String(v) ? "on" : ""}" data-act="${act || "look"}" data-k="${k}" data-v="${v}">${esc(l)}</button>`).join("")}</div>`;
   function lookHTML() {
     const P = SET.palettes, themes = ["auto"].concat(Object.keys(P));
@@ -4706,10 +4924,81 @@ function webApp() {
     bookToggle(b) {
       const x = book && book.words[Number(b.dataset.i)];
       if (!x) return;
+      if (x.noPic) return A.bookEdit(b);   // no picture yet: choose one first
       x.on = !x.on;
       const inp = document.getElementById("bookTitle");
       if (inp) book.title = inp.value;
       renderBook();
+    },
+    bookEdit(b) {
+      const i = Number(b.dataset.i), x = book && book.words[i];
+      if (!x) return;
+      keepBookTitle();
+      openWordEditor({
+        lang: book.lang, w: x.w, e: x.e || "",
+        dupCheck: (plain) => book.words.some((o, j) => j !== i && plainOf(o.w) === plain) || inGame(book.lang, plain),
+        onSave: (w, e, n) => { Object.assign(x, { w, e, n, noPic: false, on: true, known: false }); renderBook(); },
+        onRemove: () => { book.words.splice(i, 1); renderBook(); },
+      });
+    },
+    bookNewWord() {
+      if (!book) return;
+      keepBookTitle();
+      openWordEditor({
+        lang: book.lang, isNew: true,
+        dupCheck: (plain) => book.words.some((o) => plainOf(o.w) === plain) || inGame(book.lang, plain),
+        onSave: (w, e, n) => { book.words.push({ w, e, n, on: true, known: false }); renderBook(); },
+      });
+    },
+    addWordsSelf() {   // the parent's own list, no photo or AI needed
+      if (!requireParent()) return;
+      book = { manual: true, lang: state.lang, title: "✍️ " + t("myWords"), text: "", by: "", words: [] };
+      renderBook();
+      A.bookNewWord();
+    },
+    srcWordEdit(b) {
+      if (!requireParent()) return;
+      const src = state.books.find((q) => q.id === b.dataset.id), i = Number(b.dataset.i), x = src && src.words[i];
+      if (!x) return;
+      const own = plainOf(x.w);
+      openSrc = src.id;
+      openWordEditor({
+        lang: src.lang, w: x.w, e: x.e,
+        dupCheck: (plain) => plain !== own && inGame(src.lang, plain),
+        onSave: (w, e) => { src.words[i] = { w, e }; booksChanged(); persist(); toast(t("wordSaved")); render(); },
+        onRemove: () => {
+          src.words.splice(i, 1);
+          if (!src.words.length) state.books = state.books.filter((q) => q !== src);
+          booksChanged(); persist(); render();
+        },
+      });
+    },
+    srcWordAdd(b) {
+      if (!requireParent()) return;
+      const src = state.books.find((q) => q.id === b.dataset.id);
+      if (!src) return;
+      openSrc = src.id;
+      openWordEditor({
+        lang: src.lang, isNew: true,
+        dupCheck: (plain) => inGame(src.lang, plain),
+        onSave: (w, e) => { src.words.push({ w, e }); booksChanged(); persist(); toast(t("wordsAdded", 1)); render(); },
+      });
+    },
+    weCancel() { closeWordEditor(); },
+    weUseEmoji(b) { const i = document.getElementById("weEmoji"); if (i) { i.value = b.dataset.v; updateWordPreview(); } },
+    weSave() {
+      if (!wordEdit) return;
+      const st = wordEditState();
+      if (!st.ok) return updateWordPreview();
+      const E = wordEdit;
+      closeWordEditor();
+      E.onSave(st.p.w, st.e, st.p.n);
+    },
+    weRemove() {
+      if (!wordEdit || !wordEdit.onRemove) return;
+      const E = wordEdit;
+      closeWordEditor();
+      E.onRemove();
     },
     bookCancel() {
       book = null;
@@ -5274,7 +5563,7 @@ async function handleAction(head, p) {
         const img = String((await ev("window.__takeBookImage ? window.__takeBookImage() : ''", 20000)) || "");
         if (img.length < 1000 || img.length > BOOK_IMAGE_MAX || !/^[A-Za-z0-9+/=]+$/.test(img.slice(0, 200))) throw new Error("The photo didn't arrive. Try again.");
         const pr = settings.aiProvider;
-        const out = parseJSON(await aiCall(BOOK_SYSTEM, bookPrompt(m.lang), 3000, "books", pr, [img]));
+        const out = parseJSON(await aiCall(BOOK_SYSTEM, bookPrompt(m.lang), 8000, "books", pr, [img]));   // room for every word on the page
         return answer(true, Object.assign({ by: PROVIDERS[pr] }, out));
       } catch (e) { return answer(false, String((e && e.message) || e)); }
     }

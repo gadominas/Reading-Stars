@@ -2,6 +2,21 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.14.0 (2026-11-01): Every word, your way
+
+- 🦉 **Expert: no length limit**: Expert words can now be as long as they come.
+- 📷 **Scans keep every word**: A book photo now brings every word; ones without a picture wait for one.
+- ✏️ **Fix or add words**: Correct any word or its picture, or add your own words, AI or not.
+
+**Changes**
+
+- Settings › Rounds › Longest word, Expert: a new top step, No limit (Be ribos, Sin límite), now the default; Expert level cards read 3+ syllables
+- Book scans: the AI is asked for every word a child could read (nouns, verbs, adjectives; no cap, any length), with the closest emoji or none; the page keeps all of them (up to 12 syllables), and words without a picture are shown unticked until one is chosen
+- Word editor (✏️) in the scan review and in the parent zone's word lists: fix the spelling, the syllables (type - between them, or they are split automatically for Lithuanian, English and Spanish), the picture, or remove the word; duplicates and non-letters are refused
+- ➕ Add a word in the review and in each book's list; ✍️ Add words yourself in the parent zone, without AI or a photo (a My words source)
+- The Words from books card is always in the parent zone; without an AI key it offers adding words by hand
+- Book photo answers get 8000 tokens (room for every word) and keep up to 2500 characters of the page text
+
 ## 1.13.0 (2026-11-01): Stickers talk with AI
 
 - ✦ **Fresh lines from AI**: With an AI key, AI writes what each sticker says, new every couple of days.
