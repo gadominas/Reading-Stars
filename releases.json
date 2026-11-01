@@ -4,6 +4,68 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.15.0",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Your words only",
+        "lt": "Tik jūsų žodžiai",
+        "es": "Solo tus palabras"
+      },
+      "highlights": [
+        {
+          "icon": "📚",
+          "title": {
+            "en": "Only your words",
+            "lt": "Tik jūsų žodžiai",
+            "es": "Solo tus palabras"
+          },
+          "text": {
+            "en": "Read only your scanned and added words; built-in words just fill the pictures.",
+            "lt": "Skaitykite tik savo žodžius; žaidimo žodžiai tik užpildo paveikslėlius.",
+            "es": "Lee solo tus palabras; las del juego solo completan las imágenes."
+          }
+        },
+        {
+          "icon": "⏸",
+          "title": {
+            "en": "Pause any book",
+            "lt": "Pristabdykite knygą",
+            "es": "Pausa cualquier libro"
+          },
+          "text": {
+            "en": "A switch on each book takes its words out of the game and back.",
+            "lt": "Jungiklis prie knygos išima jos žodžius iš žaidimo ir grąžina.",
+            "es": "Un interruptor en cada libro saca sus palabras del juego y las devuelve."
+          }
+        },
+        {
+          "icon": "✦",
+          "title": {
+            "en": "See when AI chose",
+            "lt": "Matysite, kada parinko DI",
+            "es": "Ve cuándo eligió la IA"
+          },
+          "text": {
+            "en": "A small ✦ AI badge on the word when the AI coach picked it.",
+            "lt": "Mažas ✦ DI ženkliukas ant žodžio, kai jį parinko DI treneris.",
+            "es": "Una pequeña insignia ✦ IA cuando el entrenador IA eligió la palabra."
+          }
+        }
+      ],
+      "changes": [
+        "A fourth choice for book words, Only mine (Tik mano, Solo míos): rounds read only words from your books, your own list and this kid's AI coach; built-in words only fill the other pictures; when none of a kid's words fit their level, built-in words are read with a one-time note",
+        "The Words from books card has the choice too (Skaitomi žodžiai), with how many of each player's words fit; also in Settings › Learning",
+        "Each book has an In the game switch: a paused book's words leave rounds and pictures, and it shows paused · 0 of N",
+        "✦ AI badge on the word card when the AI coach chose the word (a focus word it asked to practise, or a word it added); tap it to see why",
+        "The PIN screen is locked in place (no scrolling) and fits small iPhones",
+        "The Words from books card's buttons sit in one grid with room for their shadows (✍️ no longer overlaps the photo buttons)"
+      ],
+      "fixes": [
+        "✍️ Add words yourself overlapped the photo buttons",
+        "The PIN screen could scroll"
+      ]
+    },
+    {
       "version": "1.14.0",
       "date": "2026-11-01",
       "title": {
