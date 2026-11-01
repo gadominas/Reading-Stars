@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.17.1';
+const VERSION = '1.18.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -967,6 +967,25 @@ body.tight-shelf .shelf .sh-strip .stk{font-size:28px}
 .sh-strip::-webkit-scrollbar{display:none}
 .sh-empty{color:var(--muted);font-weight:800;font-size:calc(15px * var(--ts))}
 .kstk{display:flex;align-items:center;gap:3px;margin-top:2px}
+.ktroph{font-size:18px;font-weight:900;color:#B7791F;margin-right:3px;filter:drop-shadow(0 0 4px rgba(255,200,40,.8))}
+.sh-troph{position:relative;flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;font-size:24px;background:linear-gradient(160deg,#FFF3C4,#FFD24A);box-shadow:0 3px 0 #D9A400}
+.sh-troph b{position:absolute;right:-6px;bottom:-6px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:10px;background:#B7791F;color:#fff;font-size:12px;line-height:20px;text-align:center}
+.al-troph{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 0;padding:8px 10px;border-radius:14px;background:linear-gradient(160deg,#FFF8DC,#FFE58A)}
+.al-troph span{position:relative;font-size:26px;line-height:1}
+.al-troph span small{position:absolute;right:-4px;bottom:-4px;font-size:10px;font-weight:900;color:#7A4D00}
+.al-troph b{margin-left:6px;color:#7A4D00;font-weight:900;font-size:calc(14px * var(--ts))}
+.al-bar.gold i{background:linear-gradient(90deg,#FFD24A,#FFB000)}
+.trophy{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;
+  background:radial-gradient(circle at 50% 40%,rgba(255,236,150,.96) 0%,rgba(255,196,40,.9) 45%,rgba(120,70,0,.88) 100%);animation:fade .3s}
+.trophy.out{opacity:0;transition:opacity .3s}
+.tr-cup{position:relative;font-size:min(42vw,170px);line-height:1;filter:drop-shadow(0 10px 18px rgba(80,40,0,.45));animation:trCup .9s cubic-bezier(.3,1.6,.5,1) both}
+.tr-rays{position:absolute;left:50%;top:40%;width:150vmax;height:150vmax;margin:-75vmax 0 0 -75vmax;border-radius:50%;
+  background:repeating-conic-gradient(rgba(255,255,255,.35) 0 8deg,transparent 8deg 22deg);-webkit-mask-image:radial-gradient(circle,#000 10%,transparent 55%);mask-image:radial-gradient(circle,#000 10%,transparent 55%);animation:raySpin 6s linear infinite}
+.tr-t{position:relative;font-size:calc(30px * var(--ts));font-weight:900;color:#5C3B00;text-shadow:0 2px 0 rgba(255,255,255,.6)}
+.tr-n{position:relative;font-size:calc(20px * var(--ts));font-weight:900;color:#fff;background:#B7791F;padding:6px 16px;border-radius:999px;box-shadow:0 4px 0 rgba(90,50,0,.35)}
+.tr-s{position:relative;font-size:calc(16px * var(--ts));font-weight:800;color:#5C3B00;max-width:320px}
+@keyframes trCup{0%{transform:scale(0) rotate(-30deg)}60%{transform:scale(1.15) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
+@media (prefers-reduced-motion: reduce){.tr-cup,.tr-rays{animation:none}}
 .kstk .stk{font-size:20px}
 .kstk small{font-weight:900;color:var(--muted);font-size:12px;margin-left:2px}
 .stk-rev{position:fixed;width:0;height:0}
@@ -1547,6 +1566,14 @@ function webApp() {
       nextSticker: (n) => (n === 1 ? "1 more word for a sticker!" : `${n} more words for a sticker!`),
       stickerCount: (n, all) => `${n} of ${all} stickers`,
       stickersDone: "All stickers collected! Now they come shiny ✨",
+      trophyTitle: "Golden album complete!",
+      trophyNo: (n) => `Trophy #${n}`,
+      trophyNext: "A new album starts now: collect them all again!",
+      trophySay: (name) => `Hooray, ${name}! You filled the whole golden album!`,
+      trophies: (n) => `${n} golden album${n === 1 ? "" : "s"}`,
+      albumRound: (n) => `Album #${n}`,
+      goldCount: (n, all) => `${n} of ${all} gold`,
+      trophyGoal: "Make them all gold for a 🏆 trophy!",
       close: "Close",
       balance: "Balance",
       allTime: "All-time",
@@ -1792,6 +1819,14 @@ function webApp() {
       nextSticker: (n) => (n === 1 ? "¡1 palabra más para una pegatina!" : `¡${n} palabras más para una pegatina!`),
       stickerCount: (n, all) => `${n} de ${all} pegatinas`,
       stickersDone: "¡Todas las pegatinas reunidas! Ahora llegan brillantes ✨",
+      trophyTitle: "¡Álbum dorado completo!",
+      trophyNo: (n) => `Trofeo n.º ${n}`,
+      trophyNext: "Empieza un álbum nuevo: ¡colecciónalas otra vez!",
+      trophySay: (name) => `¡Hurra, ${name}! ¡Completaste todo el álbum dorado!`,
+      trophies: (n) => (n === 1 ? "1 álbum dorado" : `${n} álbumes dorados`),
+      albumRound: (n) => `Álbum n.º ${n}`,
+      goldCount: (n, all) => `${n} de ${all} doradas`,
+      trophyGoal: "¡Hazlas todas doradas y ganarás un 🏆 trofeo!",
       close: "Cerrar",
       balance: "Saldo",
       allTime: "Total",
@@ -2037,6 +2072,14 @@ function webApp() {
       nextSticker: (n) => (n === 1 ? "Dar 1 žodis iki lipduko!" : n < 10 ? `Dar ${n} žodžiai iki lipduko!` : `Dar ${n} žodžių iki lipduko!`),
       stickerCount: (n, all) => `${n} iš ${all} lipdukų`,
       stickersDone: "Visi lipdukai surinkti! Dabar jie bus blizgūs ✨",
+      trophyTitle: "Auksinis albumas surinktas!",
+      trophyNo: (n) => `Trofėjus Nr. ${n}`,
+      trophyNext: "Prasideda naujas albumas – rink vėl!",
+      trophySay: (name) => `Valio, ${ltVocative(name)}! Surinkai visą auksinį albumą!`,
+      trophies: (n) => `Auksinių albumų: ${n}`,
+      albumRound: (n) => `Albumas Nr. ${n}`,
+      goldCount: (n, all) => `Auksinių: ${n} iš ${all}`,
+      trophyGoal: "Paversk visus auksiniais ir laimėk 🏆 trofėjų!",
       close: "Uždaryti",
       balance: "Likutis",
       allTime: "Iš viso",
@@ -4068,7 +4111,8 @@ function webApp() {
   function normStickers(v) {
     const o = v && typeof v === "object" ? v : {};
     const ids = (x) => (Array.isArray(x) ? x.filter((s, i, arr) => typeof s === "string" && s && arr.indexOf(s) === i) : []);
-    return { have: ids(o.have), shiny: ids(o.shiny), pts: Math.max(0, Math.floor(+o.pts || 0)) };
+    const trophies = (Array.isArray(o.trophies) ? o.trophies : []).filter((d) => typeof d === "number" && isFinite(d) && d > 0);   // 1.18.0: when each golden album was completed
+    return { have: ids(o.have), shiny: ids(o.shiny), pts: Math.max(0, Math.floor(+o.pts || 0)), trophies };
   }
   // A right first-try answer: one step towards the next sticker. Returns { id, shiny } when a sticker is earned.
   function stickerStep(kid) {
@@ -4085,6 +4129,12 @@ function webApp() {
     const dull = st.have.filter((x) => st.shiny.indexOf(x) < 0);
     const id = pickRand(dull.length ? dull : st.have);
     if (st.shiny.indexOf(id) < 0) st.shiny.unshift(id);
+    if (STICKERS.every((x) => st.shiny.indexOf(x) >= 0)) {   // the whole album is gold: a trophy, then a new album
+      st.trophies.push(Date.now());
+      st.have = [];
+      st.shiny = [];
+      return { id, shiny: true, trophy: st.trophies.length };
+    }
     return { id, shiny: true };
   }
   const stkRot = (id) => { let h = 0; for (const c of id) h = (h * 31 + c.codePointAt(0)) % 997; return (h % 17) - 8; };
@@ -4093,6 +4143,7 @@ function webApp() {
     const st = normStickers(kid.stickers), every = stickerEvery();
     return `<div class="shelf" id="shelf" data-action="album" role="button" aria-label="${esc(t("stickers"))}">
       <div class="sh-prog" id="shprog" style="--p:${Math.round((st.pts / every) * 100)}"><span class="sh-gift">🎁</span><b>${st.pts}/${every}</b></div>
+      ${st.trophies.length ? `<div class="sh-troph" aria-label="${esc(t("trophies", st.trophies.length))}">🏆<b>${st.trophies.length}</b></div>` : ""}
       <div class="sh-strip" id="shstrip">${st.have.length ? st.have.map((id) => stickerHTML(id, kid, "", true)).join("") : `<span class="sh-empty">${esc(t("nextSticker", every - st.pts))}</span>`}</div>
     </div>`;
   }
@@ -4129,6 +4180,7 @@ function webApp() {
     for (let j = 0; j < 12; j++) { const an = (j / 12) * Math.PI * 2; funBit(got.shiny ? "✨" : pickRand(["⭐", "✨", "🌟"]), cx, cy, Math.cos(an) * 170, Math.sin(an) * 170, 900, 22, 200); }
     setTimeout(() => {
       wrap.remove();
+      if (got.trophy) return trophyCelebration(kid, got.trophy);
       const s2 = document.getElementById("shstrip");
       if (!s2) return;
       const old = s2.querySelector(".sh-empty");
@@ -4139,20 +4191,53 @@ function webApp() {
     }, D);
     return D;
   }
+  // 1.18.0: the whole album gold → a big trophy: rays, gold confetti, a cheer out loud; the next word waits for it
+  // (or a tap). Then a new album starts; trophies stay on the shelf, in the album and on the home card.
+  let trophyDone = null;
+  function trophyCelebration(kid, n) {
+    const W = window.innerWidth, H = window.innerHeight;
+    const ov = document.createElement("div");
+    ov.className = "trophy";
+    ov.setAttribute("role", "alert");
+    ov.innerHTML = `<div class="tr-rays"></div><div class="tr-cup">🏆</div>
+      <div class="tr-t">${esc(t("trophyTitle"))}</div><div class="tr-n">${esc(t("trophyNo", n))}</div><div class="tr-s">${esc(t("trophyNext"))}</div>`;
+    document.body.appendChild(ov);
+    sfx("win");
+    setTimeout(() => sfx("sticker"), 500);
+    for (let i = 0; i < 3; i++) setTimeout(() => confetti(W / 2, H * 0.4, 70), i * 450);
+    for (let j = 0; j < 16; j++) { const an = (j / 16) * Math.PI * 2; funBit(pickRand(["✨", "⭐", "🌟", "🏅"]), W / 2, H * 0.36, Math.cos(an) * 190, Math.sin(an) * 190, 1100, 26, 250); }
+    if (state.settings.sound !== false) setTimeout(() => speakWord(t("trophySay", kid.name), null, "sticker"), 900);
+    let closed = false;
+    const done = () => {
+      if (closed) return;
+      closed = true;
+      trophyDone = null;
+      ov.classList.add("out");
+      setTimeout(() => ov.remove(), 350);
+      const sh = document.getElementById("shelf");
+      if (sh && game && getKid(game.kidId) === kid) sh.outerHTML = shelfHTML(kid);   // the new album's empty shelf, with the trophy
+    };
+    trophyDone = done;
+    ov.addEventListener("click", done);
+    setTimeout(done, 4200);
+    return 4200;
+  }
   // The album: every sticker, the missing ones as dark shapes to guess
   function openAlbum(kid) {
     closeAlbum();
     const st = normStickers(kid.stickers), all = STICKERS.concat(st.have.filter((x) => STICKERS.indexOf(x) < 0));
     const done = all.every((x) => st.have.indexOf(x) >= 0);
+    const gold = STICKERS.filter((x) => st.shiny.indexOf(x) >= 0).length, round = st.trophies.length + 1;
     const ov = document.createElement("div");
     ov.id = "album";
     ov.className = "albumov";
     ov.setAttribute("data-action", "albumClose");
     ov.innerHTML = `<div class="albumcard" data-action="noop" role="dialog" aria-label="${esc(t("stickers"))}">
-      <div class="al-head"><span class="ava sm" style="background:${avaBg(kid)}">${kid.avatar}</span><div class="al-t"><b>${esc(kid.name)}</b><small>${esc(t("stickerCount", st.have.length, all.length))}</small></div>
+      <div class="al-head"><span class="ava sm" style="background:${avaBg(kid)}">${kid.avatar}</span><div class="al-t"><b>${esc(kid.name)}${round > 1 ? ` · ${esc(t("albumRound", round))}` : ""}</b><small>${esc(done ? t("goldCount", gold, STICKERS.length) : t("stickerCount", st.have.length, all.length))}</small></div>
         <button class="icon" data-action="albumClose" aria-label="${esc(t("close"))}">✕</button></div>
-      <div class="al-bar"><i style="width:${Math.round((st.have.length / all.length) * 100)}%"></i></div>
-      <p class="al-note">${esc(done ? t("stickersDone") : t("nextSticker", stickerEvery() - st.pts))}${st.have.length ? `<br><small>${esc(t("stkTapHint"))}</small>` : ""}</p>
+      ${st.trophies.length ? `<div class="al-troph">${st.trophies.map((d, i) => `<span title="${esc(fmtDate(d))}">🏆<small>${i + 1}</small></span>`).join("")}<b>${esc(t("trophies", st.trophies.length))}</b></div>` : ""}
+      <div class="al-bar ${done ? "gold" : ""}"><i style="width:${Math.round(((done ? gold : st.have.length) / (done ? STICKERS.length : all.length)) * 100)}%"></i></div>
+      <p class="al-note">${esc(done ? t("stickersDone") + " " + t("trophyGoal") : t("nextSticker", stickerEvery() - st.pts))}${st.have.length ? `<br><small>${esc(t("stkTapHint"))}</small>` : ""}</p>
       <div class="al-grid">${all.map((id) => (st.have.indexOf(id) >= 0 ? `<button class="al-cell" data-action="stkHello" data-id="${id}">${stickerHTML(id, kid, "big")}</button>` : `<div class="al-cell"><span class="stk big locked" style="--rot:${stkRot(id)}deg">${id}</span></div>`)).join("")}</div>
     </div>`;
     document.body.appendChild(ov);
@@ -4333,7 +4418,7 @@ function webApp() {
           nextRound();
           render();
         }
-      }, (earned ? 2100 : 2300) + (got ? 1900 : 0));   // a new sticker gets time to fly to the shelf
+      }, (earned ? 2100 : 2300) + (got ? 1900 : 0) + (got && got.trophy ? 4300 : 0));   // a new sticker gets time to fly to the shelf; a trophy, its celebration
     } else {
       if (game.wrong.has(i)) return;
       game.wrong.add(i);
@@ -4372,7 +4457,7 @@ function webApp() {
       <div class="stats"><span>🪙 ${k.tokens}</span><span>⭐ ${k.total}</span></div>
       ${k.rate > 0 ? `<div class="worth">= ${esc(money(valueCents(k)))}</div>` : ""}
       ${isShort(k) ? `<div class="warnchip">${esc(t("needTopUpShort"))}</div>` : ""}
-      ${k.stickers.have.length ? `<div class="kstk">${k.stickers.have.slice(0, 4).map((id) => stickerHTML(id, k)).join("")}${k.stickers.have.length > 4 ? `<small>+${k.stickers.have.length - 4}</small>` : ""}</div>` : ""}
+      ${k.stickers.have.length || k.stickers.trophies.length ? `<div class="kstk">${k.stickers.trophies.length ? `<span class="ktroph">🏆${k.stickers.trophies.length > 1 ? k.stickers.trophies.length : ""}</span>` : ""}${k.stickers.have.slice(0, 4).map((id) => stickerHTML(id, k)).join("")}${k.stickers.have.length > 4 ? `<small>+${k.stickers.have.length - 4}</small>` : ""}</div>` : ""}
     </button>`;
   }
 

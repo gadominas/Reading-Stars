@@ -2,6 +2,18 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.18.0 (2026-11-01): A trophy for a golden album
+
+- 🏆 **Golden album, big trophy**: Make every sticker gold to win a trophy, with a big celebration.
+- 📒 **Then a new album**: Trophies stay forever; a fresh album starts so collecting never ends.
+
+**Changes**
+
+- When the last sticker turns gold, a trophy celebration follows its reveal: rays, gold confetti, 'Golden album complete!', 'Trophy #N', and a spoken cheer with the kid's name (Lithuanian vocative); a tap closes it, the next word waits for it
+- Trophies (dates) are kept per player (stickers.trophies); the album then starts afresh as Album #N+1
+- 🏆 count on the sticker shelf, a trophy row in the album, 🏆 on the home card
+- A full album shows gold progress (30 of 60 gold, a gold bar) and the goal: make them all gold for a trophy
+
 ## 1.17.1 (2026-11-01): Bubbles stay with their sticker
 
 - 💬 **Follows when you scroll**: A sticker's speech bubble now moves with it when the album or shelf scrolls.
