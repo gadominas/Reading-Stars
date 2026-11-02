@@ -2,6 +2,23 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.18.1 (2026-11-01): Readable in every theme
+
+- 🌙 **Dark themes fixed**: Slate and Night: the player cards' boxes are dark now, their text clear.
+- 🔍 **Contrast checked**: Every text on the main screens meets the WCAG contrast minimum in all 6 themes.
+
+**Changes**
+
+- The player card's stats, money, read-aloud and coach boxes, the selected level and avatar, and ticked review words use the theme's own surfaces (they were fixed light colours, so dark themes showed light text on light boxes)
+- Dark themes: text on the accent purple is dark (selected chips, segments, the AI badge, the sticker counter, primary buttons); money is a light green; warnings use the theme's red
+- Green buttons are a deeper green (white text 4.6:1 instead of 2.4:1); the trophy counter is darker
+- Ink and Mint's accent purple is a shade deeper (4.7:1), small grey text a touch darker in Ink and lighter in Slate; small purple labels and links are darker in light themes
+- A contrast check (WCAG 4.5:1, large text 3:1) of home, PIN, parent zone, Settings, leaderboard, game and album passes in all six themes
+
+**Fixes**
+
+- In the Slate and Night themes, white text on light boxes in the parent zone was nearly invisible
+
 ## 1.18.0 (2026-11-01): A trophy for a golden album
 
 - 🏆 **Golden album, big trophy**: Make every sticker gold to win a trophy, with a big celebration.
