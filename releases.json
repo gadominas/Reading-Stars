@@ -4,6 +4,53 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.18.1",
+      "date": "2026-11-01",
+      "title": {
+        "en": "Readable in every theme",
+        "lt": "Įskaitoma bet kokioje temoje",
+        "es": "Legible en todos los temas"
+      },
+      "highlights": [
+        {
+          "icon": "🌙",
+          "title": {
+            "en": "Dark themes fixed",
+            "lt": "Pataisytos tamsios temos",
+            "es": "Temas oscuros arreglados"
+          },
+          "text": {
+            "en": "Slate and Night: the player cards' boxes are dark now, their text clear.",
+            "lt": "Slate ir Night: žaidėjų kortelių langeliai dabar tamsūs, tekstas aiškus.",
+            "es": "Slate y Night: las cajas de las fichas son oscuras y el texto, claro."
+          }
+        },
+        {
+          "icon": "🔍",
+          "title": {
+            "en": "Contrast checked",
+            "lt": "Patikrintas kontrastas",
+            "es": "Contraste revisado"
+          },
+          "text": {
+            "en": "Every text on the main screens meets the WCAG contrast minimum in all 6 themes.",
+            "lt": "Visas tekstas pagrindiniuose ekranuose atitinka WCAG kontrastą visose 6 temose.",
+            "es": "Todo el texto de las pantallas principales cumple el contraste WCAG en los 6 temas."
+          }
+        }
+      ],
+      "changes": [
+        "The player card's stats, money, read-aloud and coach boxes, the selected level and avatar, and ticked review words use the theme's own surfaces (they were fixed light colours, so dark themes showed light text on light boxes)",
+        "Dark themes: text on the accent purple is dark (selected chips, segments, the AI badge, the sticker counter, primary buttons); money is a light green; warnings use the theme's red",
+        "Green buttons are a deeper green (white text 4.6:1 instead of 2.4:1); the trophy counter is darker",
+        "Ink and Mint's accent purple is a shade deeper (4.7:1), small grey text a touch darker in Ink and lighter in Slate; small purple labels and links are darker in light themes",
+        "A contrast check (WCAG 4.5:1, large text 3:1) of home, PIN, parent zone, Settings, leaderboard, game and album passes in all six themes"
+      ],
+      "fixes": [
+        "In the Slate and Night themes, white text on light boxes in the parent zone was nearly invisible"
+      ]
+    },
+    {
       "version": "1.18.0",
       "date": "2026-11-01",
       "title": {
