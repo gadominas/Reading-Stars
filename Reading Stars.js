@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.18.1';
+const VERSION = '1.18.2';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -66,10 +66,11 @@ const KC_INSTALL = 'reading-stars-install-id';
 const BLUEPRINTS_REPO = 'https://github.com/gadominas/app-blueprints';
 const BLUEPRINTS = [
   { id: 'in-app-updates', name: 'In-app updates', version: '1.0.0', since: '1.1.0' },
-  { id: 'settings', name: 'Settings', version: '1.1.0', since: '1.6.0' },
+  { id: 'settings', name: 'Settings', version: '1.1.1', since: '1.18.2' },
   { id: 'ai-configuration', name: 'AI configuration', version: '1.0.0', since: '1.8.0' },
   { id: 'launch-screen', name: 'Launch screen', version: '1.0.0', since: '1.3.0' },
   { id: 'widgets', name: 'Widgets', version: '1.0.0', since: '1.4.0' },
+  { id: 'audio-playback', name: 'Sound in silent mode', version: '1.0.0', since: '1.18.2' },
   { id: 'read-aloud', name: 'Read aloud', version: '1.0.1', since: '1.9.0' },
   { id: 'usage-analytics', name: 'Anonymous usage analytics', version: '1.1.0', since: '1.7.0' },
 ];
@@ -2654,16 +2655,41 @@ function webApp() {
     const rank = (v) => (quality(v) === "Premium" ? 3 : quality(v) === "Enhanced" ? 2 : 0) + (String(v.lang).replace("_", "-") === locale ? 0.5 : 0);
     return voices.filter((v) => sameLang(v, locale)).sort((a, b) => rank(b) - rank(a))[0] || null;
   }
-  const SILENT = (() => {   // 0.1 s of silence as a WAV, to unlock audio inside the tap
-    const n = 800, buf = new Uint8Array(44 + n), dv = new DataView(buf.buffer);
-    const w = (o, t0) => { for (let i = 0; i < t0.length; i++) buf[o + i] = t0.charCodeAt(i); };
+  // ── Sound with the Ring/Silent switch on (app-blueprints · audio-playback 1.0.0) ──
+  // iOS mutes a page's sound while the switch is on, unless the page plays media. While the app is making sound
+  // the user asked for, it declares itself a media player (navigator.audioSession, iOS 17+); for speech and
+  // Web Audio a looping second of silence does the same on older iOS. Start inside a tap; stop with the sound.
+  const silentWav = secs => {   // silence as an 8 kHz WAV data URI
+    const n = Math.round(8000 * secs), buf = new Uint8Array(44 + n), dv = new DataView(buf.buffer);
+    const w = (o, t) => { for (let i = 0; i < t.length; i++) buf[o + i] = t.charCodeAt(i); };
     w(0, "RIFF"); dv.setUint32(4, 36 + n, true); w(8, "WAVE"); w(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
     dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true); w(36, "data"); dv.setUint32(40, n, true); buf.fill(128, 44);
-    let str = ""; buf.forEach((x) => { str += String.fromCharCode(x); }); return "data:audio/wav;base64," + btoa(str);
-  })();
+    let str = ""; buf.forEach(b => { str += String.fromCharCode(b); }); return "data:audio/wav;base64," + btoa(str);
+  };
+  const keepAwake = new Audio(); keepAwake.loop = true; keepAwake.setAttribute("playsinline", "");
+  let keepSrc = "", audioOffT = null;
+  // kind: "speech" (Web Speech), "webaudio" (an AudioContext), "media" (the sound is an <audio> element itself:
+  // iOS plays one media element at a time, so no silence loop next to it)
+  function audioOn(kind) {
+    clearTimeout(audioOffT);
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+    if (kind === "media") return;
+    try { if (!keepSrc) keepAwake.src = keepSrc = silentWav(1); const p = keepAwake.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+  }
+  function audioOff() {   // other apps' music can play again
+    clearTimeout(audioOffT);
+    try { keepAwake.pause(); } catch (e) {}
+    try { if (navigator.audioSession) navigator.audioSession.type = "auto"; } catch (e) {}
+  }
+  function audioOffSoon(ms) { clearTimeout(audioOffT); audioOffT = setTimeout(audioOff, ms); }   // sounds that come and go (games, timers)
+  const SILENT = silentWav(0.1);   // to unlock audio inside the tap
   const au = new Audio(); au.preload = "auto"; au.setAttribute("playsinline", "");
   let audioUnlocked = false;
+  // Silent switch (audio-playback): the game's words and sounds play with the Ring/Silent switch on while the
+  // child plays, and the session ends a minute and a half after the last sound, so other music can come back.
+  const playKind = () => (AIX.hasOpenAI && state.settings.speechEngine === "ai" ? "media" : "speech");
   function unlockAudio() {   // iOS lets audio start only inside a tap: play silence once, then the same element plays later
+    audioOn(playKind()); audioOffSoon(90000);
     if (audioUnlocked) return;
     try { au.src = SILENT; const pr = au.play(); if (pr && pr.catch) pr.catch(() => {}); audioUnlocked = true; } catch (e) {}
     // and speech: one silent utterance inside the tap lets later words (after the success sound) be spoken
@@ -2698,6 +2724,7 @@ function webApp() {
     const text = kind === "sticker" ? String(w) : String(w).replace(/-/g, "");   // sentences keep their hyphens (Ba-dum-tss!)
     const my = ++sayToken;
     try { if (SYN) SYN.cancel(); au.pause(); } catch (e) {}
+    audioOn(playKind()); audioOffSoon(90000);
     const aiVoice = AIX.hasOpenAI && (state.settings.speechEngine === "ai" || (kind === "sticker" && AIX.stickers));
     if (aiVoice) {
       const key = state.lang + "|" + (kind || "") + "|" + text;
@@ -3691,6 +3718,7 @@ function webApp() {
     if (!state.settings.sound) return 0;
     const def = SFX[name];
     const snd = sfxCache[name] || (sfxCache[name] = makeWav(def[0], def[1], def[2]));
+    audioOn("media"); audioOffSoon(90000);   // the effect is an <audio> element: session only
     try {
       sfxAu.pause();
       sfxAu.src = snd.src;
