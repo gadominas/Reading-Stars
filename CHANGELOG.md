@@ -2,6 +2,20 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.18.2 (2026-11-03): Heard in silent mode
+
+- 🔔 **Plays in silent mode**: Words and game sounds play with the Ring/Silent switch on.
+- 🎵 **Music comes back**: A minute and a half after the last sound, other apps' music can play again.
+- 🧩 **Shared with your apps**: Settings › Built with lists Sound in silent mode.
+
+**Changes**
+
+- While the game makes sound, it tells iOS it's playing media, so spoken words and sound effects play with the Ring/Silent switch on
+
+**Fixes**
+
+- Spoken words and sound effects were silent with the Ring/Silent switch on
+
 ## 1.18.1 (2026-11-01): Readable in every theme
 
 - 🌙 **Dark themes fixed**: Slate and Night: the player cards' boxes are dark now, their text clear.

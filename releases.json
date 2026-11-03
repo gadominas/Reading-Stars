@@ -4,6 +4,34 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.18.2",
+      "date": "2026-11-03",
+      "title": "Heard in silent mode",
+      "highlights": [
+        {
+          "icon": "🔔",
+          "title": "Plays in silent mode",
+          "text": "Words and game sounds play with the Ring/Silent switch on."
+        },
+        {
+          "icon": "🎵",
+          "title": "Music comes back",
+          "text": "A minute and a half after the last sound, other apps' music can play again."
+        },
+        {
+          "icon": "🧩",
+          "title": "Shared with your apps",
+          "text": "Settings › Built with lists Sound in silent mode."
+        }
+      ],
+      "changes": [
+        "While the game makes sound, it tells iOS it's playing media, so spoken words and sound effects play with the Ring/Silent switch on"
+      ],
+      "fixes": [
+        "Spoken words and sound effects were silent with the Ring/Silent switch on"
+      ]
+    },
+    {
       "version": "1.18.1",
       "date": "2026-11-01",
       "title": {
