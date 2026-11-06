@@ -4,6 +4,32 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.18.4",
+      "date": "2026-11-06",
+      "title": "Ready for the iPhone app",
+      "highlights": [
+        {
+          "icon": "📲",
+          "title": "Ready for the iPhone app",
+          "text": "The same game can now also run as its own iPhone app."
+        },
+        {
+          "icon": "💾",
+          "title": "Saves as before",
+          "text": "Players, tokens and budgets save exactly as they did."
+        },
+        {
+          "icon": "✨",
+          "title": "Nothing to relearn",
+          "text": "Every screen looks and works the same as in 1.18.3."
+        }
+      ],
+      "changes": [
+        "The page sends messages to Scriptable through the portable-bridge recipe, so the same script also runs in BuildIt's native shell; in Scriptable nothing changes"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.18.3",
       "date": "2026-11-04",
       "title": "Opens on any iPhone",

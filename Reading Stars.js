@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.18.3';
+const VERSION = '1.18.4';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
@@ -2419,7 +2419,7 @@ function webApp() {
     navBusy = true;
     const url = navQueue.shift();
     try {
-      window.location.href = url;
+      if (window.__hostBridge) window.__hostBridge(url); else window.location.href = url;   // portable-bridge recipe
     } catch (e) {}
     setTimeout(() => {
       navBusy = false;
