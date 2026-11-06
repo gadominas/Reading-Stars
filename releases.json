@@ -4,6 +4,62 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.18.6",
+      "date": "2026-11-07",
+      "title": {
+        "en": "Checked behind the scenes",
+        "lt": "Patikrinta užkulisiuose",
+        "es": "Revisada entre bastidores"
+      },
+      "highlights": [
+        {
+          "icon": "✅",
+          "title": {
+            "en": "Checked on every change",
+            "lt": "Tikrinama po kiekvieno pakeitimo",
+            "es": "Revisada en cada cambio"
+          },
+          "text": {
+            "en": "Every change now runs the shared app tests: start-up, widget, updates and usage counts.",
+            "lt": "Kiekvienas pakeitimas dabar pereina bendrus testus: paleidimą, valdiklį, atnaujinimus ir naudojimo skaičius.",
+            "es": "Cada cambio pasa ahora las pruebas comunes: inicio, widget, actualizaciones y recuentos de uso."
+          }
+        },
+        {
+          "icon": "🧩",
+          "title": {
+            "en": "Up-to-date building blocks",
+            "lt": "Naujausi statybiniai blokai",
+            "es": "Piezas al día"
+          },
+          "text": {
+            "en": "Settings › Built with shows the newest versions of the shared parts Reading Stars is made of.",
+            "lt": "Nustatymai › Sukurta su rodo naujausias bendrų dalių, iš kurių sukurta Reading Stars, versijas.",
+            "es": "Ajustes › Hecha con muestra las versiones más nuevas de las piezas comunes de Reading Stars."
+          }
+        },
+        {
+          "icon": "⭐",
+          "title": {
+            "en": "Same game",
+            "lt": "Tas pats žaidimas",
+            "es": "El mismo juego"
+          },
+          "text": {
+            "en": "Players, stars and tokens stay just as they were; kids play exactly as before.",
+            "lt": "Žaidėjai, žvaigždės ir žetonai lieka kaip buvo; vaikai žaidžia taip pat kaip anksčiau.",
+            "es": "Jugadores, estrellas y fichas siguen igual; los niños juegan como antes."
+          }
+        }
+      ],
+      "changes": [
+        "Testing recipe: the app-blueprints testkit (lint and five conformance packs, plus the three tests/cases in legacyCases mode) runs on every push (.github/workflows/tests.yml); docs/TESTING.md says how to run it",
+        "Portable bridge recipe 1.0.0 (since 1.18.4, reference implementation): docs/BLUEPRINTS.md now links its tag",
+        "Blueprint trace: Stability patterns 1.0.1, AI configuration 1.0.1, Launch screen 1.0.1, Widgets 1.1.1 (the optional 1.1.0 parts aren't adopted), Sound in silent mode 1.0.1"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.18.5",
       "date": "2026-11-07",
       "title": {

@@ -2,6 +2,18 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.18.6 (2026-11-07): Checked behind the scenes
+
+- ✅ **Checked on every change**: Every change now runs the shared app tests: start-up, widget, updates and usage counts.
+- 🧩 **Up-to-date building blocks**: Settings › Built with shows the newest versions of the shared parts Reading Stars is made of.
+- ⭐ **Same game**: Players, stars and tokens stay just as they were; kids play exactly as before.
+
+**Changes**
+
+- Testing recipe: the app-blueprints testkit (lint and five conformance packs, plus the three tests/cases in legacyCases mode) runs on every push (.github/workflows/tests.yml); docs/TESTING.md says how to run it
+- Portable bridge recipe 1.0.0 (since 1.18.4, reference implementation): docs/BLUEPRINTS.md now links its tag
+- Blueprint trace: Stability patterns 1.0.1, AI configuration 1.0.1, Launch screen 1.0.1, Widgets 1.1.1 (the optional 1.1.0 parts aren't adopted), Sound in silent mode 1.0.1
+
 ## 1.18.5 (2026-11-07): Ready for the App Store
 
 - 📱 **Updates the right way**: As an App Store app, Reading Stars gets new versions from the App Store only.
