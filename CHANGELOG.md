@@ -2,6 +2,16 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.18.4 (2026-11-06): Ready for the iPhone app
+
+- 📲 **Ready for the iPhone app**: The same game can now also run as its own iPhone app.
+- 💾 **Saves as before**: Players, tokens and budgets save exactly as they did.
+- ✨ **Nothing to relearn**: Every screen looks and works the same as in 1.18.3.
+
+**Changes**
+
+- The page sends messages to Scriptable through the portable-bridge recipe, so the same script also runs in BuildIt's native shell; in Scriptable nothing changes
+
 ## 1.18.3 (2026-11-04): Opens on any iPhone
 
 - 📱 **Opens on any iPhone**: Reading Stars opens on iPhones that aren't signed in to iCloud, every time.
