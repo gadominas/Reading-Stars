@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.18.5';
+const VERSION = '1.18.6';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 // In a native shell (BuildIt) new versions come from the App Store or TestFlight, never from GitHub (in-app-updates Step 8).
 const NATIVE_SHELL = (() => { try { return config.runsInNativeShell === true; } catch (e) { return false; } })();
@@ -67,13 +67,13 @@ const KC_INSTALL = 'reading-stars-install-id';
 // inventory tools read it without running the script, and Settings › Built with shows it.
 const BLUEPRINTS_REPO = 'https://github.com/gadominas/app-blueprints';
 const BLUEPRINTS = [
-  { id: 'stability-patterns', name: 'Stability patterns', version: '1.0.0', since: '1.18.3' },
+  { id: 'stability-patterns', name: 'Stability patterns', version: '1.0.1', since: '1.18.6' },
   { id: 'in-app-updates', name: 'In-app updates', version: '1.1.0', since: '1.18.5' },
   { id: 'settings', name: 'Settings', version: '1.1.2', since: '1.18.3' },
-  { id: 'ai-configuration', name: 'AI configuration', version: '1.0.0', since: '1.8.0' },
-  { id: 'launch-screen', name: 'Launch screen', version: '1.0.0', since: '1.3.0' },
-  { id: 'widgets', name: 'Widgets', version: '1.0.0', since: '1.4.0' },
-  { id: 'audio-playback', name: 'Sound in silent mode', version: '1.0.0', since: '1.18.2' },
+  { id: 'ai-configuration', name: 'AI configuration', version: '1.0.1', since: '1.18.6' },
+  { id: 'launch-screen', name: 'Launch screen', version: '1.0.1', since: '1.18.6' },
+  { id: 'widgets', name: 'Widgets', version: '1.1.1', since: '1.18.6' },
+  { id: 'audio-playback', name: 'Sound in silent mode', version: '1.0.1', since: '1.18.6' },
   { id: 'read-aloud', name: 'Read aloud', version: '1.0.1', since: '1.9.0' },
   { id: 'usage-analytics', name: 'Anonymous usage analytics', version: '1.1.0', since: '1.7.0' },
 ];

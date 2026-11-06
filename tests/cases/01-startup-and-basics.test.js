@@ -23,7 +23,10 @@ const check = (c, msg) => console.log((c ? "✓ " : "✗ ") + msg);
   pg.tap('[data-action="openSettings"]'); await wait(700);
   const sheet = pg.text("#cfgsheet") || "";
   const m = sheet.match(/In-app updates\s*Blueprint ([0-9.]+) · since Reading Stars ([0-9.]+)/);
-  check(m && m[1] === "1.1.0" && m[2] === VERSION, `B Settings › Built with: In-app updates, Blueprint ${m && m[1]} · since Reading Stars ${m && m[2]}`);
+  // expected: the script's own BLUEPRINTS line (its since moves on when the blueprint is upgraded, not with every release)
+  const src = require("fs").readFileSync(process.env.RS_SCRIPT || require("path").join(__dirname, "..", "..", "Reading Stars.js"), "utf8");
+  const bp = src.match(/\{ id: 'in-app-updates', name: 'In-app updates', version: '([^']+)', since: '([^']+)' \}/);
+  check(m && bp && m[1] === bp[1] && m[2] === bp[2], `B Settings › Built with: In-app updates, Blueprint ${m && m[1]} · since Reading Stars ${m && m[2]}`);
   E.finish(); await Promise.race([p, wait(500)]);
   const bad = [errA, errors(E)].filter((x) => x !== "none");
   console.log("errors: " + (bad.length ? bad.join(" | ") : "none"));

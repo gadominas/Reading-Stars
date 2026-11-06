@@ -4,6 +4,16 @@ Reading Stars is one Scriptable script, so it can't run in a normal test runner.
 
 ## Run the tests
 
+Reading Stars follows the [testing recipe](https://github.com/gadominas/app-blueprints/blob/testing-v1.0.0/recipes/testing.md): the shared testkit runs lint, the conformance packs (safe start-up, stability patterns, in-app updates, widgets, usage analytics) and every case in `tests/cases`, on every push (`.github/workflows/tests.yml`). With [app-blueprints](https://github.com/gadominas/app-blueprints) cloned next to this repository:
+
+```sh
+(cd ../app-blueprints/testkit && npm ci)
+(cd tests && npm install)                    # jsdom, for the cases still on tests/harness.js
+node ../app-blueprints/testkit/bin/run.js    # everything: 9 of 9 must pass before a release
+```
+
+`tests/app.config.js` holds Reading Stars's per-app values. The cases still use the old harness below and run unchanged (`legacyCases`) until they are moved; the app's own hosts aren't faked yet, so they fail like a phone without a connection. The old runner works as before:
+
 ```sh
 cd tests
 npm install          # jsdom
