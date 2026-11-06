@@ -4,6 +4,7 @@
 
 ## Steps
 
+0. **Run the tests**: `cd tests && npm install && node run.js` (see [TESTING.md](TESTING.md)). A release goes out only when every scenario passes.
 1. **Bump the version** in `Reading Stars.js`: `const VERSION = '1.2.0';`. Keep the line exactly in that form, with single quotes: the updater finds the version by matching it. Use [semantic versioning](https://semver.org): a new feature bumps the middle number, a fix-only release the last.
 2. **Add a release at the top of `releases.json`**, with the same version.
 3. **Regenerate the changelog**: `node tools/changelog.js`.

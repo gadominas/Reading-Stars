@@ -44,8 +44,10 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.18.4';
+const VERSION = '1.18.5';
 const APP_ID = 'reading-stars';   // unique per app, never changes
+// In a native shell (BuildIt) new versions come from the App Store or TestFlight, never from GitHub (in-app-updates Step 8).
+const NATIVE_SHELL = (() => { try { return config.runsInNativeShell === true; } catch (e) { return false; } })();
 const REPO_RAW = 'https://raw.githubusercontent.com/gadominas/Reading-Stars/main/';
 const SCRIPT_FILE = 'Reading Stars.js';   // the script's file name in the repository
 const UPDATE_SNOOZE_MS = 2 * 24 * 3600 * 1000;   // "Later" = 2 days
@@ -66,7 +68,7 @@ const KC_INSTALL = 'reading-stars-install-id';
 const BLUEPRINTS_REPO = 'https://github.com/gadominas/app-blueprints';
 const BLUEPRINTS = [
   { id: 'stability-patterns', name: 'Stability patterns', version: '1.0.0', since: '1.18.3' },
-  { id: 'in-app-updates', name: 'In-app updates', version: '1.0.1', since: '1.18.3' },
+  { id: 'in-app-updates', name: 'In-app updates', version: '1.1.0', since: '1.18.5' },
   { id: 'settings', name: 'Settings', version: '1.1.2', since: '1.18.3' },
   { id: 'ai-configuration', name: 'AI configuration', version: '1.0.0', since: '1.8.0' },
   { id: 'launch-screen', name: 'Launch screen', version: '1.0.0', since: '1.3.0' },
@@ -399,6 +401,7 @@ function settingsState() {
     blueprints: BLUEPRINTS, blueprintsRepo: BLUEPRINTS_REPO,
     // ai-configuration Step 6: keys only masked
     ai: aiState(),
+    nativeShell: NATIVE_SHELL,   // in-app-updates Step 8: Settings › Updates says updates come through the App Store
     hasKey: !!aiKey(), aiProvider: settings.aiProvider,
     hasOpenAI: !!keyFor("openai"), ttsModels: settings.ttsModels || null, voiceURIs: settings.voiceURIs,   // read-aloud Step 1
   };
@@ -685,7 +688,7 @@ function clearUpdateSnooze() {
 
 // Never throws: any failure just means no update is offered this time.
 async function checkForUpdate() {
-  if (!settings.checkUpdates || updateSnoozed()) return null;
+  if (NATIVE_SHELL || !settings.checkUpdates || updateSnoozed()) return null;
   try {
     const req = new Request(`${REPO_RAW}releases.json?t=${Date.now()}`);
     req.timeoutInterval = 10;
@@ -714,6 +717,7 @@ async function checkForUpdate() {
 
 // Downloads the new script, checks it three ways, then writes it over the running script.
 async function applyUpdate(info) {
+  if (NATIVE_SHELL) throw new Error('This app is updated through the App Store.');   // Step 8: never download code
   const req = new Request(`${REPO_RAW}${encodeURI((info && info.script) || SCRIPT_FILE)}?t=${Date.now()}`);
   req.timeoutInterval = 30;
   const code = await req.loadString();
@@ -4819,7 +4823,7 @@ function webApp() {
       themes: { auto: "Auto", ink: "Ink", sepia: "Sepia", mint: "Mint", contrast: "Contrast", slate: "Slate", night: "Night" },
       layouts: ["Comfortable", "Compact", "Tiny"], sizes: ["Small", "Default", "Large", "Larger"], fonts: ["Sans serif", "Serif"],
       game: "Game", money: "Money", parent: "Parent", pinHelp: "Opens the PIN pad to set a new PIN",
-      updates: "Updates", offer: "Offer new versions", offerHelp: (v) => `You have Reading Stars ${v}. “Later” waits two days.`, check: "Check for updates now", checkBtn: "Check", checking: "Checking…",
+      updates: "Updates", offer: "Offer new versions", offerHelp: (v) => `You have Reading Stars ${v}. “Later” waits two days.`, storeHelp: (v) => `You have Reading Stars ${v}. New versions come through the App Store (or TestFlight).`, check: "Check for updates now", checkBtn: "Check", checking: "Checking…",
       startLog: "Start-up log", startLogHelp: (a) => `What happened the last times ${a} opened`, show: "Show", hide: "Hide", noLog: "Nothing logged yet.",
       latest: (v) => `You're on the latest version (${v})`, avail: (v) => `Version ${v} is available`,
       reset: "Reset", original: "original", changed: (n) => `${n} setting${n === 1 ? "" : "s"} changed`, none: "All settings are at their original values", resetAll: "Reset all", confirmReset: "Confirm reset",
@@ -4829,7 +4833,7 @@ function webApp() {
       themes: { auto: "Automatiškai", ink: "Rašalas", sepia: "Sepija", mint: "Mėtinė", contrast: "Kontrastas", slate: "Skalūnas", night: "Naktis" },
       layouts: ["Erdvus", "Glaustas", "Mažytis"], sizes: ["Mažas", "Įprastas", "Didelis", "Didesnis"], fonts: ["Be serifų", "Su serifais"],
       game: "Žaidimas", money: "Pinigai", parent: "Tėvams", pinHelp: "Atidaro PIN klaviatūrą naujam PIN",
-      updates: "Atnaujinimai", offer: "Siūlyti naujas versijas", offerHelp: (v) => `Jūsų versija: Reading Stars ${v}. „Vėliau“ palaukia dvi dienas.`, check: "Tikrinti atnaujinimus dabar", checkBtn: "Tikrinti", checking: "Tikrinama…",
+      updates: "Atnaujinimai", offer: "Siūlyti naujas versijas", offerHelp: (v) => `Jūsų versija: Reading Stars ${v}. „Vėliau“ palaukia dvi dienas.`, storeHelp: (v) => `Jūsų versija: Reading Stars ${v}. Naujos versijos ateina per App Store (arba TestFlight).`, check: "Tikrinti atnaujinimus dabar", checkBtn: "Tikrinti", checking: "Tikrinama…",
       startLog: "Paleidimo žurnalas", startLogHelp: (a) => `Kas vyko paskutinius kartus atidarant ${a}`, show: "Rodyti", hide: "Slėpti", noLog: "Kol kas nieko neužrašyta.",
       latest: (v) => `Naudojate naujausią versiją (${v})`, avail: (v) => `Yra versija ${v}`,
       reset: "Atstatyti", original: "pradinė", changed: (n) => `Pakeista nustatymų: ${n}`, none: "Visi nustatymai pradiniai", resetAll: "Atstatyti viską", confirmReset: "Patvirtinti",
@@ -4839,7 +4843,7 @@ function webApp() {
       themes: { auto: "Automático", ink: "Tinta", sepia: "Sepia", mint: "Menta", contrast: "Contraste", slate: "Pizarra", night: "Noche" },
       layouts: ["Amplio", "Compacto", "Mínimo"], sizes: ["Pequeño", "Normal", "Grande", "Más grande"], fonts: ["Sin serifa", "Con serifa"],
       game: "Juego", money: "Dinero", parent: "Padres", pinHelp: "Abre el teclado para poner un PIN nuevo",
-      updates: "Actualizaciones", offer: "Ofrecer versiones nuevas", offerHelp: (v) => `Tienes Reading Stars ${v}. «Más tarde» espera dos días.`, check: "Buscar actualizaciones ahora", checkBtn: "Buscar", checking: "Buscando…",
+      updates: "Actualizaciones", offer: "Ofrecer versiones nuevas", offerHelp: (v) => `Tienes Reading Stars ${v}. «Más tarde» espera dos días.`, storeHelp: (v) => `Tienes Reading Stars ${v}. Las versiones nuevas llegan por la App Store (o TestFlight).`, check: "Buscar actualizaciones ahora", checkBtn: "Buscar", checking: "Buscando…",
       startLog: "Registro de inicio", startLogHelp: (a) => `Qué pasó las últimas veces que se abrió ${a}`, show: "Mostrar", hide: "Ocultar", noLog: "Aún no hay nada registrado.",
       latest: (v) => `Tienes la última versión (${v})`, avail: (v) => `Hay una versión ${v}`,
       reset: "Restablecer", original: "original", changed: (n) => `${n} ajuste${n === 1 ? "" : "s"} cambiado${n === 1 ? "" : "s"}`, none: "Todos los ajustes están en sus valores originales", resetAll: "Restablecer todo", confirmReset: "Confirmar",
@@ -4940,8 +4944,10 @@ function webApp() {
       <div class="srow"><div class="grow"><b>${esc(CT.share)}</b><small>${esc(CT.shareHelp)}</small></div><button class="switch ${s.shareUsage ? "on" : ""}" data-act="toggle" data-v="shareUsage" aria-label="${esc(CT.share)}"></button></div>
       <div class="srow"><div class="grow"><b>${esc(CT.test)}</b><small id="usagemsg" class="muted" aria-live="polite">${esc(SET.usageStatus || CT.testHelp)}</small></div><button class="sm" data-act="usage-test">${esc(CT.testBtn)}</button></div>` : ""}
       <h3 class="sec">${esc(CT.updates)}</h3>
-      <div class="srow"><div class="grow"><b>${esc(CT.offer)}</b><small>${esc(CT.offerHelp(SET.version))}</small></div><button class="switch ${s.checkUpdates ? "on" : ""}" data-act="toggle" data-v="checkUpdates" aria-label="${esc(CT.offer)}"></button></div>
-      <div class="srow"><div class="grow"><b>${esc(CT.check)}</b><small id="updmsg" class="muted" aria-live="polite"></small></div><button class="sm" data-act="updcheck">${esc(CT.checkBtn)}</button></div>
+      ${SET.nativeShell
+        ? `<div class="srow"><div class="grow"><b>${esc(CT.updates)}</b><small class="muted">${esc(CT.storeHelp(SET.version))}</small></div></div>`
+        : `<div class="srow"><div class="grow"><b>${esc(CT.offer)}</b><small>${esc(CT.offerHelp(SET.version))}</small></div><button class="switch ${s.checkUpdates ? "on" : ""}" data-act="toggle" data-v="checkUpdates" aria-label="${esc(CT.offer)}"></button></div>
+      <div class="srow"><div class="grow"><b>${esc(CT.check)}</b><small id="updmsg" class="muted" aria-live="polite"></small></div><button class="sm" data-act="updcheck">${esc(CT.checkBtn)}</button></div>`}
       <div class="srow"><div class="grow"><b>${esc(CT.startLog)}</b><small class="muted">${esc(CT.startLogHelp(SET.appName))}</small></div><button class="sm" data-act="startlog">${esc(CT.show)}</button></div>
       <pre id="startlog" class="startlog" hidden></pre>
       ${SET.cfgSchema.map((sec) => `<h3 class="sec">${esc(sec.title[state.lang] || sec.title.en)}</h3>${sec.items.map(fieldHTML).join("")}`).join("")}

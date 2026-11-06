@@ -2,6 +2,23 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.18.5 (2026-11-07): Ready for the App Store
+
+- 📱 **Updates the right way**: As an App Store app, Reading Stars gets new versions from the App Store only.
+- ⚙️ **Settings say where**: There, Settings › Updates says new versions come through the App Store or TestFlight.
+- 🔄 **Scriptable unchanged**: In Scriptable, updates are offered and installed just as before.
+
+**Changes**
+
+- In-app updates 1.1.0 (Step 8): in a native shell (config.runsInNativeShell, BuildIt) there's no update check, the installer refuses before downloading anything, and Settings › Updates says new versions come through the App Store (or TestFlight) instead of Offer new versions and Check for updates now; the Start-up log stays
+- In Scriptable nothing changes
+- Records: the BLUEPRINTS block and Settings › Built with show In-app updates 1.1.0; docs/BLUEPRINTS.md lists the portable-bridge recipe (since 1.18.4)
+- A test harness (tests/, modelled on Stockit's) runs the real script with Scriptable stubbed: start-up, updates in Scriptable, and updates in a native shell; see docs/TESTING.md
+
+**Fixes**
+
+- In a native shell the app would have offered, downloaded and installed updates from GitHub, which App Store apps must not do
+
 ## 1.18.4 (2026-11-06): Ready for the iPhone app
 
 - 📲 **Ready for the iPhone app**: The same game can now also run as its own iPhone app.
