@@ -4,6 +4,65 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.18.5",
+      "date": "2026-11-07",
+      "title": {
+        "en": "Ready for the App Store",
+        "lt": "Paruošta App Store",
+        "es": "Lista para la App Store"
+      },
+      "highlights": [
+        {
+          "icon": "📱",
+          "title": {
+            "en": "Updates the right way",
+            "lt": "Atnaujinama teisingai",
+            "es": "Se actualiza como debe"
+          },
+          "text": {
+            "en": "As an App Store app, Reading Stars gets new versions from the App Store only.",
+            "lt": "Kaip App Store programėlė Reading Stars naujas versijas gauna tik per App Store.",
+            "es": "Como app de la App Store, Reading Stars recibe versiones nuevas solo por la App Store."
+          }
+        },
+        {
+          "icon": "⚙️",
+          "title": {
+            "en": "Settings say where",
+            "lt": "Nustatymuose parašyta, iš kur",
+            "es": "Ajustes dicen de dónde"
+          },
+          "text": {
+            "en": "There, Settings › Updates says new versions come through the App Store or TestFlight.",
+            "lt": "Ten Nustatymai › Atnaujinimai nurodo, kad versijos ateina per App Store ar TestFlight.",
+            "es": "Allí, Ajustes › Actualizaciones indica que llegan por la App Store o TestFlight."
+          }
+        },
+        {
+          "icon": "🔄",
+          "title": {
+            "en": "Scriptable unchanged",
+            "lt": "Scriptable – kaip buvo",
+            "es": "Scriptable igual"
+          },
+          "text": {
+            "en": "In Scriptable, updates are offered and installed just as before.",
+            "lt": "Scriptable programoje atnaujinimai siūlomi ir diegiami kaip anksčiau.",
+            "es": "En Scriptable, las actualizaciones se ofrecen e instalan como antes."
+          }
+        }
+      ],
+      "changes": [
+        "In-app updates 1.1.0 (Step 8): in a native shell (config.runsInNativeShell, BuildIt) there's no update check, the installer refuses before downloading anything, and Settings › Updates says new versions come through the App Store (or TestFlight) instead of Offer new versions and Check for updates now; the Start-up log stays",
+        "In Scriptable nothing changes",
+        "Records: the BLUEPRINTS block and Settings › Built with show In-app updates 1.1.0; docs/BLUEPRINTS.md lists the portable-bridge recipe (since 1.18.4)",
+        "A test harness (tests/, modelled on Stockit's) runs the real script with Scriptable stubbed: start-up, updates in Scriptable, and updates in a native shell; see docs/TESTING.md"
+      ],
+      "fixes": [
+        "In a native shell the app would have offered, downloaded and installed updates from GitHub, which App Store apps must not do"
+      ]
+    },
+    {
       "version": "1.18.4",
       "date": "2026-11-06",
       "title": "Ready for the iPhone app",
