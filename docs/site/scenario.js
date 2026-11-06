@@ -167,6 +167,7 @@ module.exports = {
         await h.wait(500);
         const i = await pictureIndex(h, 'en', true);
         await h.tap(`.pic[data-i="${i}"]`, { after: 300 });
+        await h.eval(() => document.getAnimations().forEach((a) => { a.pause(); a.currentTime = 300; }));
       }, after: 0 },
     { id: '05-wrong', label: 'Wrong taps cost a token', caption: 'Expert rounds show five pictures with the same first letter, so a guess often fails.',
       seed: 5,
@@ -175,7 +176,8 @@ module.exports = {
         await dealWord(h, ['but-ter-fly', 'croc-o-dile', 'kan-ga-roo', 'di-no-saur', 'el-e-phant', 'oc-to-pus', 'straw-ber-ry', 'pine-ap-ple', 'ba-na-na']);
         await h.wait(500);
         const i = await pictureIndex(h, 'en', false);
-        await h.tap(`.pic[data-i="${i}"]`, { after: 450 });
+        await h.tap(`.pic[data-i="${i}"]`, { after: 700 });   // the wallet's number tween (600 ms, rAF) has finished
+        await h.eval(() => document.getAnimations().forEach((a) => { a.pause(); a.currentTime = 450; }));
       }, after: 0 },
     { id: '06-top-up-needed', label: 'Asks for a top-up', caption: 'When tokens are worth more than the hidden budget, the kid is told to ask a parent.',
       run: async (h) => { await play(h, 'ona'); await h.wait(700); } },
