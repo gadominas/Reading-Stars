@@ -2,6 +2,17 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.18.7 (2026-11-07): A widget for the iPhone app
+
+- ⭐ **Leaderboard on the Home Screen**: The iPhone app's own widget shows the top reader and everyone's stars, like here.
+- 🔒 **Still nothing private**: Widgets show names, stars and tokens only: never money, budgets or the PIN.
+- ✅ **Same game**: In Scriptable the widget and the game work exactly as before.
+
+**Changes**
+
+- Widgets 1.2.0: in a native shell (config.runsInNativeShell), runWidget() hands the model, name, accent, words and the two widget tunables to Script.setWidget() as plain JSON and draws nothing; BuildIt's native widget draws the same frame from it. Scriptable is unchanged
+- Tests: testkit 1.1.0 (testing-v1.1.0), whose widgets pack checks the native-shell hand-over
+
 ## 1.18.6 (2026-11-07): Checked behind the scenes
 
 - ✅ **Checked on every change**: Every change now runs the shared app tests: start-up, widget, updates and usage counts.

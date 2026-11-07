@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.18.6';
+const VERSION = '1.18.7';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 // In a native shell (BuildIt) new versions come from the App Store or TestFlight, never from GitHub (in-app-updates Step 8).
 const NATIVE_SHELL = (() => { try { return config.runsInNativeShell === true; } catch (e) { return false; } })();
@@ -72,7 +72,7 @@ const BLUEPRINTS = [
   { id: 'settings', name: 'Settings', version: '1.1.2', since: '1.18.3' },
   { id: 'ai-configuration', name: 'AI configuration', version: '1.0.1', since: '1.18.6' },
   { id: 'launch-screen', name: 'Launch screen', version: '1.0.1', since: '1.18.6' },
-  { id: 'widgets', name: 'Widgets', version: '1.1.1', since: '1.18.6' },
+  { id: 'widgets', name: 'Widgets', version: '1.2.0', since: '1.18.7' },
   { id: 'audio-playback', name: 'Sound in silent mode', version: '1.0.1', since: '1.18.6' },
   { id: 'read-aloud', name: 'Read aloud', version: '1.0.1', since: '1.9.0' },
   { id: 'usage-analytics', name: 'Anonymous usage analytics', version: '1.1.0', since: '1.7.0' },
@@ -5777,6 +5777,13 @@ async function runWidget() {
   try { m = await widgetModel(args.widgetParameter || '', config.widgetFamily || 'medium'); }
   catch (e) { console.error('Widget model: ' + e); }
   if (!m) m = { empty: WIDGET.words.nothing };
+  if (config.runsInNativeShell) {   // widgets 1.2.0: a native shell draws the frame itself; it takes the model (In a native shell)
+    const W = WIDGET.words;
+    Script.setWidget(JSON.parse(JSON.stringify({ frame: 1, name: WIDGET.name, accent: WIDGET.accent,
+      words: { open: W.open, nothing: W.nothing, updated: W.updated, yesterday: W.yesterday },
+      staleMin: cfg('widgetStaleMin'), refreshMin: cfg('widgetRefreshMin'), model: m })));
+    return;
+  }
   try {
     if (m.at && !m.empty && Date.now() - m.at > cfg('widgetStaleMin') * 60e3) {
       m.stale = true;

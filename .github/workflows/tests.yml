@@ -7,6 +7,6 @@ on:
   workflow_dispatch:
 jobs:
   tests:
-    uses: gadominas/app-blueprints/.github/workflows/scriptable-tests.yml@testing-v1.0.0
+    uses: gadominas/app-blueprints/.github/workflows/scriptable-tests.yml@testing-v1.1.0
     with:
-      testkit-ref: testing-v1.0.0
+      testkit-ref: testing-v1.1.0
