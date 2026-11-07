@@ -2,6 +2,23 @@
 
 All notable changes to Reading Stars. Generated from `releases.json`; edit that file, not this one.
 
+## 1.19.0 (2026-11-07): Built with, explained
+
+- 🧩 **Know what's inside**: Tap any blueprint in Settings › Built with to see what it is, what it does, what it drives and why it matters.
+- 📴 **Works offline**: The descriptions come with Reading Stars, so they open instantly, with or without a connection.
+- 🔗 **No dead links**: Built with no longer sends you to web pages you can't open.
+
+**Changes**
+
+- Settings 2.0.1: Settings › Built with opens an About sheet for each blueprint (What it is, What it does, What it drives, Why it matters) from text bundled in the script (BLUEPRINT_ABOUT), plus an About blueprints row; the links to the private blueprints repository are gone
+- About text in Lithuanian and Spanish as well, following the game's language
+- Blueprint trace: Stability patterns 1.0.2, In-app updates 1.1.1, AI configuration 1.0.2, Launch screen 1.0.2, Widgets 1.2.1, Sound in silent mode 1.0.2, Anonymous usage analytics 1.1.1 (About sections, no code change)
+- Tests: the testkit opens Settings through the parent PIN (tests/app.config.js)
+
+**Fixes**
+
+- Tapping a blueprint in Settings › Built with opened a page that no longer exists (404)
+
 ## 1.18.7 (2026-11-07): A widget for the iPhone app
 
 - ⭐ **Leaderboard on the Home Screen**: The iPhone app's own widget shows the top reader and everyone's stars, like here.
