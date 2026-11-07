@@ -4,6 +4,61 @@
   "script": "Reading Stars.js",
   "releases": [
     {
+      "version": "1.18.7",
+      "date": "2026-11-07",
+      "title": {
+        "en": "A widget for the iPhone app",
+        "lt": "Valdiklis iPhone programėlei",
+        "es": "Un widget para la app de iPhone"
+      },
+      "highlights": [
+        {
+          "icon": "⭐",
+          "title": {
+            "en": "Leaderboard on the Home Screen",
+            "lt": "Lyderiai pradžios ekrane",
+            "es": "Clasificación en la pantalla de inicio"
+          },
+          "text": {
+            "en": "The iPhone app's own widget shows the top reader and everyone's stars, like here.",
+            "lt": "iPhone programėlės valdiklis rodo pirmaujantį skaitytoją ir visų žvaigždes, kaip čia.",
+            "es": "El widget de la app de iPhone muestra al mejor lector y las estrellas de todos, como aquí."
+          }
+        },
+        {
+          "icon": "🔒",
+          "title": {
+            "en": "Still nothing private",
+            "lt": "Vis dar nieko asmeniško",
+            "es": "Sigue sin nada privado"
+          },
+          "text": {
+            "en": "Widgets show names, stars and tokens only: never money, budgets or the PIN.",
+            "lt": "Valdikliai rodo tik vardus, žvaigždes ir žetonus: niekada pinigų, biudžetų ar PIN.",
+            "es": "Los widgets solo muestran nombres, estrellas y fichas: nunca dinero, presupuestos ni el PIN."
+          }
+        },
+        {
+          "icon": "✅",
+          "title": {
+            "en": "Same game",
+            "lt": "Tas pats žaidimas",
+            "es": "El mismo juego"
+          },
+          "text": {
+            "en": "In Scriptable the widget and the game work exactly as before.",
+            "lt": "Scriptable programėlėje valdiklis ir žaidimas veikia taip pat kaip anksčiau.",
+            "es": "En Scriptable el widget y el juego funcionan igual que antes."
+          }
+        }
+      ],
+      "changes": [
+        "Widgets 1.2.0: in a native shell (config.runsInNativeShell), runWidget() hands the model, name, accent, words and the two widget tunables to Script.setWidget() as plain JSON and draws nothing; BuildIt's native widget draws the same frame from it. Scriptable is unchanged",
+        "Tests: testkit 1.1.0 (testing-v1.1.0), whose widgets pack checks the native-shell hand-over"
+      ],
+      "fixes": []
+    },
+    {
       "version": "1.18.6",
       "date": "2026-11-07",
       "title": {
