@@ -22,7 +22,7 @@
  * - Parent zone (4-digit PIN): pay out (reset) a kid's tokens, edit/delete players,
  *   word letter style, sounds, change PIN. Payouts never reduce leaderboard points.
  * - Settings (sliders icon in the parent zone, behind the PIN): appearance, game, money,
- *   updates, round sizes and Built with (github.com/gadominas/app-blueprints · settings).
+ *   updates, round sizes and Built with (app-blueprints · settings).
  * - Opens on a 2.4 s launch screen with the Reading Stars star (app-blueprints · launch-screen).
  * - Home Screen and Lock Screen widget: the top reader and the leaderboard, or one player's tokens
  *   when the widget's Parameter is that player's name (app-blueprints · widgets). Never money, budgets or the PIN.
@@ -44,7 +44,7 @@
 
 
 // This build's version. When releasing, bump it and add a matching entry to releases.json.
-const VERSION = '1.18.7';
+const VERSION = '1.19.0';
 const APP_ID = 'reading-stars';   // unique per app, never changes
 // In a native shell (BuildIt) new versions come from the App Store or TestFlight, never from GitHub (in-app-updates Step 8).
 const NATIVE_SHELL = (() => { try { return config.runsInNativeShell === true; } catch (e) { return false; } })();
@@ -63,20 +63,32 @@ const USAGE = { HOST: 'https://us.i.posthog.com', KEY: 'phc_yAi2PxJCRioWEKLF3uoc
 const KC_INSTALL = 'reading-stars-install-id';
 
 // ───────── Blueprints ─────────
-// Shared blueprints this app was built with (github.com/gadominas/app-blueprints). One line per blueprint, in this exact shape:
+// Shared blueprints this app was built with. One line per blueprint, in this exact shape:
 // inventory tools read it without running the script, and Settings › Built with shows it.
-const BLUEPRINTS_REPO = 'https://github.com/gadominas/app-blueprints';
 const BLUEPRINTS = [
-  { id: 'stability-patterns', name: 'Stability patterns', version: '1.0.1', since: '1.18.6' },
-  { id: 'in-app-updates', name: 'In-app updates', version: '1.1.0', since: '1.18.5' },
-  { id: 'settings', name: 'Settings', version: '1.1.2', since: '1.18.3' },
-  { id: 'ai-configuration', name: 'AI configuration', version: '1.0.1', since: '1.18.6' },
-  { id: 'launch-screen', name: 'Launch screen', version: '1.0.1', since: '1.18.6' },
-  { id: 'widgets', name: 'Widgets', version: '1.2.0', since: '1.18.7' },
-  { id: 'audio-playback', name: 'Sound in silent mode', version: '1.0.1', since: '1.18.6' },
+  { id: 'stability-patterns', name: 'Stability patterns', version: '1.0.2', since: '1.19.0' },
+  { id: 'in-app-updates', name: 'In-app updates', version: '1.1.1', since: '1.19.0' },
+  { id: 'settings', name: 'Settings', version: '2.0.1', since: '1.19.0' },
+  { id: 'ai-configuration', name: 'AI configuration', version: '1.0.2', since: '1.19.0' },
+  { id: 'launch-screen', name: 'Launch screen', version: '1.0.2', since: '1.19.0' },
+  { id: 'widgets', name: 'Widgets', version: '1.2.1', since: '1.19.0' },
+  { id: 'audio-playback', name: 'Sound in silent mode', version: '1.0.2', since: '1.19.0' },
   { id: 'read-aloud', name: 'Read aloud', version: '1.0.1', since: '1.9.0' },
-  { id: 'usage-analytics', name: 'Anonymous usage analytics', version: '1.1.0', since: '1.7.0' },
+  { id: 'usage-analytics', name: 'Anonymous usage analytics', version: '1.1.1', since: '1.19.0' },
 ];
+// What each blueprint is, shown when a Built with row is tapped (settings blueprint, Step 9).
+// Written by `node tools/about.js` in app-blueprints from the versions in BLUEPRINTS; never edit by hand.
+const BLUEPRINT_ABOUT = {
+  'stability-patterns': { what: "The rules that keep the app opening on any iPhone.", does: "Uses iCloud only when this iPhone has it, keeps data on the phone otherwise, and checks the Keychain before reading from it.", drives: "Where the app keeps its data, the widget, the installer and in-app updates.", why: "A new phone, one without iCloud or one with nothing saved yet still opens the app, instead of stopping with an error." },
+  'in-app-updates': { what: "The way the app offers and installs its own new versions.", does: "When the app opens it checks for a newer version, shows its three best features, and installs it with Update now; Later waits two days.", drives: "The update sheet, Settings › Updates and the installer.", why: "Fixes and features reach you without reinstalling by hand, and the app only replaces itself with a checked, newer copy." },
+  'settings': { what: "The shared Settings sheet every app has.", does: "Keeps the app's look, behaviour and limits in one place; changes apply at once and survive updates.", drives: "Appearance (colours, layout, text size, font), the app's own choices, Updates, every adjustable value, and this Built with list.", why: "Nobody edits code to change a setting, and every app is set up the same familiar way." },
+  'ai-configuration': { what: "How the app connects to Claude or OpenAI.", does: "Keeps your key in the iPhone Keychain, lets you pick the provider and model, tests the connection and counts the tokens each feature uses.", drives: "Settings › AI settings, every AI feature, and the ✦ AI label on everything AI wrote.", why: "Your key goes only to its own provider, you can see what AI uses, and the app still works without a key." },
+  'launch-screen': { what: "The branded screen the app opens on.", does: "Shows the app's logo, name and tagline for about two and a half seconds; a tap skips it, and Reduce Motion keeps it still.", drives: "The first moment after the app opens, with the same logo as the icon and the widget.", why: "The app starts the same recognisable way every time while its page gets ready behind the screen, and the screen can never get stuck." },
+  'widgets': { what: "The shared design for the app's Home Screen and Lock Screen widgets.", does: "Draws the app's logo and name, one headline figure or title, a few rows and an updated line, from the app's own data.", drives: "Every widget size, the Lock Screen versions, and the widget's settings.", why: "Widgets name their app, look like one family, say when their data is old, and never show a script error." },
+  'audio-playback': { what: "The rule that lets sound you asked for play with the Ring/Silent switch on.", does: "While the app reads, speaks or plays a sound you started, it tells iOS it is a media player, and gives sound back to other apps when it stops.", drives: "Reading aloud, spoken words, timer beeps and any other sound the app makes.", why: "Without it, iOS silently mutes the app while it looks as if it is playing." },
+  'read-aloud': { what: "The shared way the app reads text aloud, with an optional reader for articles.", does: "Reads posts, summaries or stories with an iPhone or AI voice, highlights the sentence being read, and shows how much is left.", drives: "The Listen buttons, the player at the bottom, the text view, the reader and Settings › Listening.", why: "You can listen hands-free and always know what is being read, from where, and for how long." },
+  'usage-analytics': { what: "Optional, anonymous counts of which features get used.", does: "Only after you say yes, it sends counts and fixed choices, never names, text, links or keys; turning it off stops sending and forgets the install ID.", drives: "The one-time question on the main page and Settings › Privacy.", why: "It shows what to improve next without collecting anything personal." },
+};
 
 // AI providers. Keychain names are unique per app; models are defaults until the user picks one.
 const AI = {
@@ -398,7 +410,7 @@ function settingsState() {
     cfgSchema: CONFIG.map(([title, items]) => ({ title, items })),
     palettes: PALETTES, currencies: CURRENCY_CODES, version: VERSION, appName: "Reading Stars",
     usageAvailable: usageAvailable(), usageStatus: usageStatus(),
-    blueprints: BLUEPRINTS, blueprintsRepo: BLUEPRINTS_REPO,
+    blueprints: BLUEPRINTS, blueprintAbout: BLUEPRINT_ABOUT,
     // ai-configuration Step 6: keys only masked
     ai: aiState(),
     nativeShell: NATIVE_SHELL,   // in-app-updates Step 8: Settings › Updates says updates come through the App Store
@@ -1211,6 +1223,19 @@ body.d-tiny .panel.pk.open .pkhead{margin-bottom:14px}
 .uabtns{display:flex;gap:10px}
 .uabtns .btn{flex:1;margin:0}
 #cfgsheet{position:fixed;inset:0;z-index:50;background:var(--paper);color:var(--ink);transform:translateY(102%);visibility:hidden;transition:transform .28s ease,visibility 0s linear .28s;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;text-align:left}
+#bpabout{position:fixed;inset:0;z-index:52;pointer-events:none}
+#bpabout.open{pointer-events:auto}
+.bp-dim{position:absolute;inset:0;background:rgba(0,0,0,.45);opacity:0;transition:opacity .2s}
+#bpabout.open .bp-dim{opacity:1}
+.bp-card{position:absolute;left:0;right:0;bottom:0;max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--paper);color:var(--ink);border-top:1px solid var(--rule);border-radius:20px 20px 0 0;padding:18px 20px calc(env(safe-area-inset-bottom) + 28px);transform:translateY(102%);transition:transform .28s ease}
+#bpabout.open .bp-card{transform:none}
+.bp-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:6px}
+.bp-top .grow{flex:1;min-width:0}
+.bp-kick{display:block;font:700 calc(11.5px * var(--ts))/1.2 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--signal)}
+.bp-card h2{font:700 calc(24px * var(--ts))/1.15 var(--display);margin:4px 0 4px}
+.bp-l{font:700 calc(12.5px * var(--ts))/1.2 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:20px 0 6px}
+.bp-p{margin:0;font-size:calc(16px * var(--ts));line-height:1.45}
+@media (prefers-reduced-motion: reduce){.bp-card,.bp-dim{transition:none}}
 #cfgsheet.open{transform:none;visibility:visible;transition:transform .28s ease}
 #cfgsheet button{font:inherit;color:inherit;background:none;border:0;border-radius:0;padding:0;font-weight:inherit;cursor:pointer;text-align:inherit}
 #cfgsheet .sh-head{position:sticky;top:0;z-index:2;background:var(--paper);display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top) + 14px) 18px 12px;border-bottom:1px solid var(--rule)}
@@ -4827,7 +4852,7 @@ function webApp() {
       startLog: "Start-up log", startLogHelp: (a) => `What happened the last times ${a} opened`, show: "Show", hide: "Hide", noLog: "Nothing logged yet.",
       latest: (v) => `You're on the latest version (${v})`, avail: (v) => `Version ${v} is available`,
       reset: "Reset", original: "original", changed: (n) => `${n} setting${n === 1 ? "" : "s"} changed`, none: "All settings are at their original values", resetAll: "Reset all", confirmReset: "Confirm reset",
-      builtWith: "Built with", builtHint: (a) => `${a} is built from shared blueprints that the other apps use too. Tap one to read how that part works.`, bp: (v, a, s) => `Blueprint ${v} · since ${a} ${s}`, all: "All blueprints", dec: "Decrease", inc: "Increase" },
+      builtWith: "Built with", builtHint: (a) => `${a} is built from shared blueprints that the other apps use too. Tap one to see what it does.`, bp: (v, a, s) => `Blueprint ${v} · since ${a} ${s}`, all: "About blueprints", dec: "Decrease", inc: "Increase" },
     lt: { uaTitle: "Padėti tobulinti Reading Stars?", uaText: "Siųsti anoniminius skaičius, pvz., sužaistus raundus ir išmokėjimus. Niekada vardų, avatarų, žetonų ar pinigų. Tai galite pakeisti nustatymuose.", uaYes: "Taip, siųsti", uaNo: "Ne, ačiū", uaThanks: "Ačiū! Tai galite pakeisti nustatymuose bet kada.", uaNope: "Gerai. Niekas nesiunčiama.", privacy: "Privatumas", share: "Siųsti anoniminę statistiką", shareHelp: "Skaičiai, pvz., sužaisti raundai ir išmokėjimai, su atsitiktiniu įrenginio ID. Niekada vardų, avatarų, žetonų ar pinigų. Išjungus ID ištrinamas.", test: "Patikrinti ryšį", testHelp: "Dabar išsiunčia vieną bandomąjį įvykį ir parodo PostHog atsakymą.", testBtn: "Siųsti bandymą", sending: "Siunčiama…",
       title: "Nustatymai", done: "Baigti", hint: "Pakeitimai įsigalioja iš karto ir saugomi šiame iPhone.", appearance: "Išvaizda", colours: "Spalvos", layout: "Išdėstymas", textSize: "Teksto dydis", font: "Antraščių šriftas",
       themes: { auto: "Automatiškai", ink: "Rašalas", sepia: "Sepija", mint: "Mėtinė", contrast: "Kontrastas", slate: "Skalūnas", night: "Naktis" },
@@ -4837,7 +4862,7 @@ function webApp() {
       startLog: "Paleidimo žurnalas", startLogHelp: (a) => `Kas vyko paskutinius kartus atidarant ${a}`, show: "Rodyti", hide: "Slėpti", noLog: "Kol kas nieko neužrašyta.",
       latest: (v) => `Naudojate naujausią versiją (${v})`, avail: (v) => `Yra versija ${v}`,
       reset: "Atstatyti", original: "pradinė", changed: (n) => `Pakeista nustatymų: ${n}`, none: "Visi nustatymai pradiniai", resetAll: "Atstatyti viską", confirmReset: "Patvirtinti",
-      builtWith: "Sukurta pagal", builtHint: (a) => `${a} sukurta pagal bendrus šablonus, kuriuos naudoja ir kitos programos. Paspauskite, kad perskaitytumėte, kaip veikia ta dalis.`, bp: (v, a, s) => `Šablonas ${v} · nuo ${a} ${s}`, all: "Visi šablonai", dec: "Mažinti", inc: "Didinti" },
+      builtWith: "Sukurta pagal", builtHint: (a) => `${a} sukurta pagal bendrus šablonus, kuriuos naudoja ir kitos programos. Paspauskite, kad pamatytumėte, ką jis daro.`, bp: (v, a, s) => `Šablonas ${v} · nuo ${a} ${s}`, all: "Apie šablonus", dec: "Mažinti", inc: "Didinti" },
     es: { uaTitle: "¿Ayudar a mejorar Reading Stars?", uaText: "Comparte recuentos anónimos, como rondas jugadas y pagos hechos. Nunca nombres, avatares, fichas ni dinero. Puedes cambiarlo en Ajustes.", uaYes: "Sí, compartir", uaNo: "No, gracias", uaThanks: "¡Gracias! Cámbialo cuando quieras en Ajustes.", uaNope: "De acuerdo. No se comparte nada.", privacy: "Privacidad", share: "Compartir uso anónimo", shareHelp: "Recuentos como rondas jugadas y pagos hechos, con un ID de instalación aleatorio. Nunca nombres, avatares, fichas ni dinero. Al desactivarlo se borra el ID.", test: "Probar la conexión", testHelp: "Envía ahora un evento de prueba y muestra la respuesta de PostHog.", testBtn: "Enviar prueba", sending: "Enviando…",
       title: "Ajustes", done: "Listo", hint: "Los cambios se aplican al momento y se guardan en este iPhone.", appearance: "Apariencia", colours: "Colores", layout: "Diseño", textSize: "Tamaño del texto", font: "Fuente de títulos",
       themes: { auto: "Automático", ink: "Tinta", sepia: "Sepia", mint: "Menta", contrast: "Contraste", slate: "Pizarra", night: "Noche" },
@@ -4847,7 +4872,7 @@ function webApp() {
       startLog: "Registro de inicio", startLogHelp: (a) => `Qué pasó las últimas veces que se abrió ${a}`, show: "Mostrar", hide: "Ocultar", noLog: "Aún no hay nada registrado.",
       latest: (v) => `Tienes la última versión (${v})`, avail: (v) => `Hay una versión ${v}`,
       reset: "Restablecer", original: "original", changed: (n) => `${n} ajuste${n === 1 ? "" : "s"} cambiado${n === 1 ? "" : "s"}`, none: "Todos los ajustes están en sus valores originales", resetAll: "Restablecer todo", confirmReset: "Confirmar",
-      builtWith: "Hecho con", builtHint: (a) => `${a} está hecho con plantillas compartidas que también usan las otras apps. Toca una para leer cómo funciona esa parte.`, bp: (v, a, s) => `Plantilla ${v} · desde ${a} ${s}`, all: "Todas las plantillas", dec: "Menos", inc: "Más" },
+      builtWith: "Hecho con", builtHint: (a) => `${a} está hecho con plantillas compartidas que también usan las otras apps. Toca una para ver qué hace.`, bp: (v, a, s) => `Plantilla ${v} · desde ${a} ${s}`, all: "Acerca de las plantillas", dec: "Menos", inc: "Más" },
   };
   const CT = new Proxy({}, { get: (_, k) => (CT_ALL[state.lang] || CT_ALL.en)[k] });
   let SET = null, cfgIsOpen = false, cfgArmed = false;
@@ -4898,11 +4923,37 @@ function webApp() {
       <button data-act="cfgstep" data-k="${d.k}" data-v="1" aria-label="${esc(CT.inc)}" ${v >= d.max ? "disabled" : ""}>+</button>
       <span class="unit">${esc(d.unit || "")}</span><span class="range">${fmtCfg(d, d.min)}–${fmtCfg(d, d.max)}${ch ? ` — ${esc(CT.original)} ${fmtCfg(d, d.def)}` : ""}</span></div></div>`;
   }
-  const bpLink = (b) => `${SET.blueprintsRepo}/blob/${b.id}-v${b.version}/blueprints/${b.id}.md`;
+  // Settings › Built with (settings blueprint 2.0.1, Step 9): a tap shows what a blueprint is, from text bundled in the app.
+  var bpOpen = null;   // a blueprint id, "*" for About blueprints, or null
+  var BP_KEYS = ["what", "does", "drives", "why"];
+  var BP_EN = {"fields": ["What it is", "What it does", "What it drives", "Why it matters"], "allTitle": "About blueprints", "allSub": "What they are and why every app has them", "kick": "Blueprint", "kickAll": "Built with", "none": "This version of the app carries no description of this blueprint.", "all": {"what": "Shared designs this app and its sister apps are built from, one for each part they have in common.", "does": "Each one fixes how its part works: what you see, the words used, where data is kept and the safety rules.", "drives": "Every row above; each says which version this app follows, and since which version of the app.", "why": "A fix or improvement made once reaches every app the same way, so the apps stay alike and dependable."}};
+  var BP_I18N = {"lt": {"fields": ["Kas tai", "Ką daro", "Ką valdo", "Kodėl svarbu"], "allTitle": "Apie šablonus", "allSub": "Kas jie ir kodėl juos turi kiekviena programa", "kick": "Šablonas", "kickAll": "Sukurta pagal", "none": "Šioje programos versijoje šio šablono aprašymo nėra.", "all": {"what": "Bendri sprendimai, pagal kuriuos sukurta ši ir giminingos programos, po vieną kiekvienai bendrai daliai.", "does": "Kiekvienas nustato, kaip veikia jo dalis: ką matote, kokie žodžiai naudojami, kur laikomi duomenys ir saugumo taisyklės.", "drives": "Visas eilutes aukščiau; kiekviena rodo, kurios versijos programa laikosi ir nuo kurios programos versijos.", "why": "Kartą padarytas pataisymas ar patobulinimas vienodai pasiekia visas programas, todėl jos lieka panašios ir patikimos."}, "items": {"stability-patterns": {"what": "Taisyklės, dėl kurių programa atsidaro bet kuriame iPhone.", "does": "iCloud naudoja tik tada, kai jis šiame iPhone yra, kitaip duomenis laiko telefone, o prieš skaitydama Keychain patikrina, ar jame yra įrašas.", "drives": "Kur programa laiko duomenis, valdiklį, diegimo programą ir atnaujinimus programoje.", "why": "Naujas telefonas, telefonas be iCloud ar dar nieko neišsaugojęs vis tiek atidaro programą, o ne sustoja su klaida."}, "in-app-updates": {"what": "Būdas, kuriuo programa pasiūlo ir įdiegia savo naujas versijas.", "does": "Atsidariusi patikrina, ar yra naujesnė versija, parodo tris geriausias jos naujoves ir įdiegia ją mygtuku Atnaujinti dabar; Vėliau palaukia dvi dienas.", "drives": "Atnaujinimo langą, Nustatymai › Atnaujinimai ir diegimo programą.", "why": "Pataisymai ir naujovės pasiekia jus be rankinio diegimo, o programa save pakeičia tik patikrinta, naujesne kopija."}, "settings": {"what": "Bendras Nustatymų langas, kurį turi kiekviena programa.", "does": "Programos išvaizdą, elgseną ir ribas laiko vienoje vietoje; pakeitimai veikia iškart ir išlieka po atnaujinimų.", "drives": "Išvaizdą (spalvas, išdėstymą, teksto dydį, šriftą), programos pasirinkimus, atnaujinimus, visas keičiamas reikšmes ir šį sąrašą.", "why": "Niekam nereikia keisti kodo, kad pakeistų nustatymą, o visos programos nustatomos tuo pačiu pažįstamu būdu."}, "ai-configuration": {"what": "Kaip programa jungiasi prie Claude arba OpenAI.", "does": "Jūsų raktą laiko iPhone Keychain, leidžia pasirinkti teikėją ir modelį, patikrina ryšį ir skaičiuoja, kiek žetonų sunaudoja kiekviena funkcija.", "drives": "Nustatymai › AI nustatymai, visas AI funkcijas ir žymę ✦ AI ant visko, ką parašė AI.", "why": "Raktas keliauja tik pas savo teikėją, matote, kiek AI sunaudoja, o be rakto programa vis tiek veikia."}, "launch-screen": {"what": "Firminis ekranas, kuriuo atsidaro programa.", "does": "Maždaug dvi su puse sekundės rodo programos logotipą, pavadinimą ir šūkį; paspaudimas jį praleidžia, o įjungus Mažinti judesį jis nejuda.", "drives": "Pirmąją akimirką atsidarius programai, su tuo pačiu logotipu kaip piktograma ir valdiklis.", "why": "Programa kaskart prasideda tuo pačiu atpažįstamu būdu, kol už ekrano ruošiasi jos puslapis, ir ekranas niekada neužstringa."}, "widgets": {"what": "Bendras programos pradžios ir užrakinto ekrano valdiklių dizainas.", "does": "Iš programos duomenų nupiešia jos logotipą ir pavadinimą, vieną pagrindinį skaičių ar antraštę, kelias eilutes ir atnaujinimo eilutę.", "drives": "Visų dydžių valdiklius, užrakinto ekrano versijas ir valdiklio nustatymus.", "why": "Valdikliai nurodo savo programą, atrodo kaip viena šeima, praneša, kai duomenys pasenę, ir niekada nerodo scenarijaus klaidos."}, "ai-invitation": {"what": "Trumpa kortelė, rodanti, ką šiai programai prideda AI.", "does": "Kol AI raktas nenustatytas, ji įvardija tris dalykus, kuriuos čia gali AI, ir nuveda tiesiai prie rakto pridėjimo; grįžta ne dažniau kaip kas kelias dienas, o Daugiau nepriminti ją baigia.", "drives": "Kvietimą paleidžiant programą ir perėjimą į Nustatymai › AI nustatymai.", "why": "Be rakto funkcijos, kurioms jo reikia, paslėptos ir lengvai praleidžiamos; kortelė jas parodo neįkyrėdama ir nieko neuždengdama."}, "audio-playback": {"what": "Taisyklė, leidžianti girdėti jūsų paprašytą garsą, kai įjungtas tylusis režimas.", "does": "Kol programa skaito, kalba ar groja jūsų paleistą garsą, ji praneša iOS esanti grotuvas, o baigusi grąžina garsą kitoms programoms.", "drives": "Skaitymą balsu, ištartus žodžius, laikmačio pyptelėjimus ir kitus programos garsus.", "why": "Be jos iOS tyliai nutildo programą, nors atrodo, kad ji groja."}, "read-aloud": {"what": "Bendras būdas programai skaityti tekstą balsu, su papildoma skaitykle straipsniams.", "does": "iPhone ar AI balsu skaito įrašus, santraukas ar istorijas, paryškina skaitomą sakinį ir rodo, kiek dar liko.", "drives": "Klausymo mygtukus, grotuvą apačioje, teksto rodinį, skaityklę ir Nustatymai › Klausymas.", "why": "Galite klausytis laisvomis rankomis ir visada žinote, kas skaitoma, iš kur ir kiek dar truks."}, "usage-analytics": {"what": "Neprivalomi, anonimiški skaičiai apie tai, kurios funkcijos naudojamos.", "does": "Tik jums sutikus siunčia skaičius ir fiksuotus pasirinkimus, niekada vardų, teksto, nuorodų ar raktų; išjungus nustoja siųsti ir pamiršta įrenginio ID.", "drives": "Vienkartinį klausimą pagrindiniame puslapyje ir Nustatymai › Privatumas.", "why": "Parodo, ką tobulinti toliau, nerenkant nieko asmeniško."}}}, "es": {"fields": ["Qué es", "Qué hace", "Qué controla", "Por qué importa"], "allTitle": "Acerca de las plantillas", "allSub": "Qué son y por qué todas las apps las tienen", "kick": "Plantilla", "kickAll": "Hecho con", "none": "Esta versión de la app no incluye la descripción de esta plantilla.", "all": {"what": "Diseños compartidos con los que se hacen esta app y sus apps hermanas, uno para cada parte que tienen en común.", "does": "Cada una fija cómo funciona su parte: lo que ves, las palabras que se usan, dónde se guardan los datos y las reglas de seguridad.", "drives": "Todas las filas de arriba; cada una dice qué versión sigue esta app y desde qué versión de la app.", "why": "Una mejora o un arreglo hecho una vez llega a todas las apps igual, así siguen parecidas y fiables."}, "items": {"stability-patterns": {"what": "Las reglas que hacen que la app se abra en cualquier iPhone.", "does": "Usa iCloud solo si este iPhone lo tiene, si no guarda los datos en el teléfono, y comprueba el llavero antes de leerlo.", "drives": "Dónde guarda la app sus datos, el widget, el instalador y las actualizaciones.", "why": "Un teléfono nuevo, uno sin iCloud o uno sin nada guardado abre la app igualmente, en vez de pararse con un error."}, "in-app-updates": {"what": "La forma en que la app ofrece e instala sus nuevas versiones.", "does": "Al abrirse busca una versión más nueva, muestra sus tres mejores novedades y la instala con Actualizar ahora; Más tarde espera dos días.", "drives": "La hoja de actualización, Ajustes › Actualizaciones y el instalador.", "why": "Los arreglos y novedades te llegan sin reinstalar a mano, y la app solo se reemplaza con una copia comprobada y más nueva."}, "settings": {"what": "La hoja de Ajustes compartida que tiene cada app.", "does": "Reúne el aspecto, el comportamiento y los límites de la app en un solo lugar; los cambios se aplican al momento y se mantienen tras actualizar.", "drives": "Aspecto (colores, diseño, tamaño de texto, letra), las opciones de la app, actualizaciones, cada valor ajustable y esta lista.", "why": "Nadie toca código para cambiar un ajuste, y todas las apps se configuran de la misma forma conocida."}, "ai-configuration": {"what": "Cómo se conecta la app a Claude u OpenAI.", "does": "Guarda tu clave en el llavero del iPhone, te deja elegir proveedor y modelo, prueba la conexión y cuenta los tokens de cada función.", "drives": "Ajustes › Ajustes de IA, cada función con IA y la etiqueta ✦ IA en todo lo que escribe la IA.", "why": "Tu clave solo va a su proveedor, ves cuánto usa la IA y la app sigue funcionando sin clave."}, "launch-screen": {"what": "La pantalla con la marca con la que se abre la app.", "does": "Muestra el logo, el nombre y el lema unos dos segundos y medio; un toque la salta y con Reducir movimiento queda quieta.", "drives": "El primer momento al abrir la app, con el mismo logo que el icono y el widget.", "why": "La app empieza siempre de la misma forma reconocible mientras su página se prepara detrás, y la pantalla nunca se queda atascada."}, "widgets": {"what": "El diseño compartido de los widgets de la pantalla de inicio y de bloqueo.", "does": "Dibuja el logo y el nombre de la app, una cifra o título principal, unas filas y una línea de actualización, con los datos de la app.", "drives": "Cada tamaño de widget, las versiones de la pantalla de bloqueo y los ajustes del widget.", "why": "Los widgets dicen de qué app son, parecen una familia, avisan cuando sus datos son viejos y nunca muestran un error."}, "audio-playback": {"what": "La regla que deja sonar lo que pediste con el modo silencio activado.", "does": "Mientras la app lee, habla o suena algo que iniciaste, le dice a iOS que es un reproductor, y devuelve el sonido a otras apps al terminar.", "drives": "La lectura en voz alta, las palabras habladas, los pitidos del temporizador y otros sonidos de la app.", "why": "Sin ella, iOS silencia la app sin avisar mientras parece que suena."}, "read-aloud": {"what": "La forma compartida en que la app lee texto en voz alta, con un lector opcional para artículos.", "does": "Lee publicaciones, resúmenes o historias con una voz del iPhone o de IA, resalta la frase que se lee y muestra cuánto queda.", "drives": "Los botones de escuchar, el reproductor de abajo, la vista de texto, el lector y Ajustes › Escuchar.", "why": "Puedes escuchar sin manos y saber siempre qué se lee, de dónde y cuánto dura."}, "usage-analytics": {"what": "Recuentos anónimos y opcionales de qué funciones se usan.", "does": "Solo si dices que sí, envía recuentos y opciones fijas, nunca nombres, textos, enlaces ni claves; al apagarlo deja de enviar y olvida el ID de instalación.", "drives": "La pregunta única en la página principal y Ajustes › Privacidad.", "why": "Muestra qué mejorar después sin recoger nada personal."}}}};   // the About text in the app's other languages (BLUEPRINT_ABOUT stays English)
+  function bpT(k) { var t = BP_I18N[state.lang]; return t && t[k] != null ? t[k] : BP_EN[k]; }
+  function bpEl() {
+    var el = document.getElementById("bpabout");
+    if (!el) {
+      el = document.createElement("div"); el.id = "bpabout"; el.setAttribute("aria-hidden", "true"); document.body.appendChild(el);
+      el.addEventListener("click", function (e) { e.stopPropagation(); var t = e.target.closest("[data-act]"); if (t && t.getAttribute("data-act") === "bpclose") { bpOpen = null; renderBp(); } });
+    }
+    return el;
+  }
+  function renderBp() {
+    var el = bpEl(), b = null, items = (BP_I18N[state.lang] || {}).items || {};
+    SET.blueprints.forEach(function (x) { if (x.id === bpOpen) b = x; });
+    var a = bpOpen === "*" ? bpT("all") : b ? (items[b.id] || (SET.blueprintAbout || {})[b.id]) : null;
+    el.classList.toggle("open", !!(a || b)); el.setAttribute("aria-hidden", a || b ? "false" : "true");
+    if (!a && !b) return;   // closing: keep the old content while the card slides away
+    var F = bpT("fields");
+    el.innerHTML = '<div class="bp-dim" data-act="bpclose"></div><div class="bp-card" role="dialog" aria-modal="true" aria-labelledby="bp-h">' +
+      '<div class="bp-top"><div class="grow"><small class="bp-kick">' + esc(b ? bpT("kick") : bpT("kickAll")) + '</small><h2 id="bp-h">' + esc(b ? b.name : bpT("allTitle")) + '</h2>' +
+      (b ? '<small class="muted">' + esc(CT.bp(b.version, SET.appName, b.since)) + '</small>' : '') + '</div><button class="link" data-act="bpclose">' + esc(CT.done) + '</button></div>' +
+      (a ? BP_KEYS.map(function (k, i) { return '<h3 class="bp-l">' + esc(F[i]) + '</h3><p class="bp-p">' + esc(a[k]) + '</p>'; }).join("") : '<p class="bp-p muted">' + esc(bpT("none")) + '</p>') + '</div>';
+    el.querySelector(".bp-card").scrollTop = 0;
+  }
   function builtWithHTML() {
     return `<h3 class="sec">${esc(CT.builtWith)}</h3><p class="hint">${esc(CT.builtHint(SET.appName))}</p>
-      ${SET.blueprints.map((b) => `<button class="srow bp" data-act="openurl" data-v="${esc(bpLink(b))}"><div class="grow"><b>${esc(b.name)}</b><small class="muted">${esc(CT.bp(b.version, SET.appName, b.since))}</small></div><span class="chev" aria-hidden="true">›</span></button>`).join("")}
-      <button class="srow bp" data-act="openurl" data-v="${esc(SET.blueprintsRepo)}"><div class="grow"><b>${esc(CT.all)}</b><small class="muted">${esc(SET.blueprintsRepo.replace("https://", ""))}</small></div><span class="chev" aria-hidden="true">›</span></button>`;
+      ${SET.blueprints.map((b) => `<button class="srow bp" data-act="bpabout" data-v="${esc(b.id)}"><div class="grow"><b>${esc(b.name)}</b><small class="muted">${esc(CT.bp(b.version, SET.appName, b.since))}</small></div><span class="chev" aria-hidden="true">›</span></button>`).join("")}
+      <button class="srow bp" data-act="bpabout" data-v="${esc("*")}"><div class="grow"><b>${esc(CT.all)}</b><small class="muted">${esc(bpT("allSub"))}</small></div><span class="chev" aria-hidden="true">›</span></button>`;
   }
   // Settings blueprint 1.1.0: each section's rows in one card (.grp), built right after every render.
   // A heading's explanation (p.hint right under it) and the changed-count footer (.cfg-foot) stay outside.
@@ -4982,7 +5033,7 @@ function webApp() {
     if (cfgIsOpen) return;
     send("settings-get", {}, (ok, st) => { if (!ok) return toast(st); useState(st); cfgIsOpen = true; renderCfg(); cfgSheet().scrollTop = 0; });
   }
-  function closeSettings() { cfgIsOpen = false; cfgArmed = false; aiOpen = false; renderAI(); renderCfg(); render(); }
+  function closeSettings() { bpOpen = null; renderBp(); cfgIsOpen = false; cfgArmed = false; aiOpen = false; renderAI(); renderCfg(); render(); }
   function cfgClick(e) {
     e.stopPropagation();   // the sheet's taps never reach the game's own click handler
     const ab = e.target.closest("[data-action]");   // …except the word collections' own buttons, run here (1.17.0)
@@ -5012,7 +5063,7 @@ function webApp() {
       cfgArmed = true; renderCfg(); setTimeout(() => { if (cfgArmed) { cfgArmed = false; renderCfg(); } }, 3500); return;
     }
     if (act === "changePin") { closeSettings(); return openPin("set1", "parent"); }
-    if (act === "openurl") return send("openurl", { v });
+    if (act === "bpabout") { bpOpen = v; return renderBp(); }
     if (act === "usage-test") {
       const um = document.getElementById("usagemsg"); el.disabled = true; if (um) um.textContent = CT.sending;
       return send("usage-test", {}, (ok, msg) => { el.disabled = false; const m = document.getElementById("usagemsg"); if (m) m.textContent = (ok ? "✓ " : "✗ ") + msg; });
@@ -6033,11 +6084,6 @@ async function handleAction(head, p) {
     let txt = "";
     try { txt = FileManager.local().readString(LOG_PATH).split("\n").slice(-40).join("\n"); } catch (e) {}
     return answer(true, txt);
-  }
-  if (head === "openurl") {   // Built with: only the blueprints repository opens from here
-    const v = String(p.v || "");
-    if (v === BLUEPRINTS_REPO || v.startsWith(BLUEPRINTS_REPO + "/")) await Safari.openInApp(v, false);
-    return;
   }
   if (head === "update-later") {
     snoozeUpdate();
