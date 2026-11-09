@@ -1,0 +1,30 @@
+{
+  "name": "Reading Stars",
+  "accent": "#FACC15",
+  "headline": [
+    "Read.",
+    "Match.",
+    "Shine."
+  ],
+  "sentence": "Words and pictures go in. First-try answers come out as tokens your child can swap for real pocket money.",
+  "shots": [
+    {
+      "card": "01-home.png"
+    },
+    {
+      "card": "02-beginner-round.png"
+    }
+  ],
+  "motif": {
+    "x": 392,
+    "y": 388,
+    "w": 170,
+    "rotate": 8,
+    "front": true,
+    "svg": "<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><path d='M100 8 L125.5 72 L194 76 L141 120 L158 188 L100 150 L42 188 L59 120 L6 76 L74.5 72 Z' fill='{accent}' stroke='#0E1116' stroke-width='6' stroke-linejoin='round'/><path d='M128 50 L132 62 L144 66 L132 70 L128 82 L124 70 L112 66 L124 62 Z' fill='#FFFFFF'/></svg>"
+  },
+  "benefit": "Reading practice your kids ask for",
+  "steps": "Add your kids. Let them read and match. Swap tokens for pocket money.",
+  "facts": "Free · iPhone and iPad · Runs in the free Scriptable app · In English, Lithuanian and Spanish · AI is optional, with your own Claude or OpenAI key",
+  "bannerAlt": "Reading Stars: Read. Match. Shine. Words and pictures go in, first-try answers come out as tokens for real pocket money. Two iPhone screens show the players at home and a word with three pictures, with a big yellow star."
+}

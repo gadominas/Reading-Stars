@@ -1,12 +1,15 @@
+<!-- header:start: repo-site/tools/header.js writes this block from docs/site/header.json -->
 <div align="center">
 
-<img src="docs/logo.svg" width="96" alt="Reading Stars logo: a big yellow star with a white sparkle over a teal reading line">
+<a href="#install"><img src="docs/banner.png" width="100%" alt="Reading Stars: Read. Match. Shine. Words and pictures go in, first-try answers come out as tokens for real pocket money. Two iPhone screens show the players at home and a word with three pictures, with a big yellow star."></a>
 
-# Reading Stars
+<h2>Reading practice your kids ask for</h2>
 
-**Read. Match. Shine.**
+Add your kids. Let them read and match. Swap tokens for pocket money.
 
-A picture-and-word reading game for kids, where first-try answers earn tokens a parent can exchange for real pocket money.<br>An iPhone and iPad app for [Scriptable](https://scriptable.app). One file, no server, no sign-up.
+<a href="#install"><img src="docs/button-install.png" height="48" alt="Install Reading Stars free"></a>&nbsp;&nbsp;<a href="CHANGELOG.md"><img src="docs/button-whats-new.png" height="48" alt="See what's new in Reading Stars"></a>
+
+<sub>Free · iPhone and iPad · Runs in the free Scriptable app · In English, Lithuanian and Spanish · AI is optional, with your own Claude or OpenAI key</sub>
 
 [![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgadominas%2FReading-Stars%2Fmain%2Freleases.json&query=%24.releases%5B0%5D.version&label=version&color=FACC15&labelColor=0E1116&style=flat-square)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/iOS-Scriptable-171B22?style=flat-square&labelColor=0E1116)](https://apps.apple.com/app/scriptable/id1405459188)
@@ -16,6 +19,7 @@ A picture-and-word reading game for kids, where first-try answers earn tokens a 
 [![License](https://img.shields.io/badge/license-MIT-171B22?style=flat-square&labelColor=0E1116)](LICENSE)
 
 </div>
+<!-- header:end -->
 
 <p align="center">
   <img src="docs/screenshots/01-home.png" width="31%" alt="Home screen: four player cards with avatars, levels, tokens, stars and what the tokens are worth, under the language switch.">
